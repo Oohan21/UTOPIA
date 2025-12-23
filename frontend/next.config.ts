@@ -1,6 +1,9 @@
-// next.config.js
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+import type { NextConfig } from 'next'
+import createNextIntlPlugin from 'next-intl/plugin'
+
+const withNextIntl = createNextIntlPlugin()
+
+const nextConfig: NextConfig = {
   reactStrictMode: true,
   images: {
     remotePatterns: [
@@ -16,17 +19,14 @@ const nextConfig = {
         port: '8000',
         pathname: '/media/**',
       },
-      // Add your production domain when ready
       {
         protocol: 'https',
         hostname: 'your-domain.com',
         pathname: '/media/**',
       },
     ],
-    // Disable image optimization for development to allow localhost images
     unoptimized: process.env.NODE_ENV === 'development',
   },
-  // Allow loading from localhost in dev
   experimental: {
     serverActions: {
       allowedOrigins: ['localhost:8000', 'localhost:3000'],
@@ -34,4 +34,4 @@ const nextConfig = {
   },
 }
 
-module.exports = nextConfig
+export default withNextIntl(nextConfig)
