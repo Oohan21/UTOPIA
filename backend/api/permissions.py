@@ -1,4 +1,5 @@
 from rest_framework import permissions
+from real_estate.models import Message, MessageThread
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
     """
@@ -49,3 +50,67 @@ class IsAdminOrReadOnly(permissions.BasePermission):
             request.user.is_staff or
             request.user.is_superuser
         )
+
+class IsParticipant(permissions.BasePermission):
+    """
+    Permission to check if user is a participant in the message thread.
+    """
+    def has_object_permission(self, request, view, obj):
+        if hasattr(obj, 'participants'):
+            return request.user in obj.participants.all()
+        return False
+
+
+class IsMessageReceiver(permissions.BasePermission):
+    """
+    Permission to check if user is the receiver of a message.
+    """
+    def has_object_permission(self, request, view, obj):
+        return obj.receiver == request.user
+
+
+class IsMessageSender(permissions.BasePermission):
+    """
+    Permission to check if user is the sender of a message.
+    """
+    def has_object_permission(self, request, view, obj):
+        return obj.sender == request.user
+
+
+class CanSendMessage(permissions.BasePermission):
+    """
+    Permission to check if user can send a message.
+    Prevents users from messaging themselves.
+    """
+    def has_permission(self, request, view):
+        if request.method == 'POST':
+            receiver_id = request.data.get('receiver')
+            if receiver_id and int(receiver_id) == request.user.id:
+                return False
+        return True
+
+
+class CanAccessMessage(permissions.BasePermission):
+    """
+    Permission to check if user can access a message.
+    User must be either sender or receiver.
+    """
+    def has_object_permission(self, request, view, obj):
+        return obj.sender == request.user or obj.receiver == request.user
+
+
+class CanCreateThread(permissions.BasePermission):
+    """
+    Permission to check if user can create a message thread.
+    """
+    def has_permission(self, request, view):
+        if request.method == 'POST':
+            # Check if all participants exist
+            participants = request.data.get('participants', [])
+            if not participants or len(participants) < 2:
+                return False
+            
+            # User must be one of the participants
+            return request.user.id in participants
+        
+        return True
