@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from .models import UserActivity, CustomUser, UserProfile
 
 User = get_user_model()
 
@@ -26,6 +27,8 @@ class UserSerializer(serializers.ModelSerializer):
             "phone_number",
             "user_type",
             "language_preference",
+            "is_verified", "is_active",
+            "is_premium",
             "profile_picture",
             "bio",
             "occupation",
@@ -99,3 +102,97 @@ class RegisterSerializer(serializers.ModelSerializer):
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
     password = serializers.CharField(write_only=True, required=True)
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    token = serializers.CharField(required=True)
+    new_password = serializers.CharField(
+        write_only=True,
+        required=True,
+        min_length=8,
+        style={'input_type': 'password'}
+    )
+    confirm_password = serializers.CharField(
+        write_only=True,
+        required=True,
+        min_length=8,
+        style={'input_type': 'password'}
+    )
+
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['confirm_password']:
+            raise serializers.ValidationError(
+                {"password": "Password fields didn't match."}
+            )
+        return attrs
+
+class UserActivitySerializer(serializers.ModelSerializer):
+    activity_type_display = serializers.CharField(source='get_activity_type_display', read_only=True)
+    user_email = serializers.CharField(source='user.email', read_only=True)
+    
+    class Meta:
+        model = UserActivity
+        fields = [
+            'id', 
+            'activity_type', 
+            'activity_type_display',
+            'ip_address',
+            'user_agent',
+            'metadata',
+            'created_at',
+            'user_email'
+        ]
+        read_only_fields = ['id', 'created_at']
+
+class UserActivityCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserActivity
+        fields = ['activity_type', 'metadata']
+        extra_kwargs = {
+            'metadata': {'required': False, 'default': dict}
+        }
+
+class UserActivitiesResponseSerializer(serializers.Serializer):
+    count = serializers.IntegerField()
+    next = serializers.URLField(allow_null=True)
+    previous = serializers.URLField(allow_null=True)
+    results = UserActivitySerializer(many=True)
+
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(required=True, write_only=True)
+    new_password = serializers.CharField(
+        required=True, 
+        min_length=8,
+        write_only=True
+    )
+    confirm_password = serializers.CharField(
+        required=True, 
+        min_length=8,
+        write_only=True
+    )
+    
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['confirm_password']:
+            raise serializers.ValidationError({
+                "confirm_password": "Passwords do not match"
+            })
+        return attrs
+
+
+class DeleteAccountSerializer(serializers.Serializer):
+    reason = serializers.CharField(required=True, max_length=1000)
+    password = serializers.CharField(required=False, write_only=True)
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        fields = '__all__'
+        read_only_fields = ['user', 'created_at', 'updated_at']
+        extra_kwargs = {
+            'date_of_birth': {'required': False, 'allow_null': True},
+            'gender': {'required': False, 'allow_null': True},
+            'address': {'required': False, 'allow_null': True},
+        }

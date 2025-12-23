@@ -5,7 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from .models import (
     City, SubCity, Amenity, Property, PropertyImage, 
     PropertyDocument, SavedSearch, TrackedProperty, Inquiry, 
-    PropertyView, PropertyComparison, ComparisonSession
+    PropertyView, PropertyComparison, ComparisonSession, Message, MessageThread
 )
 
 @admin.register(City)
@@ -188,18 +188,18 @@ class PropertyAdmin(admin.ModelAdmin):
 
 @admin.register(Inquiry)
 class InquiryAdmin(admin.ModelAdmin):
-    list_display = ('property', 'user', 'inquiry_type', 'status', 'priority', 
-                   'response_sent')
-    list_filter = ('inquiry_type', 'status', 'priority', 'response_sent')
-    search_fields = ('property__title', 'user__email', 'full_name', 
+    list_display = ('property_display', 'user_display', 'inquiry_type', 'status', 'priority', 
+                   'response_sent', 'created_at_display')
+    list_filter = ('inquiry_type', 'status', 'priority', 'response_sent', 'created_at')
+    search_fields = ('property_rel__title', 'user__email', 'full_name', 
                     'email', 'phone', 'message')
     readonly_fields = ('created_at', 'updated_at', 'responded_at')
-    list_select_related = ('property', 'user', 'assigned_to')
+    list_select_related = ('property_rel', 'user', 'assigned_to')
     list_per_page = 50
     
     fieldsets = (
         (_('Basic Information'), {
-            'fields': ('property', 'user', 'inquiry_type', 'message')
+            'fields': ('property_rel', 'user', 'inquiry_type', 'message')
         }),
         (_('Contact Information'), {
             'fields': ('full_name', 'email', 'phone', 'contact_preference')
@@ -215,6 +215,82 @@ class InquiryAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+    
+    def property_display(self, obj):
+        """Display property title with link"""
+        if obj.property_rel:
+            return format_html(
+                '<a href="/admin/real_estate/property/{}/change/">{}</a>',
+                obj.property_rel.id,
+                obj.property_rel.title[:50] + ('...' if len(obj.property_rel.title) > 50 else '')
+            )
+        return "-"
+    property_display.short_description = 'Property'
+    property_display.admin_order_field = 'property_rel__title'
+    
+    def user_display(self, obj):
+        """Display user information"""
+        if obj.user:
+            return format_html(
+                '{}<br><small class="text-muted">{}</small>',
+                obj.user.get_full_name() or obj.user.email,
+                obj.user.email
+            )
+        return format_html(
+            '{}<br><small class="text-muted">{}</small>',
+            obj.full_name or 'Anonymous',
+            obj.email or 'No email'
+        )
+    user_display.short_description = 'User'
+    user_display.admin_order_field = 'user__email'
+    
+    def created_at_display(self, obj):
+        """Formatted created at date"""
+        from django.utils import timezone
+        from django.utils.timesince import timesince
+        
+        if obj.created_at:
+            local_time = timezone.localtime(obj.created_at)
+            return format_html(
+                '{}<br><small class="text-muted">{} ago</small>',
+                local_time.strftime('%Y-%m-%d %H:%M'),
+                timesince(obj.created_at)
+            )
+        return "-"
+    created_at_display.short_description = 'Created'
+    created_at_display.admin_order_field = 'created_at'
+    
+    def response_time_display(self, obj):
+        """Display response time"""
+        if obj.response_time:
+            if obj.response_time < 1:
+                return f"{obj.response_time * 60:.0f} min"
+            elif obj.response_time < 24:
+                return f"{obj.response_time:.1f} hours"
+            else:
+                return f"{obj.response_time / 24:.1f} days"
+        return "No response"
+    response_time_display.short_description = 'Response Time'
+    
+    def get_queryset(self, request):
+        """Optimize queryset with related fields"""
+        queryset = super().get_queryset(request)
+        return queryset.select_related(
+            'property_rel', 
+            'property_rel__city',
+            'property_rel__sub_city',
+            'user',
+            'assigned_to'
+        ).prefetch_related('tags')
+    
+    def is_urgent_display(self, obj):
+        """Display urgent status"""
+        if obj.is_urgent:
+            return format_html(
+                '<span style="color: red; font-weight: bold;">⚠️ URGENT</span>'
+            )
+        return ""
+    is_urgent_display.short_description = 'Urgent'
 
 @admin.register(PropertyComparison)
 class PropertyComparisonAdmin(admin.ModelAdmin):
@@ -313,3 +389,43 @@ class PropertyViewAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+
+@admin.register(Message)
+class MessageAdmin(admin.ModelAdmin):
+    list_display = ('sender', 'receiver', 'property', 'message_type', 
+                   'is_read', 'created_at')
+    list_filter = ('message_type', 'is_read', 'created_at')
+    search_fields = ('sender__email', 'receiver__email', 
+                    'property__title', 'content')
+    readonly_fields = ('created_at', 'read_at')
+    list_select_related = ('sender', 'receiver', 'property')
+    
+    fieldsets = (
+        (None, {
+            'fields': ('sender', 'receiver', 'property', 'inquiry')
+        }),
+        (_('Content'), {
+            'fields': ('message_type', 'subject', 'content', 'attachment')
+        }),
+        (_('Status'), {
+            'fields': ('is_read', 'read_at')
+        }),
+        (_('Timestamps'), {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
+        }),
+    )
+
+@admin.register(MessageThread)
+class MessageThreadAdmin(admin.ModelAdmin):
+    list_display = ('subject', 'property', 'participant_count', 
+                   'last_message', 'updated_at')
+    list_filter = ('is_active', 'created_at')
+    search_fields = ('subject', 'property__title')
+    filter_horizontal = ('participants',)
+    readonly_fields = ('created_at', 'updated_at')
+    
+    def participant_count(self, obj):
+        return obj.participants.count()
+    participant_count.short_description = 'Participants'

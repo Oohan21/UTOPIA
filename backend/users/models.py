@@ -97,6 +97,23 @@ class CustomUser(AbstractUser):
     registration_ip = models.GenericIPAddressField(null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # Analytics fields
+    last_activity = models.DateTimeField(null=True, blank=True)
+    total_logins = models.IntegerField(default=0)
+    total_properties_viewed = models.IntegerField(default=0)
+    total_properties_saved = models.IntegerField(default=0)
+    total_inquiries_sent = models.IntegerField(default=0)
+    total_searches = models.IntegerField(default=0)
+
+    reset_token = models.UUIDField(default=uuid.uuid4, editable=False, null=True, blank=True)
+    reset_token_sent_at = models.DateTimeField(null=True, blank=True)
+    reset_token_expires_at = models.DateTimeField(null=True, blank=True)
+    
+    # Marketing fields
+    referral_code = models.CharField(max_length=20, unique=True, blank=True, null=True)
+    referred_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
+    marketing_source = models.CharField(max_length=50, blank=True)
     
     objects = CustomUserManager()
     
@@ -148,6 +165,26 @@ class CustomUser(AbstractUser):
         fields = ['first_name', 'last_name', 'phone_number', 'profile_picture', 'bio']
         completed = sum(1 for field in fields if getattr(self, field))
         return int((completed / len(fields)) * 100)
+
+    def update_activity(self):
+        """Update user's last activity timestamp"""
+        self.last_activity = timezone.now()
+        self.save(update_fields=['last_activity'])
+    
+    def increment_logins(self):
+        """Increment login counter"""
+        self.total_logins += 1
+        self.save(update_fields=['total_logins'])
+    
+    def increment_property_views(self):
+        """Increment property views counter"""
+        self.total_properties_viewed += 1
+        self.save(update_fields=['total_properties_viewed'])
+    
+    def increment_property_saves(self):
+        """Increment property saves counter"""
+        self.total_properties_saved += 1
+        self.save(update_fields=['total_properties_saved'])
 
 class UserProfile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='user_profile')
@@ -211,12 +248,17 @@ class UserActivity(models.Model):
         ('logout', 'User Logout'),
         ('property_view', 'Property Viewed'),
         ('property_save', 'Property Saved'),
+        ('property_unsave', 'Property Unsaved'),
         ('search', 'Search Performed'),
         ('inquiry', 'Inquiry Sent'),
         ('property_add', 'Property Added'),
         ('property_edit', 'Property Edited'),
         ('profile_update', 'Profile Updated'),
         ('valuation_request', 'Valuation Requested'),
+        ('promotion_purchase', 'Promotion Purchased'),
+        ('promotion_cancel', 'Promotion Cancelled'),
+        ('message_sent', 'Message Sent'),
+        ('message_received', 'Message Received'),
     )
     
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='activities')

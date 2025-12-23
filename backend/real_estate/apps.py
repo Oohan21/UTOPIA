@@ -1,3 +1,4 @@
+# real_estate/apps.py
 from django.apps import AppConfig
 
 
