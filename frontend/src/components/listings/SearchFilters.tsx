@@ -11,7 +11,7 @@ import {
     FURNISHING_TYPES,
     SORT_OPTIONS
 } from '@/lib/utils/constants'
-import { Search, Filter, X, ChevronDown, ChevronUp, Save } from 'lucide-react'
+import { Search, Filter, X, ChevronDown, ChevronUp, Save, Star, CheckCircle, TrendingUp } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -22,8 +22,8 @@ import { City, SubCity, PropertyFilters } from '@/lib/types/property'
 
 // Define the props interface
 interface SearchFiltersProps {
-  filters: PropertyFilters;
-  onChange: (newFilters: Partial<PropertyFilters>) => void;
+    filters: PropertyFilters;
+    onChange: (newFilters: Partial<PropertyFilters>) => void;
 }
 
 export default function SearchFilters({ filters, onChange }: SearchFiltersProps) {
@@ -72,11 +72,13 @@ export default function SearchFilters({ filters, onChange }: SearchFiltersProps)
             has_garden: undefined,
             has_security: undefined,
             has_furniture: undefined,
+            has_air_conditioning: undefined,
             is_featured: undefined,
             is_verified: undefined,
             min_bathrooms: undefined,
             furnishing_type: undefined,
             built_year: undefined,
+            is_promoted: undefined,
         })
     }
 
@@ -133,6 +135,40 @@ export default function SearchFilters({ filters, onChange }: SearchFiltersProps)
                         onValueChange={(value) => handleInputChange({ listing_type: value })}
                         options={LISTING_TYPES}
                     />
+                </div>
+
+                {/* Quick Filters */}
+                <div className="flex flex-wrap gap-2">
+                    <Button
+                        type="button"
+                        variant={filters.is_promoted ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleInputChange({ is_promoted: !filters.is_promoted })}
+                        className={filters.is_promoted ? "bg-blue-100 text-blue-800 hover:bg-blue-200" : ""}
+                    >
+                        <TrendingUp className="mr-2 h-4 w-4" />
+                        Promoted Properties
+                    </Button>
+
+                    <Button
+                        type="button"
+                        variant={filters.is_featured ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleInputChange({ is_featured: !filters.is_featured })}
+                    >
+                        <Star className="mr-2 h-4 w-4" />
+                        Featured Only
+                    </Button>
+
+                    <Button
+                        type="button"
+                        variant={filters.is_verified ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleInputChange({ is_verified: !filters.is_verified })}
+                    >
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Verified Only
+                    </Button>
                 </div>
 
                 {/* Advanced Filters Toggle */}
@@ -213,9 +249,9 @@ export default function SearchFilters({ filters, onChange }: SearchFiltersProps)
                         <Select
                             placeholder="City"
                             value={filters.city?.toString()}
-                            onValueChange={(value) => handleInputChange({ 
-                                city: parseInt(value), 
-                                sub_city: undefined 
+                            onValueChange={(value) => handleInputChange({
+                                city: parseInt(value),
+                                sub_city: undefined
                             })}
                             options={cityOptions}
                             disabled={isLoadingCities}
@@ -237,16 +273,16 @@ export default function SearchFilters({ filters, onChange }: SearchFiltersProps)
                                     type="number"
                                     placeholder="Min"
                                     value={filters.min_price || ''}
-                                    onChange={(e) => handleInputChange({ 
-                                        min_price: e.target.value ? parseInt(e.target.value) : undefined 
+                                    onChange={(e) => handleInputChange({
+                                        min_price: e.target.value ? parseInt(e.target.value) : undefined
                                     })}
                                 />
                                 <Input
                                     type="number"
                                     placeholder="Max"
                                     value={filters.max_price || ''}
-                                    onChange={(e) => handleInputChange({ 
-                                        max_price: e.target.value ? parseInt(e.target.value) : undefined 
+                                    onChange={(e) => handleInputChange({
+                                        max_price: e.target.value ? parseInt(e.target.value) : undefined
                                     })}
                                 />
                             </div>
@@ -276,16 +312,16 @@ export default function SearchFilters({ filters, onChange }: SearchFiltersProps)
                                     type="number"
                                     placeholder="Min"
                                     value={filters.min_area || ''}
-                                    onChange={(e) => handleInputChange({ 
-                                        min_area: e.target.value ? parseInt(e.target.value) : undefined 
+                                    onChange={(e) => handleInputChange({
+                                        min_area: e.target.value ? parseInt(e.target.value) : undefined
                                     })}
                                 />
                                 <Input
                                     type="number"
                                     placeholder="Max"
                                     value={filters.max_area || ''}
-                                    onChange={(e) => handleInputChange({ 
-                                        max_area: e.target.value ? parseInt(e.target.value) : undefined 
+                                    onChange={(e) => handleInputChange({
+                                        max_area: e.target.value ? parseInt(e.target.value) : undefined
                                     })}
                                 />
                             </div>
@@ -304,8 +340,8 @@ export default function SearchFilters({ filters, onChange }: SearchFiltersProps)
                             type="number"
                             placeholder="Built Year"
                             value={filters.built_year || ''}
-                            onChange={(e) => handleInputChange({ 
-                                built_year: e.target.value ? parseInt(e.target.value) : undefined 
+                            onChange={(e) => handleInputChange({
+                                built_year: e.target.value ? parseInt(e.target.value) : undefined
                             })}
                             min="1800"
                             max="2100"
@@ -348,10 +384,8 @@ export default function SearchFilters({ filters, onChange }: SearchFiltersProps)
                             <div className="flex items-center space-x-2">
                                 <Checkbox
                                     id="aircon"
-                                    checked={false}
-                                    onCheckedChange={() => {
-                                        // Add air conditioning filter if needed
-                                    }}
+                                    checked={filters.has_air_conditioning || false}
+                                    onCheckedChange={(checked) => handleInputChange({ has_air_conditioning: checked as boolean })}
                                 />
                                 <label htmlFor="aircon" className="text-sm cursor-pointer">Air Conditioning</label>
                             </div>
