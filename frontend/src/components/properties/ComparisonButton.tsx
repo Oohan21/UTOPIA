@@ -36,7 +36,10 @@ export const ComparisonButton: React.FC<ComparisonButtonProps> = ({
       await removeFromComparison(propertyId)
     } else {
       if (!canAddMore) {
-        toast.error('Cannot add more than 10 properties to comparison')
+        toast.error('Maximum 10 properties allowed in comparison', {
+          duration: 4000,
+          icon: '⚠️',
+        })
         return
       }
       await addToComparison(propertyId)

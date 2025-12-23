@@ -1,3 +1,4 @@
+// src/components/ui/Avatar.tsx - UPDATE
 "use client";
 
 import * as React from "react";
@@ -11,7 +12,8 @@ const Avatar = React.forwardRef<
   <AvatarPrimitive.Root
     ref={ref}
     className={cn(
-      "relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full",
+      "relative flex shrink-0 overflow-hidden rounded-full",
+      "h-10 w-10",
       className
     )}
     {...props}
@@ -46,4 +48,12 @@ const AvatarFallback = React.forwardRef<
 ));
 AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName;
 
-export { Avatar, AvatarImage, AvatarFallback };
+// Size variants
+const avatarSizes = {
+  sm: "h-6 w-6",
+  md: "h-10 w-10",
+  lg: "h-14 w-14",
+  xl: "h-20 w-20",
+};
+
+export { Avatar, AvatarImage, AvatarFallback, avatarSizes };
