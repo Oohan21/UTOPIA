@@ -69,6 +69,33 @@
   }
 }
 
+@layer components {
+  .select-content-fix {
+    z-index: 9999 !important;
+    position: relative !important;
+  }
+}
+
+/* RTL support for Amharic */
+html[lang="am"] {
+  direction: rtl;
+}
+
+/* Adjust layout for RTL */
+html[lang="am"] .rtl-flip {
+  transform: scaleX(-1);
+}
+
+/* Fix text alignment for RTL */
+html[lang="am"] body {
+  text-align: right;
+}
+
+/* Adjust flex direction for RTL */
+html[lang="am"] .flex-row {
+  flex-direction: row-reverse;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
