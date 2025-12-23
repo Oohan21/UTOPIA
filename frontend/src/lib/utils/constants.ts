@@ -14,8 +14,6 @@ export const PROPERTY_TYPES = [
 export const LISTING_TYPES = [
   { value: 'for_sale', label: 'For Sale' },
   { value: 'for_rent', label: 'For Rent' },
-  { value: 'for_lease', label: 'For Lease' },
-  { value: 'auction', label: 'Auction' },
 ]
 
 export const FURNISHING_TYPES = [
@@ -25,6 +23,7 @@ export const FURNISHING_TYPES = [
 ]
 
 export const BEDROOM_OPTIONS = [
+  { value: '0', label: 'No Bedroom' },
   { value: '1', label: '1' },
   { value: '2', label: '2' },
   { value: '3', label: '3' },
@@ -33,6 +32,7 @@ export const BEDROOM_OPTIONS = [
 ]
 
 export const BATHROOM_OPTIONS = [
+  { value: '0', label: 'No Bathroom' },
   { value: '1', label: '1+ Bathrooms' },
   { value: '2', label: '2+ Bathrooms' },
   { value: '3', label: '3+ Bathrooms' },
@@ -58,15 +58,18 @@ export const AREA_RANGES = [
 ]
 
 export const SORT_OPTIONS = [
-  { value: 'created_at', label: 'Newest First' },
-  { value: '-created_at', label: 'Oldest First' },
-  { value: 'price_etb', label: 'Price: Low to High' },
+  { value: '-promotion_priority,-created_at', label: 'Promoted First' },
+  { value: '-created_at', label: 'Newest First' },
+  { value: 'created_at', label: 'Oldest First' },
   { value: '-price_etb', label: 'Price: High to Low' },
-  { value: 'total_area', label: 'Area: Small to Large' },
+  { value: 'price_etb', label: 'Price: Low to High' },
   { value: '-total_area', label: 'Area: Large to Small' },
-  { value: 'bedrooms', label: 'Bedrooms: Few to Many' },
-  { value: '-bedrooms', label: 'Bedrooms: Many to Few' },
-  { value: 'views_count', label: 'Most Viewed' },
+  { value: 'total_area', label: 'Area: Small to Large' },
+  { value: '-bedrooms', label: 'Bedrooms: High to Low' },
+  { value: 'bedrooms', label: 'Bedrooms: Low to High' },
+  { value: '-views_count', label: 'Most Viewed' },
+  { value: 'views_count', label: 'Least Viewed' },
+  { value: '-save_count', label: 'Most Saved' },
 ]
 
 export const USER_TYPES = [
@@ -77,6 +80,59 @@ export const USER_TYPES = [
   { value: 'developer', label: 'Property Developer' },
 ]
 
+export const adminNavigation = [
+  {
+    title: 'Dashboard',
+    href: '/admin',
+    icon: 'Home',
+  },
+  {
+    title: 'Users',
+    href: '/admin/users',
+    icon: 'Users',
+    subItems: [
+      { title: 'All Users', href: '/admin/users' },
+      { title: 'Create User', href: '/admin/users/create' },
+      { title: 'User Groups', href: '/admin/users/groups' },
+    ],
+  },
+  {
+    title: 'Properties',
+    href: '/admin/properties',
+    icon: 'Building2',
+    subItems: [
+      { title: 'All Properties', href: '/admin/properties' },
+      { title: 'Create Property', href: '/admin/properties/create' },
+      { title: 'Property Types', href: '/admin/properties/types' },
+    ],
+  },
+  {
+    title: 'Inquiries',
+    href: '/admin/inquiries',
+    icon: 'MessageSquare',
+  },
+  {
+    title: 'Analytics',
+    href: '/admin/analytics',
+    icon: 'BarChart3',
+  },
+  {
+    title: 'Reports',
+    href: '/admin/reports',
+    icon: 'FileText',
+  },
+  {
+    title: 'Notifications',
+    href: '/admin/notifications',
+    icon: 'Bell',
+  },
+  {
+    title: 'Settings',
+    href: '/admin/settings',
+    icon: 'Settings',
+  },
+];
+
 export const PROPERTY_STATUS = [
   { value: 'available', label: 'Available' },
   { value: 'pending', label: 'Pending' },
@@ -84,3 +140,4 @@ export const PROPERTY_STATUS = [
   { value: 'rented', label: 'Rented' },
   { value: 'off_market', label: 'Off Market' },
 ]
+export const USD_TO_ETB_RATE = 172

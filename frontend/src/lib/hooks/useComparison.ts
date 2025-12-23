@@ -1,15 +1,55 @@
-// src/lib/hooks/useComparison.ts
-import { useState, useCallback, useEffect } from 'react'
-import { comparisonApi } from '@/lib/api/comparison'
-import { listingsApi } from '@/lib/api/listings'
-import { Property } from '@/lib/types/property'
+// lib/hooks/useComparison.ts
+import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
+import { comparisonApi } from '@/lib/api/comparison'
+import { Property } from '@/lib/types/property'
 import { ComparisonUtils } from '@/lib/utils/comparison'
+
+export interface SavedComparison {
+  id: number
+  name: string
+  properties: Property[]
+  comparison_summary: any
+  created_at: string
+  updated_at: string
+}
+
+export interface ComparisonStats {
+  price: {
+    min: number
+    max: number
+    avg: number
+    median: number
+  }
+  area: {
+    min: number
+    max: number
+    avg: number
+  }
+  pricePerSqm: {
+    min: number
+    max: number
+    avg: number
+    bestValue?: Property
+  }
+  bedrooms: {
+    min: number
+    max: number
+    avg: number
+    mostCommon: number
+  }
+  amenities: {
+    avg: number
+    mostCommon: string[]
+    topFeatures: string[]
+  }
+}
 
 export const useComparison = () => {
   const [comparisonProperties, setComparisonProperties] = useState<Property[]>([])
-  const [savedComparisons, setSavedComparisons] = useState<any[]>([])
+  const [savedComparisons, setSavedComparisons] = useState<SavedComparison[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [sessionId, setSessionId] = useState<string>('')
 
   // Load comparison session on mount
   useEffect(() => {
@@ -19,10 +59,15 @@ export const useComparison = () => {
 
   const loadComparisonSession = async () => {
     try {
-      const session = await listingsApi.getComparisonProperties()
+      setIsLoading(true)
+      const session = await comparisonApi.getComparisonSession()
       setComparisonProperties(session.properties || [])
+      setSessionId(session.session_id || '')
     } catch (error) {
       console.error('Failed to load comparison session:', error)
+      toast.error('Failed to load comparison session')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -32,35 +77,34 @@ export const useComparison = () => {
       setSavedComparisons(comparisons)
     } catch (error) {
       console.error('Failed to load saved comparisons:', error)
+      toast.error('Failed to load saved comparisons')
     }
   }
 
-  const addToComparison = async (property: Property | number) => {
+  const addToComparison = async (propertyId: number) => {
     try {
-      const propertyId = typeof property === 'number' ? property : property.id
-      
-      if (comparisonProperties.length >= 10) {
-        toast.error('Cannot add more than 10 properties to comparison')
-        return false
-      }
-
-      // Check if property is already in comparison
-      if (comparisonProperties.some(p => p.id === propertyId)) {
-        toast.error('Property already in comparison')
-        return false
-      }
-
       setIsLoading(true)
-      const response = await comparisonApi.addToComparisonSession(propertyId)
-      
-      // Refresh comparison session
-      await loadComparisonSession()
-      
-      toast.success('Property added to comparison')
-      return true
+      const result = await comparisonApi.addToComparisonSession(propertyId)
+
+      if (result.action === 'added') {
+        await loadComparisonSession()
+        toast.success(`✓ Property added to comparison (${result.session_properties_count}/10)`, {
+          duration: 3000,
+          icon: '➕',
+        })
+      } else {
+        await loadComparisonSession()
+        toast.success('✓ Property removed from comparison', {
+          duration: 3000,
+          icon: '❌',
+        })
+      }
     } catch (error) {
-      toast.error('Failed to add property to comparison')
-      return false
+      console.error('Failed to add to comparison:', error)
+      toast.error('Failed to update comparison', {
+        duration: 4000,
+        icon: '⚠️',
+      })
     } finally {
       setIsLoading(false)
     }
@@ -68,115 +112,265 @@ export const useComparison = () => {
 
   const removeFromComparison = async (propertyId: number) => {
     try {
-      // Toggle removal
+      setIsLoading(true)
       await comparisonApi.addToComparisonSession(propertyId)
       await loadComparisonSession()
-      toast.success('Property removed from comparison')
+      toast.success('✓ Property removed from comparison', {
+        duration: 3000,
+        icon: '🗑️',
+      })
     } catch (error) {
-      toast.error('Failed to remove property from comparison')
+      console.error('Failed to remove from comparison:', error)
+      toast.error('Failed to remove property', {
+        duration: 4000,
+        icon: '⚠️',
+      })
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const clearComparison = async () => {
-    try {
-      await comparisonApi.clearComparisonSession()
-      setComparisonProperties([])
-      toast.success('Comparison cleared')
-    } catch (error) {
-      toast.error('Failed to clear comparison')
+  const compareProperties = async () => {
+    if (comparisonProperties.length < 2) {
+      toast.error('Add at least 2 properties to compare', {
+        duration: 4000,
+        icon: '📊',
+      })
+      return null
     }
-  }
 
-  const compareProperties = async (propertyIds?: number[]) => {
     try {
       setIsLoading(true)
-      const ids = propertyIds || comparisonProperties.map(p => p.id)
-      
-      if (ids.length < 2) {
-        toast.error('Select at least 2 properties to compare')
-        return null
-      }
-
-      const result = await comparisonApi.compareProperties(ids)
+      const propertyIds = comparisonProperties.map(p => p.id)
+      const result = await comparisonApi.compareProperties(propertyIds)
+      toast.success(`✓ Successfully compared ${comparisonProperties.length} properties`, {
+        duration: 4000,
+        icon: '✅',
+      })
       return result
     } catch (error) {
-      toast.error('Failed to compare properties')
+      console.error('Comparison failed:', error)
+      toast.error('Unable to compare properties', {
+        duration: 4000,
+        icon: '❌',
+      })
       return null
     } finally {
       setIsLoading(false)
     }
   }
 
-  const saveComparison = async (name?: string) => {
-    try {
-      const propertyIds = comparisonProperties.map(p => p.id)
-      
-      if (propertyIds.length < 2) {
-        toast.error('Need at least 2 properties to save comparison')
-        return null
-      }
-
-      const result = await comparisonApi.saveComparison(propertyIds, name)
-      await loadSavedComparisons()
-      toast.success('Comparison saved successfully')
-      return result
-    } catch (error) {
-      toast.error('Failed to save comparison')
+  const saveComparison = async (name: string) => {
+    if (comparisonProperties.length < 2) {
+      toast.error('Add at least 2 properties to save comparison', {
+        duration: 4000,
+        icon: '💾',
+      })
       return null
     }
-  }
 
-  const deleteSavedComparison = async (id: number) => {
     try {
-      await comparisonApi.deleteComparison(id)
+      setIsLoading(true)
+      const propertyIds = comparisonProperties.map(p => p.id)
+      const result = await comparisonApi.saveComparison(propertyIds, name)
+
+      toast.success('✓ Your comparison has been saved successfully', {
+        duration: 4000,
+        icon: '💾',
+      })
       await loadSavedComparisons()
-      toast.success('Comparison deleted')
+      return result
     } catch (error) {
-      toast.error('Failed to delete comparison')
+      console.error('Failed to save comparison:', error)
+      toast.error('Unable to save comparison', {
+        duration: 4000,
+        icon: '❌',
+      })
+      return null
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const exportComparison = (format: 'csv' | 'json' = 'csv') => {
-    const matrix = ComparisonUtils.formatComparisonData(comparisonProperties).matrix
-    let data: string
-    let mimeType: string
-    let filename: string
+  const deleteSavedComparison = async (comparisonId: number) => {
+    try {
+      setIsLoading(true)
+      await comparisonApi.deleteComparison(comparisonId)
 
-    if (format === 'csv') {
-      data = ComparisonUtils.exportComparisonToCSV(comparisonProperties, matrix!)
-      mimeType = 'text/csv'
-      filename = `property_comparison_${new Date().toISOString().split('T')[0]}.csv`
-    } else {
-      data = ComparisonUtils.exportComparisonToJSON(comparisonProperties, matrix!)
-      mimeType = 'application/json'
-      filename = `property_comparison_${new Date().toISOString().split('T')[0]}.json`
+      toast.success('✓ Comparison deleted successfully', {
+        duration: 3000,
+        icon: '🗑️',
+      })
+      await loadSavedComparisons()
+    } catch (error) {
+      console.error('Failed to delete comparison:', error)
+      toast.error('Unable to delete comparison', {
+        duration: 4000,
+        icon: '⚠️',
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const clearComparison = async () => {
+    try {
+      setIsLoading(true)
+      await comparisonApi.clearComparisonSession()
+      setComparisonProperties([])
+
+      toast.success('✓ Comparison cleared successfully', {
+        duration: 3000,
+        icon: '🧹',
+      })
+    } catch (error) {
+      console.error('Failed to clear comparison:', error)
+      toast.error('Unable to clear comparison', {
+        duration: 4000,
+        icon: '⚠️',
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const exportComparison = async (format: 'csv' | 'json' | 'pdf' = 'csv') => {
+    if (comparisonProperties.length < 2) {
+      toast.error('Add at least 2 properties to export', {
+        duration: 4000,
+        icon: '📤',
+      })
+      return
     }
 
-    const blob = new Blob([data], { type: mimeType })
-    const url = window.URL.createObjectURL(blob)
+    try {
+      setIsLoading(true)
+      const propertyIds = comparisonProperties.map(p => p.id)
+
+      // First, try to get comparison data
+      let comparisonResult: any
+
+      try {
+        comparisonResult = await compareProperties()
+        if (!comparisonResult) {
+          throw new Error('Comparison failed')
+        }
+      } catch (compareError) {
+        console.error('Comparison failed:', compareError)
+        // Fallback to local data
+        comparisonResult = {
+          properties: comparisonProperties,
+          matrix: ComparisonUtils.formatComparisonData(comparisonProperties).matrix,
+          summary: {
+            total_properties: comparisonProperties.length,
+            price_range: {
+              min: Math.min(...comparisonProperties.map(p => p.price_etb || 0)),
+              max: Math.max(...comparisonProperties.map(p => p.price_etb || 0)),
+              avg: comparisonProperties.reduce((sum, p) => sum + (p.price_etb || 0), 0) / comparisonProperties.length
+            }
+          }
+        }
+        toast('Using local data for export', {
+          duration: 3000,
+          icon: '📋',
+        })
+      }
+
+      let data: string
+      let filename: string
+      let mimeType: string
+
+      if (format === 'csv') {
+        data = convertToCSV(comparisonResult)
+        filename = `comparison_${Date.now()}.csv`
+        mimeType = 'text/csv'
+      } else if (format === 'json') {
+        data = JSON.stringify(comparisonResult, null, 2)
+        filename = `comparison_${Date.now()}.json`
+        mimeType = 'application/json'
+      } else {
+        toast('PDF export will be available soon', {
+          duration: 3000,
+          icon: '📄',
+        })
+        return
+      }
+
+      downloadFile(data, filename, mimeType)
+      toast.success(`✓ Comparison exported as ${format.toUpperCase()}`, {
+        duration: 4000,
+        icon: '📤',
+      })
+    } catch (error) {
+      console.error('Export failed:', error)
+      toast.error('Unable to export comparison', {
+        duration: 4000,
+        icon: '❌',
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const downloadFile = (content: string, filename: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType })
+    const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
     link.download = filename
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
+    URL.revokeObjectURL(url)
   }
 
+  const convertToCSV = (data: any): string => {
+    if (!data || !data.matrix) return ''
+
+    const fields = data.fields || []
+    const matrix = data.matrix || {}
+    const properties = data.properties || []
+
+    const headers = ['Feature', ...properties.map((p: any, i: number) => `Property ${i + 1}`)]
+    const rows = fields.map((field: string) => {
+      const values = matrix[field] || []
+      return [field, ...values.map((v: any) =>
+        v === true ? 'Yes' : v === false ? 'No' : String(v || '-')
+      )]
+    })
+
+    return [headers, ...rows].map(row =>
+      row.map((cell: any) => `"${cell}"`).join(',')
+    ).join('\n')
+  }
+
+  // Helper functions
+  const hasEnoughProperties = comparisonProperties.length >= 2
+  const canAddMore = comparisonProperties.length < 10
+  const isInComparison = (propertyId: number) =>
+    comparisonProperties.some(p => p.id === propertyId)
+
   return {
+    // State
     comparisonProperties,
     savedComparisons,
     isLoading,
+    sessionId,
+
+    // Actions
     addToComparison,
     removeFromComparison,
-    clearComparison,
     compareProperties,
     saveComparison,
     deleteSavedComparison,
+    clearComparison,
     exportComparison,
-    canAddMore: comparisonProperties.length < 10,
-    hasEnoughProperties: comparisonProperties.length >= 2,
-    refreshComparisons: loadSavedComparisons,
-    refreshSession: loadComparisonSession
+    loadComparisonSession,
+    loadSavedComparisons,
+
+    // Helpers
+    hasEnoughProperties,
+    canAddMore,
+    isInComparison,
   }
 }

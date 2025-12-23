@@ -1,94 +1,158 @@
-// lib/api/subscriptions.ts - NEW FILE
+// lib/api/subscriptions.ts - UPDATED
 import apiClient from './client';
 import {
-    SubscriptionPlan, UserSubscription,
-    PropertyPromotionTier, PropertyPromotion
+    PropertyPromotionTier,
+    PropertyPromotion
 } from '@/lib/types/subscription';
 
+export interface PromotionTiersResponse {
+    count?: number;
+    next?: string | null;
+    previous?: string | null;
+    results?: PropertyPromotionTier[];
+    data?: PropertyPromotionTier[];
+}
+
 export const subscriptionApi = {
-    // Subscription Plans (Optional)
-    getPlans: async () => {
-        const response = await apiClient.get<{ results: SubscriptionPlan[] }>('/subscription-plans/');
-        return response.data.results;
-    },
-
-    getUserPlans: async () => {
-        const response = await apiClient.get<SubscriptionPlan[]>('/subscription-plans/for_user/');
-        return response.data;
-    },
-
-    getCurrentSubscription: async () => {
+    // Property Promotion Tiers
+    getPromotionTiers: async (): Promise<PropertyPromotionTier[]> => {
         try {
-            const response = await apiClient.get<UserSubscription>('/user-subscriptions/current/');
-            return response.data;
-        } catch (error: any) {
-            // If 404 or "No active subscription", return null
-            if (error.response?.status === 404 || error.response?.data?.detail === 'No active subscription') {
-                return null;
+            const response = await apiClient.get<PromotionTiersResponse>('/subscriptions/promotion-tiers/');
+            console.log('Promotion tiers API response:', response.data);
+
+            // Handle different response formats
+            const data = response.data;
+
+            if (Array.isArray(data)) {
+                return data;
+            } else if (data?.results && Array.isArray(data.results)) {
+                return data.results;
+            } else if (data?.data && Array.isArray(data.data)) {
+                return data.data;
+            } else if (data && typeof data === 'object') {
+                // Try to extract array from object values
+                const values = Object.values(data);
+                const arrayValue = values.find(v => Array.isArray(v));
+                if (arrayValue) {
+                    return arrayValue;
+                }
             }
+
+            console.warn('Unexpected API response format:', data);
+            return [];
+
+        } catch (error: any) {
+            console.error('Error fetching promotion tiers:', error);
             throw error;
         }
     },
 
-    subscribe: async (data: {
-        plan_id: number;
-        payment_method: string;
-        billing_cycle: 'monthly' | 'yearly';
+    // Calculate promotion price
+    calculatePromotionPrice: async (data: {
+        tier_type: string;
+        duration_days: number;
         promo_code?: string;
     }) => {
-        const response = await apiClient.post('/user-subscriptions/subscribe/', data);
+        const response = await apiClient.post('/subscriptions/property-promotions/calculate_price/', data);
         return response.data;
     },
 
-    cancelSubscription: async (subscriptionId: number) => {
-        const response = await apiClient.post(`/user-subscriptions/${subscriptionId}/cancel/`);
-        return response.data;
-    },
-
-    // Property Promotion Tiers (Required)
-    getPromotionTiers: async () => {
-        const response = await apiClient.get<PropertyPromotionTier[]>('/promotion-tiers/');
-        return response.data;
-    },
-
-    calculatePromotionPrice: async (tier_id: number, duration_days: number) => {
-        const response = await apiClient.post('/property-promotions/calculate_price/', {
-            tier_id,
-            duration_days
-        });
-        return response.data;
-    },
-
-    purchasePromotion: async (data: {
+    // Initiate promotion payment
+    initiatePromotionPayment: async (data: {
         property_id: number;
-        tier_id: number;
+        tier_type: string;
         duration_days: number;
-        payment_method: string;
+        promo_code?: string;
     }) => {
-        const response = await apiClient.post('/property-promotions/purchase/', data);
-        return response.data;
+        try {
+            console.log('Initiating payment with data:', data);
+
+            const requestData = {
+                property_id: data.property_id,
+                tier_type: data.tier_type,
+                duration_days: data.duration_days,
+                ...(data.promo_code && { promo_code: data.promo_code })
+            };
+
+            console.log('Sending to backend endpoint:', '/subscriptions/payment/initiate/');
+            console.log('Request data:', requestData);
+
+            // This should match the Django URL pattern
+            const response = await apiClient.post('/subscriptions/payment/initiate/', requestData);
+
+            console.log('Backend payment response:', response.data);
+            return response.data;
+
+        } catch (error: any) {
+            console.error('Payment initiation error details:', {
+                status: error.response?.status,
+                data: error.response?.data,
+                message: error.message
+            });
+
+            // Provide more specific error messages
+            if (error.response?.status === 404) {
+                throw new Error('Payment endpoint not found. Please check backend configuration.');
+            } else if (error.response?.status === 400) {
+                throw new Error(`Invalid request: ${error.response.data?.error || 'Bad request'}`);
+            } else if (error.response?.status === 403) {
+                throw new Error('You do not have permission to promote this property.');
+            } else if (error.response?.status === 404) {
+                throw new Error('Property or promotion tier not found.');
+            }
+
+            throw new Error(error.response?.data?.error || 'Failed to initiate payment');
+        }
     },
 
-    activatePromotion: async (promotionId: number) => {
-        const response = await apiClient.post(`/property-promotions/${promotionId}/activate/`);
-        return response.data;
+    // Verify payment
+    verifyPayment: async (params: {
+        tx_ref?: string;
+        payment_id?: string;
+        promotion_id?: string;
+        property_id?: string;  // Add this if needed
+    }) => {
+        // Log the params to see what's being sent
+        console.log('verifyPayment called with params:', params);
+
+        // Filter out undefined parameters
+        const cleanParams: Record<string, string> = {};
+
+        if (params.tx_ref) cleanParams.tx_ref = params.tx_ref;
+        if (params.payment_id) cleanParams.payment_id = params.payment_id;
+        if (params.promotion_id) cleanParams.promotion_id = params.promotion_id;
+        if (params.property_id) cleanParams.property_id = params.property_id;
+
+        console.log('cleanParams being sent:', cleanParams);
+
+        try {
+            const response = await apiClient.get('/subscriptions/payment/verify/', {
+                params: cleanParams
+            });
+            return response.data;
+        } catch (error: any) {
+            console.error('Error verifying payment:', error.response?.data || error.message);
+            throw error;
+        }
     },
 
+    // Get user promotions
     getUserPromotions: async () => {
-        const response = await apiClient.get<PropertyPromotion[]>('/property-promotions/');
+        const response = await apiClient.get<PropertyPromotion[]>('/subscriptions/property-promotions/');
         return response.data;
     },
 
     // Dashboard
-    getDashboard: async () => {
+    getPromotionsDashboard: async () => {
         const response = await apiClient.get('/subscriptions/dashboard/');
         return response.data;
     },
 
-    // Payment
-    processPayment: async (paymentId: string, transactionId: string) => {
-        const response = await apiClient.post(`/payments/${paymentId}/process/`, {
-            transaction_id: transactionId
+    // Apply promo code
+    applyPromoCode: async (code: string, amount: number) => {
+        const response = await apiClient.post('/subscriptions/apply-promo-code/', {
+            code,
+            amount
         });
         return response.data;
     }

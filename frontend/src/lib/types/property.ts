@@ -46,7 +46,7 @@ export interface Property {
   description: string
   description_amharic?: string
   property_type: string
-  listing_type: 'for_sale' | 'for_rent' | 'for_lease' | 'auction'
+  listing_type: 'for_sale' | 'for_rent'
   property_status: string
   owner: User
   agent?: User
@@ -111,12 +111,67 @@ export interface Property {
   price_display?: string
   key_features?: string[]
   comparison_score?: number
-  promotion_tier?: string  
-  promotion_duration?: number  
-  promotion_price?: number 
-  promotion_active?: boolean  
-  promotion_start?: string  
+  approval_status: 'pending' | 'approved' | 'rejected' | 'changes_requested';
+  approval_notes?: string;
+  approved_by?: User;
+  approved_at?: string;
+  rejection_reason?: string;
+  is_approved?: boolean;
+
+  // Promotion fields - UPDATED
+  promotion_tier?: string
+  promotion_duration?: number
+  promotion_price?: number
+  promotion_active?: boolean
+  promotion_start?: string
   promotion_end?: string
+  is_promoted?: boolean
+  promotion_status?: 'active' | 'pending' | 'expired'
+  promotion_priority?: number
+
+  promotion_benefits?: {
+    top_position?: number
+    email_notifications?: boolean
+    analytics_access?: boolean
+    visibility_guarantee_days?: number
+    social_media_promotion?: boolean
+    homepage_featured?: boolean
+    badge_display?: boolean
+  }
+}
+
+// Add promotion types
+export interface PromotionTier {
+  id: number
+  name: string
+  tier_type: 'basic' | 'standard' | 'premium'
+  description: string
+  price_7_days: number
+  price_30_days: number
+  price_90_days?: number
+  features: string[]
+  search_priority: number
+  homepage_featured: boolean
+  email_inclusion: boolean
+  social_media_promotion: boolean
+  badge_display: boolean
+}
+
+export interface PropertyPromotion {
+  id: number
+  promotion_id: string
+  property: number
+  property_title: string
+  tier: PromotionTier
+  original_price: number
+  discount_applied: number
+  final_price: number
+  duration_days: number
+  start_date?: string
+  end_date?: string
+  status: 'active' | 'pending' | 'expired' | 'canceled'
+  is_active: boolean
+  created_at: string
 }
 
 export interface PropertyFilters {
@@ -127,7 +182,7 @@ export interface PropertyFilters {
   max_bedrooms?: number
   min_area?: number
   max_area?: number
-  listing_type?: string
+  listing_type?: 'for_sale' | 'for_rent' | string  
   property_type?: string
   city?: number
   sub_city?: number
@@ -136,6 +191,7 @@ export interface PropertyFilters {
   has_security?: boolean
   has_air_conditioning?: boolean
   is_featured?: boolean
+  is_pet_friendly?: boolean
   has_furniture?: boolean
   is_verified?: boolean
   sort_by?: string
@@ -145,17 +201,34 @@ export interface PropertyFilters {
   min_bathrooms?: number
   furnishing_type?: string
   built_year?: number
+  is_promoted?: boolean
+  promotion_tier?: string
+  price_etb__gte?: number
+  price_etb__lte?: number
+  total_area__gte?: number
+  total_area__lte?: number
+  bedrooms?: number
+  bathrooms__gte?: number
+  ordering?: string
+  [key: string]: any
 }
 
-// lib/types/property.ts
+export interface FileDraft {
+  name: string 
+  size: number
+  type?: string
+  lastModified?: number
+  isPlaceholder: true
+  url?: string
+}
+
 export interface PropertyFormData {
-  // Basic Information
   title: string
   title_amharic?: string
   description: string
   description_amharic?: string
   property_type: string
-  listing_type: 'for_sale' | 'for_rent' | 'for_lease' | 'auction'
+  listing_type: 'for_sale' | 'for_rent'
   property_status: string
 
   // Location
@@ -204,8 +277,8 @@ export interface PropertyFormData {
   has_backup_water: boolean
 
   // Media
-  images: File[]
-  property_video?: File
+  images: (File | FileDraft)[]
+  property_video?: File | FileDraft
   virtual_tour_url?: string
   video_url?: string
 
@@ -215,10 +288,11 @@ export interface PropertyFormData {
   has_occupancy_certificate: boolean
 
   // Additional Files
-  documents: File[]
+  documents: (File | FileDraft)[]
 
   // Status
   is_premium: boolean
+  is_promoted?: boolean
   promotionTier?: string;
   promotionDuration?: number;  // 7, 30, 90 days
   promotionPrice?: number;  // Calculated price

@@ -1,4 +1,5 @@
 // lib/types/user.ts
+// lib/types/user.ts
 export interface User {
   id: number;
   email: string;
@@ -19,8 +20,24 @@ export interface User {
   profile_completion: number;
   created_at: string;
   updated_at: string;
+  
+  // Admin properties
   is_staff?: boolean;
   is_superuser?: boolean;
+  is_admin_user?: boolean;
+  
+  // Activity tracking fields - ADD THESE
+  last_activity?: string;
+  total_logins?: number;
+  total_properties_viewed?: number;
+  total_properties_saved?: number;
+  total_inquiries_sent?: number;
+  total_searches?: number;
+  
+  // Helper methods
+  get_full_name?: () => string;
+  
+  // Other properties
   email_verified?: boolean;
   phone_verified?: boolean;
   is_approved?: boolean;

@@ -2,7 +2,38 @@
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://localhost:8000/api'
+
+const getCSRFToken = () => {
+  const name = 'csrftoken';
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+};
+
+// Setup CSRF token before requests
+const setupCSRF = async () => {
+  try {
+    // Get CSRF token by calling the endpoint
+    await axios.get(`${API_BASE_URL}/auth/csrf/`, {
+      withCredentials: true,
+    });
+  } catch (error) {
+    console.error('Failed to get CSRF token:', error);
+  }
+};
+
+// Initialize CSRF token on app load (optional)
+setupCSRF();
 
 // Regular API client for JSON data
 export const apiClient = axios.create({
@@ -22,17 +53,16 @@ export const uploadClient = axios.create({
   withCredentials: true,
 })
 
-// Add auth token to both clients
-const addAuthToken = (config: any) => {
-  const token = localStorage.getItem('access_token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+const addCSRFToken = (config: any) => {
+  const csrfToken = getCSRFToken();
+  if (csrfToken) {
+    config.headers['X-CSRFToken'] = csrfToken;
   }
-  return config
+  return config;
 }
 
-apiClient.interceptors.request.use(addAuthToken)
-uploadClient.interceptors.request.use(addAuthToken)
+apiClient.interceptors.request.use(addCSRFToken)
+uploadClient.interceptors.request.use(addCSRFToken)
 
 // Response interceptor for error handling
 const errorHandler = async (error: any) => {

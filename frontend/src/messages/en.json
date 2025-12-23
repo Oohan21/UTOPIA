@@ -1,0 +1,528 @@
+{
+  "common": {
+    "welcome": "Welcome to Utopia",
+    "search": "Search",
+    "properties": "Properties",
+    "compare": "Compare",
+    "messages": "Messages",
+    "notifications": "Notifications",
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "myAccount": "My Account",
+    "myListings": "My Listings",
+    "adminPanel": "Admin Panel",
+    "logOut": "Log Out",
+    "language": "Language",
+    "theme": "Theme",
+    "searchProperties": "Search properties...",
+    "home": "Home",
+    "save": "Save",
+    "cancel": "Cancel",
+    "loginRequired": "Please login to continue",
+    "close": "Close",
+    "active": "Active"
+  },
+  "home": {
+    "title": "Find Your Perfect Property in Ethiopia",
+    "subtitle": "UTOPIA connects you with the best real estate opportunities. Browse thousands of verified properties, get instant valuations, and make informed decisions.",
+    "browseProperties": "Browse Properties",
+    "getValuation": "Get Valuation",
+    "whyChoose": "Why Choose UTOPIA",
+    "wideSelection": "Wide Selection",
+    "wideSelectionDesc": "Thousands of properties across Ethiopia",
+    "marketInsights": "Market Insights",
+    "marketInsightsDesc": "Real-time market data and trends",
+    "verifiedListings": "Verified Listings",
+    "verifiedListingsDesc": "All properties are thoroughly vetted",
+    "instantValuation": "Instant Valuation",
+    "instantValuationDesc": "Get property valuations in minutes",
+    "featuredProperties": "Featured Properties",
+    "featuredPropertiesDesc": "Handpicked properties with great value",
+    "viewAll": "View All",
+    "noFeatured": "No Featured Properties",
+    "noFeaturedDesc": "Check back soon for new listings",
+    "marketInsightsTitle": "Market Insights",
+    "marketInsightsSubtitle": "Real-time market data and trends",
+    "marketDataUnavailable": "Market Data Unavailable",
+    "marketDataUnavailableDesc": "Market statistics will be available soon",
+    "readyToFind": "Ready to Find Your Dream Property?",
+    "joinThousands": "Join thousands of satisfied buyers and sellers on UTOPIA",
+    "signUpFree": "Sign Up Free",
+    "browseListings": "Browse Listings"
+  },
+  "property": {
+    "forSale": "For Sale",
+    "forRent": "For Rent",
+    "bedrooms": "Bedrooms",
+    "bathrooms": "Bathrooms",
+    "area": "Area",
+    "price": "Price",
+    "viewDetails": "View Details",
+    "save": "Save",
+    "share": "Share",
+    "compare": "Compare",
+    "contact": "Contact",
+    "perMonth": "/mo",
+    "areaUnit": "m²",
+    "priceNegotiable": "Price Negotiable",
+    "verifiedSeller": "Verified Seller",
+    "propertyOwner": "Property Owner",
+    "contactInformation": "Contact Information",
+    "contactDetails": "Contact Details",
+    "phone": "Phone",
+    "email": "Email",
+    "memberSince": "Member Since",
+    "saveAndShare": "Save & Share",
+    "savedToFavorites": "Saved to Favorites",
+    "saveProperty": "Save Property",
+    "inComparison": "In Comparison",
+    "addToComparison": "Add to Comparison",
+    "shareProperty": "Share Property",
+    "copyLink": "Copy Link",
+    "printDetails": "Print Details",
+    "downloadPDF": "Download PDF",
+    "propertyStats": "Property Stats",
+    "propertyID": "Property ID",
+    "listed": "Listed",
+    "views": "views",
+    "inquiries": "inquiries",
+    "saved": "saved",
+    "status": "Status",
+    "statuses": {
+      "available": "Available",
+      "sold": "Sold",
+      "pending": "Pending",
+      "rented": "Rented"
+    },
+    "features": {
+      "parking": "Parking",
+      "garden": "Garden",
+      "security": "Security",
+      "furnished": "Furnished",
+      "ac": "A/C",
+      "internet": "Internet",
+      "generator": "Generator",
+      "gym": "Gym",
+      "petFriendly": "Pet Friendly",
+      "swimmingPool": "Swimming Pool",
+      "elevator": "Elevator",
+      "accessible": "Accessible",
+      "heating": "Heating",
+      "waterBackup": "Water Backup",
+      "conferenceRoom": "Conference Room"
+    },
+    "documents": {
+      "titleDeed": "Title Deed",
+      "constructionPermit": "Construction Permit",
+      "occupancyCertificate": "Occupancy Certificate"
+    },
+    "actions": {
+      "callNow": "Call Now",
+      "whatsapp": "WhatsApp",
+      "sendMessage": "Send Message",
+      "contactUnavailable": "Contact Unavailable",
+      "sendDetailedInquiry": "Send Detailed Inquiry"
+    }
+  },
+  "propertyDetail": {
+    "bedrooms": "Bedrooms",
+    "bathrooms": "Bathrooms",
+    "areaUnit": "m²",
+    "floors": "floors",
+    "floor": "floor",
+    "built": "Built",
+    "features": {
+      "parking": "Parking",
+      "garden": "Garden",
+      "security": "Security",
+      "furnished": "Furnished",
+      "ac": "A/C",
+      "internet": "Internet",
+      "generator": "Generator",
+      "gym": "Gym",
+      "petFriendly": "Pet Friendly",
+      "swimmingPool": "Swimming Pool",
+      "elevator": "Elevator",
+      "accessible": "Wheelchair Accessible",
+      "heating": "Heating",
+      "waterBackup": "Water Backup",
+      "conferenceRoom": "Conference Room"
+    },
+    "documents": {
+      "titleDeed": "Title Deed",
+      "constructionPermit": "Construction Permit",
+      "occupancyCertificate": "Occupancy Certificate"
+    },
+    "perMonth": "/mo",
+    "priceNegotiable": "Price Negotiable",
+    "verifiedSeller": "Verified Seller",
+    "propertyOwner": "Property Owner",
+    "contactInformation": "Contact Information",
+    "contactDetails": "Contact Details",
+    "phone": "Phone",
+    "email": "Email",
+    "memberSince": "Member Since",
+    "saveAndShare": "Save & Share",
+    "savedToFavorites": "Saved to Favorites",
+    "saveProperty": "Save Property",
+    "inComparison": "In Comparison",
+    "addToComparison": "Add to Comparison",
+    "shareProperty": "Share Property",
+    "copyLink": "Copy Link",
+    "printDetails": "Print Details",
+    "downloadPDF": "Download PDF",
+    "propertyStats": "Property Stats",
+    "propertyID": "Property ID",
+    "listed": "Listed",
+    "views": "views",
+    "inquiries": "inquiries",
+    "saved": "saved",
+    "status": "Status",
+    "statuses": {
+      "available": "Available",
+      "sold": "Sold",
+      "pending": "Pending",
+      "rented": "Rented"
+    },
+    "safetyTipsTitle": "Safety Tips",
+    "safetyTips": {
+      "meetPublic": "Meet in public places first",
+      "verifyDocuments": "Verify property documents thoroughly",
+      "neverWire": "Never wire money without inspection",
+      "reportSuspicious": "Report suspicious activity immediately"
+    },
+    "gallery": {
+      "image": "Image",
+      "of": "of",
+      "photos": "photos",
+      "video": "video",
+      "videoTour": "Video Tour",
+      "noImages": "No images available",
+      "playVideo": "Play Video",
+      "cover": "Cover",
+      "propertyVideoTour": "Property Video Tour",
+      "immersiveVideoTour": "Immersive video tour of",
+      "browserNoSupport": "Your browser does not support the video tag.",
+      "downloadVideo": "Download Video"
+    },
+    "promotion": {
+      "standardPromoted": "Standard Promoted",
+      "premiumPromoted": "Premium Promoted",
+      "standardExposureFor": "Standard exposure for",
+      "premiumVisibilityFor": "Premium visibility for",
+      "features": {
+        "top20InSearch": "Top 20 in search",
+        "emailNotifications": "Email notifications",
+        "promotedBadge": "Promoted badge",
+        "topPosition": "TOP position in search",
+        "homepageFeatured": "Homepage featured section",
+        "socialMediaPromotion": "Social media promotion"
+      },
+      "left": "left",
+      "listing": "Listing",
+      "expires": "Expires",
+      "days": "days",
+      "activePromotion": "Active Promotion",
+      "propertyCurrentlyPromoted": "Your property is currently promoted with enhanced visibility",
+      "promotionProgress": "Promotion Progress",
+      "daysRemaining": "days remaining",
+      "totalViews": "Total Views",
+      "daysLeft": "Days Left",
+      "activeBenefits": "Active Benefits",
+      "benefits": {
+        "top20InSearch": "Top 20 in search results",
+        "emailNotification": "Email notification to matching buyers",
+        "promotedBadge": "Promoted badge display",
+        "topPosition": "TOP position in search",
+        "homepageFeatured": "Homepage featured section",
+        "socialMediaAdvertising": "Social media advertising"
+      },
+      "started": "Started",
+      "cancelWarning": "Cancelling will remove promotion benefits immediately",
+      "cancelPromotion": "Cancel Promotion",
+      "extendPromotion": "Extend Promotion",
+      "hideAnalytics": "Hide Analytics",
+      "viewAnalytics": "View Promotion Analytics",
+      "hideBenefits": "Hide Promotion Benefits",
+      "viewBenefits": "View Promotion Benefits"
+    },
+    "stats": {
+      "totalViews": "Total Views",
+      "inquiries": "Inquiries"
+    },
+    "actions": {
+      "callNow": "Call Now",
+      "whatsapp": "WhatsApp",
+      "sendMessage": "Send Message",
+      "contactUnavailable": "Contact Unavailable",
+      "sendDetailedInquiry": "Send Detailed Inquiry"
+    },
+    "loading": {
+      "propertyDetails": "Loading property details..."
+    },
+    "errors": {
+      "propertyNotFound": "Property Not Found",
+      "propertyNotFoundDesc": "The property you're looking for doesn't exist or has been removed."
+    },
+    "buttons": {
+      "browseProperties": "Browse Properties",
+      "goBack": "Go Back",
+      "editAndResubmit": "Edit & Resubmit",
+      "editProperty": "Edit Property",
+      "deactivate": "Deactivate",
+      "activate": "Activate",
+      "viewAll": "View All",
+      "browseAll": "Browse All",
+      "backToListings": "Back to Listings"
+    },
+    "toasts": {
+      "loginRequired": "Please login to continue",
+      "propertySaved": "Property saved to favorites!",
+      "removedFromSaved": "Removed from saved properties",
+      "saveFailed": "Failed to save property",
+      "sharedSuccess": "Shared successfully!",
+      "linkCopied": "Link copied to clipboard!",
+      "copyFailed": "Failed to copy link",
+      "noContactInfo": "No contact information available",
+      "enterMessage": "Please enter a message",
+      "inquirySent": "Inquiry sent successfully! The owner will contact you soon.",
+      "inquiryFailed": "Failed to send inquiry",
+      "addedToComparison": "Added to comparison!",
+      "comparisonFailed": "Failed to add to comparison",
+      "printDialog": "Print dialog opened",
+      "downloading": "Downloading property details...",
+      "promotionActivated": "Promotion activated successfully! Your property will get more visibility.",
+      "promotionCancelled": "Promotion cancelled successfully",
+      "promotionCancelFailed": "Failed to cancel promotion",
+      "listingActivated": "Listing activated successfully!",
+      "listingDeactivated": "Listing deactivated successfully!",
+      "activationFailed": "Failed to activate listing",
+      "messageSent": "Message sent successfully!"
+    },
+    "share": {
+      "defaultTitle": "Check out this property"
+    },
+    "whatsapp": {
+      "message": "Hi, I'm interested in your property:"
+    },
+    "approval": {
+      "pending": {
+        "title": "Pending Approval",
+        "description": "Your listing is awaiting admin approval. It will be visible to the public once approved.",
+        "adminNotes": "Admin Notes:"
+      },
+      "rejected": {
+        "title": "Listing Rejected",
+        "defaultMessage": "Your listing was rejected. Please contact support for details.",
+        "editAndResubmit": "Edit & Resubmit"
+      },
+      "changesRequested": {
+        "title": "Changes Requested",
+        "description": "The admin has requested changes to your listing:",
+        "defaultMessage": "Please review your listing details and make necessary changes.",
+        "makeChanges": "Make Changes",
+        "contactSupport": "Contact Support"
+      },
+      "approved": {
+        "title": "Approved & Ready",
+        "description": "Your listing is approved! Activate it to make it visible to the public.",
+        "activateListing": "Activate Listing"
+      }
+    },
+    "sections": {
+      "propertyFeatures": "Property Features",
+      "description": "Description",
+      "descriptionAmharic": "Description in Amharic",
+      "similarProperties": "Similar Properties",
+      "similarPropertiesDesc": "Other properties you might be interested in",
+      "recommended": "Recommended For You",
+      "recommendedDesc": "Based on your preferences and browsing history"
+    },
+    "tabs": {
+      "features": "Features",
+      "amenities": "Amenities",
+      "location": "Location",
+      "documents": "Documents",
+      "noFeatures": "No additional features listed",
+      "virtualTour": "Virtual Tour",
+      "view3dTour": "View 3D Virtual Tour",
+      "noAmenities": "No amenities listed",
+      "address": "Address",
+      "zipCode": "Zip Code",
+      "fullscreenMap": "Fullscreen Map",
+      "locationMap": "Location Map",
+      "noCoordinates": "Exact location coordinates not provided",
+      "privacyMessage": "The property owner has not provided exact GPS coordinates for privacy. Contact the owner for precise location details.",
+      "availableForVerification": "Available for verification",
+      "available": "Available",
+      "noDocuments": "No Documents Available",
+      "contactOwner": "Contact the property owner for documentation"
+    },
+    "disclaimer": {
+      "title": "Disclaimer",
+      "message": "Information provided is for general guidance only. All measurements are approximate. Please verify all details with the property owner before making any decisions.",
+      "propertyId": "Property ID",
+      "lastUpdated": "Last updated"
+    }
+  },
+  "listings": {
+    "title": "Browse Properties",
+    "subtitle": "Find your dream property",
+    "searchPlaceholder": "Search properties, locations, or keywords...",
+    "filter": "Filters",
+    "showFilters": "Show Filters",
+    "hideFilters": "Hide Filters",
+    "sortBy": "Sort by",
+    "featuredLabel": "Featured",
+    "verified": "Verified",
+    "amenities": "Amenities",
+    "features": "Features",
+    "viewMode": {
+      "grid": "Grid View",
+      "list": "List View",
+      "map": "Map View"
+    },
+    "propertyTypes": {
+      "all": "All Types",
+      "house": "House",
+      "apartment": "Apartment",
+      "villa": "Villa",
+      "commercial": "Commercial",
+      "land": "Land",
+      "office": "Office Space",
+      "warehouse": "Warehouse",
+      "farm": "Farm",
+      "hotel": "Hotel",
+      "other": "Other"
+    },
+    "listingTypes": {
+      "all": "All Listings",
+      "for_sale": "For Sale",
+      "for_rent": "For Rent"
+    },
+    "bedrooms": {
+      "any": "Any Bedrooms",
+      "1": "1+ Bedrooms",
+      "2": "2+ Bedrooms",
+      "3": "3+ Bedrooms",
+      "4": "4+ Bedrooms",
+      "5": "5+ Bedrooms"
+    },
+    "bathrooms": {
+      "any": "Any Bathrooms",
+      "1": "1+ Bathrooms",
+      "2": "2+ Bathrooms",
+      "3": "3+ Bathrooms"
+    },
+    "sortOptions": {
+      "recommended": "Recommended",
+      "newest": "Newest First",
+      "priceLowToHigh": "Price: Low to High",
+      "priceHighToLow": "Price: High to Low",
+      "largest": "Largest First",
+      "mostViewed": "Most Viewed",
+      "featured": "Featured First"
+    },
+    "filters": {
+      "advancedFilters": "Advanced Filters",
+      "location": "Location",
+      "priceRange": "Price Range (ETB)",
+      "areaRange": "Area (m²)",
+      "quickFilters": "Quick Filters",
+      "promotedOnly": "Promoted Only",
+      "featuredOnly": "Featured Only",
+      "verifiedOnly": "Verified Only",
+      "selectCity": "Select City",
+      "allCities": "All Cities",
+      "selectArea": "Select Area",
+      "allAreas": "All Areas",
+      "min": "Min",
+      "max": "Max"
+    },
+    "actions": {
+      "resetAll": "Reset All",
+      "saveSearch": "Save Search",
+      "listProperty": "List Property",
+      "viewAllFeatured": "View All Featured",
+      "compareNow": "Compare Now",
+      "hide": "Hide",
+      "fullscreen": "Fullscreen",
+      "exitFullscreen": "Exit Fullscreen",
+      "resetFilters": "Reset Filters",
+      "refreshPage": "Refresh Page",
+      "inComparison": "In Comparison",
+      "propertySaved": "Property saved!",
+      "removedFromSaved": "Removed from saved",
+      "addedToComparison": "Added to comparison",
+      "listed": "Listed"
+    },
+    "results": {
+      "propertiesFound": "{count} properties found",
+      "showing": "Showing {start} to {end} of {total} properties",
+      "activeFilters": "{count} active filter{count, plural, one {} other {s}}",
+      "mapViewCount": "{count} properties with location data",
+      "noProperties": "No properties found",
+      "noMatch": "No properties match \"{search}\". Try adjusting your search criteria.",
+      "adjustFilters": "Try adjusting your filters or search criteria",
+      "loading": "Loading properties..."
+    },
+    "featured": {
+      "title": "Featured Properties",
+      "featuredCount": "{count} featured"
+    },
+    "promotion": {
+      "basic": "Basic",
+      "standard": "Standard",
+      "premium": "Premium",
+      "promoted": "Promoted",
+      "title": "Get 3-5x More Views With Property Promotion",
+      "description": "Promote your listing to appear at the top of search results and reach more potential buyers.",
+      "benefits": {
+        "topPosition": "Top Search Position",
+        "featuredBadge": "Featured Badge",
+        "prioritySupport": "Priority Support",
+        "analytics": "Analytics Dashboard"
+      },
+      "badges": {
+        "basic": "Basic",
+        "standard": "Standard",
+        "premium": "Premium"
+      },
+      "viewPlans": "View Promotion Plans"
+    },
+    "searchHistory": {
+      "recentSearches": "Recent Searches",
+      "clearAll": "Clear All",
+      "popularSearches": "Popular Searches",
+      "searchTips": "Search Tips",
+      "historyEmpty": "Your search history will appear here"
+    },
+    "tips": {
+      "title": "Tips for Buyers & Sellers",
+      "verifyDocuments": "Verify Documents",
+      "verifyDocumentsDesc": "Always check for title deeds, construction permits, and occupancy certificates before purchasing.",
+      "promoteListing": "Promote Your Listing",
+      "promoteListingDesc": "Get 3-5x more views by promoting your property. Featured listings sell faster.",
+      "compareOptions": "Compare Options",
+      "compareOptionsDesc": "Use our comparison tool to evaluate multiple properties side by side."
+    },
+    "map": {
+      "propertiesOnMap": "Properties on Map",
+      "legend": "Map Legend",
+      "layers": "Layers",
+      "standard": "Standard",
+      "promoted": "Promoted",
+      "featured": "Featured"
+    },
+    "stats": {
+      "views": "views",
+      "inquiries": "inquiries"
+    },
+    "errors": {
+      "unableToLoad": "Unable to Load Properties",
+      "errorLoading": "There was an error loading the properties. Please try again.",
+      "saveFailed": "Failed to save property",
+      "addToComparisonFailed": "Failed to add to comparison"
+    }
+  }
+}

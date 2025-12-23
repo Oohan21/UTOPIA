@@ -1,0 +1,528 @@
+{
+  "common": {
+    "welcome": "እንኳን ወደ ዩቶፒያ በደህና መጡ",
+    "search": "ፈልግ",
+    "properties": "ንብረቶች",
+    "compare": "አነፃፅር",
+    "messages": "መልዕክቶች",
+    "notifications": "ማሳወቂያዎች",
+    "signIn": "ግባ",
+    "signUp": "ተመዝገብ",
+    "myAccount": "የእኔ መለያ",
+    "myListings": "የእኔ ዝርዝሮች",
+    "adminPanel": "የአስተዳደር ፓነል",
+    "logOut": "ውጣ",
+    "language": "ቋንቋ",
+    "theme": "ገጽታ",
+    "searchProperties": "ንብረቶችን ፈልግ...",
+    "home": "መነሻ",
+    "save": "አስቀምጥ",
+    "cancel": "ሰርዝ",
+    "loginRequired": "እባክዎ ይግቡ",
+    "close": "ገጠመ",
+    "active": "ንቁ"
+  },
+  "home": {
+    "title": "በኢትዮጵያ ተስማሚ ንብረትዎን ያግኙ",
+    "subtitle": "ዩቶፒያ ከተሻለው የሪል እስቴት እድል ጋር ያገናኝዎታል። በሺዎች የሚቆጠሩ የተረጋገጡ ንብረቶችን ይመልከቱ፣ በፍጥነት ዋጋ መወሰን ያግኙ እና በተመሰረተ መረጃ ውሳኔ ይስጡ።",
+    "browseProperties": "ንብረቶችን ይመልከቱ",
+    "getValuation": "ዋጋ ይወስኑ",
+    "whyChoose": "ለምን ዩቶፒያን መምረጥ",
+    "wideSelection": "ሰፊ ምርጫ",
+    "wideSelectionDesc": "በመላው ኢትዮጵያ በሺዎች የሚቆጠሩ ንብረቶች",
+    "marketInsights": "የገበያ ግንዛቤ",
+    "marketInsightsDesc": "በቀጥታ የገበያ መረጃ እና አዝማሚያዎች",
+    "verifiedListings": "የተረጋገጡ ዝርዝሮች",
+    "verifiedListingsDesc": "ሁሉም ንብረቶች በደንብ ይመረመራሉ",
+    "instantValuation": "በፍጥነት ዋጋ መወሰን",
+    "instantValuationDesc": "የንብረት ዋጋ በጥቂቝ ደቂቃዎች ውስጥ ይወስኑ",
+    "featuredProperties": "ልዩ ንብረቶች",
+    "featuredPropertiesDesc": "በትልቅ ዋጋ የተመረጡ ንብረቶች",
+    "viewAll": "ሁሉንም ይመልከቱ",
+    "noFeatured": "ምንም ልዩ ንብረቶች የሉም",
+    "noFeaturedDesc": "ለአዲስ ዝርዝሮች ቆይተው ይመልከቱ",
+    "marketInsightsTitle": "የገበያ ግንዛቤ",
+    "marketInsightsSubtitle": "በቀጥታ የገበያ መረጃ እና አዝማሚያዎች",
+    "marketDataUnavailable": "የገበያ መረጃ አይገኝም",
+    "marketDataUnavailableDesc": "የገበያ ስታቲስቲክስ በቅርቡ ይገኛል",
+    "readyToFind": "የህልምዎን ንብረት ለማግኘት ዝግጁ ነዎት?",
+    "joinThousands": "በሺዎች የሚቆጠሩ የተደሰቱ ገዢዎች እና የሚሸጡ ሰዎች በዩቶፒያ ይቀላቀሉ",
+    "signUpFree": "በነፃ ይመዝገቡ",
+    "browseListings": "ዝርዝሮችን ይመልከቱ"
+  },
+  "property": {
+    "forSale": "ለመሸጥ",
+    "forRent": "ለጥገና",
+    "bedrooms": "ክፍሎች",
+    "bathrooms": "መጸዳጃ ቤቶች",
+    "area": "አካባቢ",
+    "price": "ዋጋ",
+    "viewDetails": "ዝርዝሮችን ይመልከቱ",
+    "save": "አስቀምጥ",
+    "share": "አጋራ",
+    "compare": "አነፃፅር",
+    "contact": "አግኙ",
+    "perMonth": "/ሰለስ",
+    "areaUnit": "ሜ²",
+    "priceNegotiable": "ዋጋ የሚወሳደር",
+    "verifiedSeller": "የተረጋገጠ መሸጫ",
+    "propertyOwner": "የንብረት ባለቤት",
+    "contactInformation": "የመገናኘት መረጃ",
+    "contactDetails": "የመገናኘት ዝርዝሮች",
+    "phone": "ስልክ",
+    "email": "ኢሜይል",
+    "memberSince": "ከዚህ ጊዜ ጀምሮ አባል",
+    "saveAndShare": "አስቀምጥ እና አጋራ",
+    "savedToFavorites": "ወደ አድናቂዎች ተቀምጧል",
+    "saveProperty": "ንብረት አስቀምጥ",
+    "inComparison": "በንፅፅር ውስጥ",
+    "addToComparison": "ወደ ንፅፅር ጨምር",
+    "shareProperty": "ንብረት አጋራ",
+    "copyLink": "ሊንክ ቅዳ",
+    "printDetails": "ዝርዝሮች አተም",
+    "downloadPDF": "PDF አውርድ",
+    "propertyStats": "የንብረት ስታቲስቲክስ",
+    "propertyID": "የንብረት መለያ",
+    "listed": "ተዘርዝሯል",
+    "views": "እይታዎች",
+    "inquiries": "ጥያቄዎች",
+    "saved": "ተቀምጧል",
+    "status": "ሁኔታ",
+    "statuses": {
+      "available": "ይገኛል",
+      "sold": "ተሸጧል",
+      "pending": "በመጠባበቅ ላይ",
+      "rented": "ተከራይቷል"
+    },
+    "features": {
+      "parking": "መኪና ማቆሚያ",
+      "garden": "አትክልት",
+      "security": "ደህንነት",
+      "furnished": "ዕቃ ያለው",
+      "ac": "ኤር ኮንዲሽን",
+      "internet": "ኢንተርኔት",
+      "generator": "ጄኔሬተር",
+      "gym": "ጂም",
+      "petFriendly": "እንስሳት ማረፊያ",
+      "swimmingPool": "ማሰሻ ገንቢ",
+      "elevator": "ሊፍት",
+      "accessible": "ተደራሽ",
+      "heating": "ማሞቂያ",
+      "waterBackup": "ውሃ ማጠራቀሚያ",
+      "conferenceRoom": "ስብሰባ ክፍል"
+    },
+    "documents": {
+      "titleDeed": "የቤት ሰርተፊኬት",
+      "constructionPermit": "የግንባታ ፈቃድ",
+      "occupancyCertificate": "የቤት ኪራይ የማስረጃ ወረቀት"
+    },
+    "actions": {
+      "callNow": "አሁን ይደውሉ",
+      "whatsapp": "ዋትስአፕ",
+      "sendMessage": "መልእክት ይላኩ",
+      "contactUnavailable": "የመገናኘት መረጃ የለም",
+      "sendDetailedInquiry": "ዝርዝር ጥያቄ ይላኩ"
+    }
+  },
+  "propertyDetail": {
+    "bedrooms": "ክፍሎች",
+    "bathrooms": "መጸዳጃ ቤቶች",
+    "areaUnit": "ሜ²",
+    "floors": "ፎቆች",
+    "floor": "ፎቅ",
+    "built": "ተገንብቷል",
+    "features": {
+      "parking": "መኪና ማቆሚያ",
+      "garden": "አትክልት",
+      "security": "ደህንነት",
+      "furnished": "ዕቃ ያለው",
+      "ac": "ኤር ኮንዲሽን",
+      "internet": "ኢንተርኔት",
+      "generator": "ጄኔሬተር",
+      "gym": "ጂም",
+      "petFriendly": "እንስሳት ማረፊያ",
+      "swimmingPool": "ማሰሻ ገንቢ",
+      "elevator": "ሊፍት",
+      "accessible": "ተደራሽ",
+      "heating": "ማሞቂያ",
+      "waterBackup": "ውሃ ማጠራቀሚያ",
+      "conferenceRoom": "ስብሰባ ክፍል"
+    },
+    "documents": {
+      "titleDeed": "የቤት ሰርተፊኬት",
+      "constructionPermit": "የግንባታ ፈቃድ",
+      "occupancyCertificate": "የቤት ኪራይ የማስረጃ ወረቀት"
+    },
+    "perMonth": "/ሰለስ",
+    "priceNegotiable": "ዋጋ የሚወሳደር",
+    "verifiedSeller": "የተረጋገጠ መሸጫ",
+    "propertyOwner": "የንብረት ባለቤት",
+    "contactInformation": "የመገናኘት መረጃ",
+    "contactDetails": "የመገናኘት ዝርዝሮች",
+    "phone": "ስልክ",
+    "email": "ኢሜይል",
+    "memberSince": "ከዚህ ጊዜ ጀምሮ አባል",
+    "saveAndShare": "አስቀምጥ እና አጋራ",
+    "savedToFavorites": "ወደ አድናቂዎች ተቀምጧል",
+    "saveProperty": "ንብረት አስቀምጥ",
+    "inComparison": "በንፅፅር ውስጥ",
+    "addToComparison": "ወደ ንፅፅር ጨምር",
+    "shareProperty": "ንብረት አጋራ",
+    "copyLink": "ሊንክ ቅዳ",
+    "printDetails": "ዝርዝሮች አተም",
+    "downloadPDF": "PDF አውርድ",
+    "propertyStats": "የንብረት ስታቲስቲክስ",
+    "propertyID": "የንብረት መለያ",
+    "listed": "ተዘርዝሯል",
+    "views": "እይታዎች",
+    "inquiries": "ጥያቄዎች",
+    "saved": "ተቀምጧል",
+    "status": "ሁኔታ",
+    "statuses": {
+      "available": "ይገኛል",
+      "sold": "ተሸጧል",
+      "pending": "በመጠባበቅ ላይ",
+      "rented": "ተከራይቷል"
+    },
+    "safetyTipsTitle": "የደህንነት ምክሮች",
+    "safetyTips": {
+      "meetPublic": "መጀመሪያ በህዝብ ቦታዎች ይገናኙ",
+      "verifyDocuments": "የንብረት ሰነዶችን በደንብ ያረጋግጡ",
+      "neverWire": "ከመመርመርዎ በፊት ገንዘብ አይላኩ",
+      "reportSuspicious": "ወዲያውኑ አግባብነት የሌለው እንቅስቃሴ ሪፖርት ያድርጉ"
+    },
+    "gallery": {
+      "image": "ምስል",
+      "of": "ከ",
+      "photos": "ፎቶዎች",
+      "video": "ቪዲዮ",
+      "videoTour": "ቪዲዮ ጉብኝት",
+      "noImages": "ምንም ምስሎች የሉም",
+      "playVideo": "ቪዲዮ ማጫወት",
+      "cover": "ሽፋን",
+      "propertyVideoTour": "የንብረት ቪዲዮ ጉብኝት",
+      "immersiveVideoTour": "ውበት ያለው ቪዲዮ ጉብኝት የ",
+      "browserNoSupport": "አሳሽዎ ቪዲዮ መለያውን አይደገፍም።",
+      "downloadVideo": "ቪዲዮ አውርድ"
+    },
+    "promotion": {
+      "standardPromoted": "መደበኛ የተረታ",
+      "premiumPromoted": "ፕሪሚየም የተረታ",
+      "standardExposureFor": "መደበኛ እይታ ለ",
+      "premiumVisibilityFor": "ፕሪሚየም እይታ ለ",
+      "features": {
+        "top20InSearch": "በፍለጋ ውስጥ ከ20 በላይ",
+        "emailNotifications": "ኢሜይል ማሳወቂያዎች",
+        "promotedBadge": "የተረታ ምልክት",
+        "topPosition": "በፍለጋ ውስጥ ከፍተኛ ቦታ",
+        "homepageFeatured": "የመነሻ ገጽ ልዩ ክፍል",
+        "socialMediaPromotion": "ማህበራዊ ሚዲያ ማስተዋወቂያ"
+      },
+      "left": "ቀረ",
+      "listing": "ዝርዝር",
+      "expires": "ያበቃል",
+      "days": "ቀናት",
+      "activePromotion": "ንቁ ማስተዋወቂያ",
+      "propertyCurrentlyPromoted": "ንብረትዎ በአሁኑ ጊዜ ከፍ ያለ እይታ ጋር ተረቷል",
+      "promotionProgress": "የማስተዋወቂያ ሂደት",
+      "daysRemaining": "ቀናት ቀርተዋል",
+      "totalViews": "ጠቅላላ እይታዎች",
+      "daysLeft": "ቀርተው ያሉ ቀናት",
+      "activeBenefits": "ንቁ ጥቅሞች",
+      "benefits": {
+        "top20InSearch": "በፍለጋ ውጤቶች ውስጥ ከ20 በላይ",
+        "emailNotification": "ለሚመስሉ ገዢዎች ኢሜይል ማሳወቂያ",
+        "promotedBadge": "የተረታ ምልክት ማሳየት",
+        "topPosition": "በፍለጋ ውስጥ ከፍተኛ ቦታ",
+        "homepageFeatured": "የመነሻ ገጽ ልዩ ክፍል",
+        "socialMediaAdvertising": "ማህበራዊ ሚዲያ ማስተዋወቂያ"
+      },
+      "started": "ጀመረ",
+      "cancelWarning": "ማቆም የማስተዋወቂያ ጥቅሞችን ወዲያውኑ ያስወግዳል",
+      "cancelPromotion": "ማስተዋወቂያ አቁም",
+      "extendPromotion": "ማስተዋወቂያ አራዝም",
+      "hideAnalytics": "ትንታኔዎችን ደብቅ",
+      "viewAnalytics": "የማስተዋወቂያ ትንታኔዎችን ይመልከቱ",
+      "hideBenefits": "ጥቅሞችን ደብቅ",
+      "viewBenefits": "ጥቅሞችን ይመልከቱ"
+    },
+    "stats": {
+      "totalViews": "ጠቅላላ እይታዎች",
+      "inquiries": "ጥያቄዎች"
+    },
+    "actions": {
+      "callNow": "አሁን ይደውሉ",
+      "whatsapp": "ዋትስአፕ",
+      "sendMessage": "መልእክት ይላኩ",
+      "contactUnavailable": "የመገናኘት መረጃ የለም",
+      "sendDetailedInquiry": "ዝርዝር ጥያቄ ይላኩ"
+    },
+    "loading": {
+      "propertyDetails": "የንብረት ዝርዝሮች በመጫን ላይ..."
+    },
+    "errors": {
+      "propertyNotFound": "ንብረት አልተገኘም",
+      "propertyNotFoundDesc": "የሚፈልጉት ንብረት የለም ወይም ተወግዷል።"
+    },
+    "buttons": {
+      "browseProperties": "ንብረቶችን ይመልከቱ",
+      "goBack": "ወደኋላ ተመለስ",
+      "editAndResubmit": "አርትዕ እና እንደገና አስገባ",
+      "editProperty": "ንብረት አርትዕ",
+      "deactivate": "አቦዝን",
+      "activate": "ንቁ አድርግ",
+      "viewAll": "ሁሉንም ይመልከቱ",
+      "browseAll": "ሁሉንም ይመልከቱ",
+      "backToListings": "ወደ ዝርዝሮች ተመለስ"
+    },
+    "toasts": {
+      "loginRequired": "እባክዎ ይግቡ",
+      "propertySaved": "ንብረቱ ወደ አድናቂዎች ተቀምጧል!",
+      "removedFromSaved": "ከተቀመጡ ንብረቶች ተወግዷል",
+      "saveFailed": "ንብረቱን ማስቀመጥ አልተቻለም",
+      "sharedSuccess": "በተሳካ ሁኔታ ተካፈለ!",
+      "linkCopied": "ሊንክ ወደ ክሊፕቦርድ ተቀድሟል!",
+      "copyFailed": "ሊንክ ማስቀደም አልተቻለም",
+      "noContactInfo": "የመገናኘት መረጃ የለም",
+      "enterMessage": "እባክዎ መልእክት ያስገቡ",
+      "inquirySent": "ጥያቄ በተሳካ ሁኔታ ተልኳል! ባለቤቱ በቅርቡ ያግኝዎታል።",
+      "inquiryFailed": "ጥያቄ መላክ አልተቻለም",
+      "addedToComparison": "ወደ ንፅፅር ታክሏል!",
+      "comparisonFailed": "ወደ ንፅፅር መጨመር አልተቻለም",
+      "printDialog": "የማተም ውይይት ተከፈተ",
+      "downloading": "የንብረት ዝርዝሮች በማውረድ ላይ...",
+      "promotionActivated": "ማስተዋወቂያ በተሳካ ሁኔታ ንቁ ተደረገ! ንብረትዎ ተጨማሪ እይታ ያገኛል።",
+      "promotionCancelled": "ማስተዋወቂያ በተሳካ ሁኔታ ተቋርጧል",
+      "promotionCancelFailed": "ማስተዋወቂያ ማቋረጥ አልተቻለም",
+      "listingActivated": "ዝርዝር በተሳካ ሁኔታ ንቁ ተደረገ!",
+      "listingDeactivated": "ዝርዝር በተሳካ ሁኔታ አልቦዝነዋል!",
+      "activationFailed": "ዝርዝር ማንቃት አልተቻለም",
+      "messageSent": "መልእክት በተሳካ ሁኔታ ተልኳል!"
+    },
+    "share": {
+      "defaultTitle": "ይህን ንብረት ይመልከቱ"
+    },
+    "whatsapp": {
+      "message": "ሰላም፣ በንብረትዎ ፍላጎት አለኝ፡"
+    },
+    "approval": {
+      "pending": {
+        "title": "በመጠባበቅ ላይ",
+        "description": "ዝርዝርዎ የአስተዳደር ማጽደቅን እየጠበቀ ነው። ከተጽድቀ በኋላ ለህዝብ ይታያል።",
+        "adminNotes": "የአስተዳደር ማስታወሻዎች፡"
+      },
+      "rejected": {
+        "title": "ዝርዝር ተቀባይነት አላገኘም",
+        "defaultMessage": "ዝርዝርዎ ተቀባይነት አላገኘም። እባክዎ ለዝርዝር ድጋፍ ያነጋግሩ።",
+        "editAndResubmit": "አርትዕ እና እንደገና አስገባ"
+      },
+      "changesRequested": {
+        "title": "ለውጦች ተጠይቀዋል",
+        "description": "አስተዳዳሪው ለዝርዝርዎ ለውጦችን ጠይቋል፡",
+        "defaultMessage": "እባክዎ የዝርዝር ዝርዝሮችዎን ይገምግሙ እና አስፈላጊ ለውጦችን ያድርጉ።",
+        "makeChanges": "ለውጦች ያድርጉ",
+        "contactSupport": "ድጋፍ ያነጋግሩ"
+      },
+      "approved": {
+        "title": "ተጽድቋል እና ዝግጁ ነው",
+        "description": "ዝርዝርዎ ተጽድቋል! ለህዝብ ለማቅረብ ንቁ ያድርጉት።",
+        "activateListing": "ዝርዝር ንቁ አድርግ"
+      }
+    },
+    "sections": {
+      "propertyFeatures": "የንብረት ባህሪያት",
+      "description": "መግለጫ",
+      "descriptionAmharic": "መግለጫ በአማርኛ",
+      "similarProperties": "ተመሳሳይ ንብረቶች",
+      "similarPropertiesDesc": "ሊፈልጉት የሚችሉ ሌሎች ንብረቶች",
+      "recommended": "ለእርስዎ የተመከረ",
+      "recommendedDesc": "በምርጫዎችዎ እና በመስራት ታሪክዎ ላይ ተመስርቶ"
+    },
+    "tabs": {
+      "features": "ባህሪያት",
+      "amenities": "መገልገያዎች",
+      "location": "ቦታ",
+      "documents": "ሰነዶች",
+      "noFeatures": "ሌላ ተጨማሪ ባህሪያት የሉም",
+      "virtualTour": "ምናባዊ ጉብኝት",
+      "view3dTour": "3D ምናባዊ ጉብኝት ይመልከቱ",
+      "noAmenities": "ምንም መገልገያዎች የሉም",
+      "address": "አድራሻ",
+      "zipCode": "የፖስታ ኮድ",
+      "fullscreenMap": "ሙሉ ማያ ካርታ",
+      "locationMap": "የቦታ ካርታ",
+      "noCoordinates": "ትክክለኛ የቦታ መጋጠሚያዎች አልተሰጡም",
+      "privacyMessage": "የንብረት ባለቤቱ ለግላዊነት ትክክለኛ GPS መጋጠሚያዎችን አላቀረበም። ለትክክለኛ የቦታ ዝርዝሮች ባለቤቱን ያነጋግሩ።",
+      "availableForVerification": "ለማረጋገጥ ይገኛል",
+      "available": "ይገኛል",
+      "noDocuments": "ምንም ሰነዶች የሉም",
+      "contactOwner": "ለሰነድ የንብረት ባለቤቱን ያነጋግሩ"
+    },
+    "disclaimer": {
+      "title": "ማስታወሻ",
+      "message": "የቀረበው መረጃ ለአጠቃላይ መመሪያ ብቻ ነው። ሁሉም መለኪያዎች ግምታዊ ናቸው። ማንኛውንም ውሳኔ ከመውሰድዎ በፊት ሁሉንም ዝርዝሮች ከንብረት ባለቤቱ ጋር ያረጋግጡ።",
+      "propertyId": "የንብረት መለያ",
+      "lastUpdated": "የመጨረሻ ዝማኔ"
+    }
+  },
+  "listings": {
+    "title": "ንብረቶችን ይመልከቱ",
+    "subtitle": "የህልምዎን ንብረት ያግኙ",
+    "searchPlaceholder": "ንብረቶችን፣ ቦታዎችን ወይም ቁልፍ ቃላትን ፈልግ...",
+    "filter": "ማጣሪያዎች",
+    "showFilters": "ማጣሪያዎችን አሳይ",
+    "hideFilters": "ማጣሪያዎችን ደብቅ",
+    "sortBy": "በማደርግ ደርድር",
+    "featuredLabel": "ልዩ",
+    "verified": "የተረጋገጠ",
+    "amenities": "መገልገያዎች",
+    "features": "ባህሪያት",
+    "viewMode": {
+      "grid": "ፍርግርግ እይታ",
+      "list": "ዝርዝር እይታ",
+      "map": "ካርታ እይታ"
+    },
+    "propertyTypes": {
+      "all": "ሁሉም ዓይነቶች",
+      "house": "ቤት",
+      "apartment": "አፓርታማ",
+      "villa": "ቪላ",
+      "commercial": "ንግድ",
+      "land": "መሬት",
+      "office": "የቢሮ ቦታ",
+      "warehouse": "መጋዘን",
+      "farm": "ግብርና",
+      "hotel": "ሆቴል",
+      "other": "ሌላ"
+    },
+    "listingTypes": {
+      "all": "ሁሉም ዝርዝሮች",
+      "for_sale": "ለመሸጥ",
+      "for_rent": "ለጥገና"
+    },
+    "bedrooms": {
+      "any": "ማንኛውም ክፍል",
+      "1": "1+ ክፍሎች",
+      "2": "2+ ክፍሎች",
+      "3": "3+ ክፍሎች",
+      "4": "4+ ክፍሎች",
+      "5": "5+ ክፍሎች"
+    },
+    "bathrooms": {
+      "any": "ማንኛውም መጸዳጃ ቤት",
+      "1": "1+ መጸዳጃ ቤቶች",
+      "2": "2+ መጸዳጃ ቤቶች",
+      "3": "3+ መጸዳጃ ቤቶች"
+    },
+    "sortOptions": {
+      "recommended": "የሚመከር",
+      "newest": "አዲስ መጀመሪያ",
+      "priceLowToHigh": "ዋጋ: ከዝቅ ወደ ከፍተኛ",
+      "priceHighToLow": "ዋጋ: ከከፍተኛ ወደ ዝቅ",
+      "largest": "ትልቁ መጀመሪያ",
+      "mostViewed": "በጣም የተመለከተ",
+      "featured": "ልዩ መጀመሪያ"
+    },
+    "filters": {
+      "advancedFilters": "የላቀ ማጣሪያዎች",
+      "location": "ቦታ",
+      "priceRange": "የዋጋ ክልል (ብር)",
+      "areaRange": "አካባቢ (ሜ²)",
+      "quickFilters": "ፈጣን ማጣሪያዎች",
+      "promotedOnly": "የተረታ ብቻ",
+      "featuredOnly": "ልዩ ብቻ",
+      "verifiedOnly": "የተረጋገጠ ብቻ",
+      "selectCity": "ከተማ ይምረጡ",
+      "allCities": "ሁሉም ከተሞች",
+      "selectArea": "አካባቢ ይምረጡ",
+      "allAreas": "ሁሉም አካባቢዎች",
+      "min": "ትንሹ",
+      "max": "ትልቁ"
+    },
+    "actions": {
+      "resetAll": "ሁሉንም ዳግም አስጀምር",
+      "saveSearch": "ፍለጋ አስቀምጥ",
+      "listProperty": "ንብረት ዝርዝር",
+      "viewAllFeatured": "ሁሉንም ልዩ ይመልከቱ",
+      "compareNow": "አነፃፅር",
+      "hide": "ደብቅ",
+      "fullscreen": "ሙሉ ማያ",
+      "exitFullscreen": "ሙሉ ማያ ውጣ",
+      "resetFilters": "ማጣሪያዎችን ዳግም አስጀምር",
+      "refreshPage": "ገጹን አድስ",
+      "inComparison": "በንፅፅር ውስጥ",
+      "propertySaved": "ንብረቱ ተቀምጧል!",
+      "removedFromSaved": "ከተቀመጡ ተወግዷል",
+      "addedToComparison": "ወደ ንፅፅር ታክሏል",
+      "listed": "ተዘርዝሯል"
+    },
+    "results": {
+      "propertiesFound": "{count} ንብረቶች ተገኝተዋል",
+      "showing": "{start} እስከ {end} ከ {total} ንብረቶች ውስጥ ይታያል",
+      "activeFilters": "{count} ንቁ ማጣሪያ{count, plural, one {} other {ዎች}}",
+      "mapViewCount": "{count} ንብረቶች ከቦታ መረጃ ጋር",
+      "noProperties": "ምንም ንብረቶች አልተገኙም",
+      "noMatch": "ምንም ንብረቶች \"{search}\" አይዛመዱም። የፍለጋ መስፈርቶችዎን ይለውጡ።",
+      "adjustFilters": "ማጣሪያዎችዎን ወይም የፍለጋ መስፈርቶችዎን ይለውጡ",
+      "loading": "ንብረቶች በመጫን ላይ..."
+    },
+    "featured": {
+      "title": "ልዩ ንብረቶች",
+      "featuredCount": "{count} ልዩ"
+    },
+    "promotion": {
+      "basic": "መሰረታዊ",
+      "standard": "መደበኛ",
+      "premium": "ፕሪሚየም",
+      "promoted": "የተረታ",
+      "title": "ከ 3-5 እጥፍ በላይ እይታ በንብረት ማስተዋወቅ ያግኙ",
+      "description": "ዝርዝርዎን ማስተዋወቅ በፍለጋ ውጤቶች አናት ላይ ለመታየት እና ብዙ ሊገዙ ለሚችሉ ደራሲያን ለመድረስ።",
+      "benefits": {
+        "topPosition": "የፍለጋ ከፍተኛ ቦታ",
+        "featuredBadge": "ልዩ ምልክት",
+        "prioritySupport": "ቅድሚያ ድጋፍ",
+        "analytics": "የትንተና ዳሽቦርድ"
+      },
+      "badges": {
+        "basic": "መሰረታዊ",
+        "standard": "መደበኛ",
+        "premium": "ፕሪሚየም"
+      },
+      "viewPlans": "የማስተዋወቂያ እቅዶችን ይመልከቱ"
+    },
+    "searchHistory": {
+      "recentSearches": "የቅርብ ጊዜ ፍለጋዎች",
+      "clearAll": "ሁሉንም አጽዳ",
+      "popularSearches": "ታዋቂ ፍለጋዎች",
+      "searchTips": "የፍለጋ ምክሮች",
+      "historyEmpty": "የፍለጋ ታሪክዎ እዚህ ይታያል"
+    },
+    "tips": {
+      "title": "ለገዢዎች እና ለሚሸጡ ሰዎች ምክሮች",
+      "verifyDocuments": "ሰነዶችን ያረጋግጡ",
+      "verifyDocumentsDesc": "ከመግዛትዎ በፊት ሁል ጊዜ የንብረት ወረቀት፣ የግንባታ ፈቃድ እና የቤት ኪራይ የማስረጃ ወረቀት ያረጋግጡ።",
+      "promoteListing": "ዝርዝርዎን አስተዋውቁ",
+      "promoteListingDesc": "ንብረትዎን በማስተዋወቅ 3-5 እጥፍ ብዙ እይታ ያግኙ። ልዩ ዝርዝሮች በፍጥነት ይሸጣሉ።",
+      "compareOptions": "አማራጮችን አነፃፅር",
+      "compareOptionsDesc": "ብዙ ንብረቶችን አጠገብ ለመገምገም የእኛን የንፅፅር መሳሪያ ይጠቀሙ።"
+    },
+    "map": {
+      "propertiesOnMap": "በካርታ ላይ ያሉ ንብረቶች",
+      "legend": "የካርታ ምሳሌ",
+      "layers": "ቁጥሮች",
+      "standard": "መደበኛ",
+      "promoted": "የተረታ",
+      "featured": "ልዩ"
+    },
+    "stats": {
+      "views": "እይታዎች",
+      "inquiries": "ጥያቄዎች"
+    },
+    "errors": {
+      "unableToLoad": "ንብረቶችን መጫን አልተቻለም",
+      "errorLoading": "ንብረቶችን በማጫን ላይ ስህተት ተከስቷል። እባክዎ እንደገና ይሞክሩ።",
+      "saveFailed": "ንብረቱን ማስቀመጥ አልተቻለም",
+      "addToComparisonFailed": "ወደ ንፅፅር መጨመር አልተቻለም"
+    }
+  }
+}
