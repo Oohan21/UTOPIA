@@ -100,13 +100,13 @@ export const UserActivityChart: React.FC<UserActivityChartProps> = ({
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-4 w-64" />
+      <Card className="dark:bg-gray-800 dark:border-gray-700">
+        <CardHeader className="dark:bg-gray-800">
+          <Skeleton className="h-6 w-48 dark:bg-gray-700" />
+          <Skeleton className="h-4 w-64 dark:bg-gray-700" />
         </CardHeader>
-        <CardContent>
-          <Skeleton className="h-[300px]" />
+        <CardContent className="dark:bg-gray-800">
+          <Skeleton className="h-[300px] dark:bg-gray-700" />
         </CardContent>
       </Card>
     );
@@ -114,14 +114,14 @@ export const UserActivityChart: React.FC<UserActivityChartProps> = ({
 
   if (isError || error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
+      <Card className="dark:bg-gray-800 dark:border-gray-700">
+        <CardHeader className="dark:bg-gray-800">
+          <CardTitle className="dark:text-white">{title}</CardTitle>
+          <CardDescription className="dark:text-gray-400">{description}</CardDescription>
         </CardHeader>
-        <CardContent className="py-8 text-center">
+        <CardContent className="py-8 text-center dark:bg-gray-800">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-gray-500">Unable to load activity data</p>
+          <p className="text-gray-500 dark:text-gray-400">Unable to load activity data</p>
         </CardContent>
       </Card>
     );
@@ -129,26 +129,26 @@ export const UserActivityChart: React.FC<UserActivityChartProps> = ({
 
   if (chartData.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
+      <Card className="dark:bg-gray-800 dark:border-gray-700">
+        <CardHeader className="dark:bg-gray-800">
+          <CardTitle className="dark:text-white">{title}</CardTitle>
+          <CardDescription className="dark:text-gray-400">{description}</CardDescription>
         </CardHeader>
-        <CardContent className="py-8 text-center">
-          <Activity className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">No activity data available for this period</p>
+        <CardContent className="py-8 text-center dark:bg-gray-800">
+          <Activity className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+          <p className="text-gray-500 dark:text-gray-400">No activity data available for this period</p>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="dark:bg-gray-800 dark:border-gray-700">
+      <CardHeader className="dark:bg-gray-800">
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle>{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
+            <CardTitle className="dark:text-white">{title}</CardTitle>
+            <CardDescription className="dark:text-gray-400">{description}</CardDescription>
           </div>
           {stats && (
             <div className="flex items-center gap-2">
@@ -157,36 +157,36 @@ export const UserActivityChart: React.FC<UserActivityChartProps> = ({
               ) : (
                 <TrendingDown className="h-5 w-5 text-red-500" />
               )}
-              <span className={`font-medium ${stats.isGrowing ? 'text-green-600' : 'text-red-600'}`}>
+              <span className={`font-medium ${stats.isGrowing ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                 {stats.growthRate}%
               </span>
             </div>
           )}
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="dark:bg-gray-800">
         {/* Stats Summary */}
         {showStats && stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="text-sm text-blue-600 mb-1">New Users</div>
-              <div className="text-2xl font-bold">{formatNumber(stats.totalNewUsers)}</div>
-              <div className="text-xs text-gray-500">Total in period</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+              <div className="text-sm text-blue-600 dark:text-blue-400 mb-1">New Users</div>
+              <div className="text-2xl font-bold dark:text-white">{formatNumber(stats.totalNewUsers)}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Total in period</div>
             </div>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <div className="text-sm text-green-600 mb-1">Avg. Active</div>
-              <div className="text-2xl font-bold">{formatNumber(stats.avgActiveUsers)}</div>
-              <div className="text-xs text-gray-500">Daily average</div>
+            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+              <div className="text-sm text-green-600 dark:text-green-400 mb-1">Avg. Active</div>
+              <div className="text-2xl font-bold dark:text-white">{formatNumber(stats.avgActiveUsers)}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Daily average</div>
             </div>
-            <div className="bg-purple-50 p-4 rounded-lg">
-              <div className="text-sm text-purple-600 mb-1">Peak Active</div>
-              <div className="text-2xl font-bold">{formatNumber(stats.peakActiveUsers)}</div>
-              <div className="text-xs text-gray-500">Highest in period</div>
+            <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
+              <div className="text-sm text-purple-600 dark:text-purple-400 mb-1">Peak Active</div>
+              <div className="text-2xl font-bold dark:text-white">{formatNumber(stats.peakActiveUsers)}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Highest in period</div>
             </div>
-            <div className="bg-amber-50 p-4 rounded-lg">
-              <div className="text-sm text-amber-600 mb-1">Growth Rate</div>
-              <div className="text-2xl font-bold">{stats.growthRate}%</div>
-              <div className="text-xs text-gray-500">Period change</div>
+            <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg">
+              <div className="text-sm text-amber-600 dark:text-amber-400 mb-1">Growth Rate</div>
+              <div className="text-2xl font-bold dark:text-white">{stats.growthRate}%</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Period change</div>
             </div>
           </div>
         )}
@@ -195,36 +195,44 @@ export const UserActivityChart: React.FC<UserActivityChartProps> = ({
         <div style={{ height: `${height}px` }}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" className="dark:stroke-gray-700" />
               <XAxis 
                 dataKey="date" 
                 tick={{ fontSize: 12 }}
                 tickLine={false}
+                stroke="#6B7280"
+                className="dark:text-gray-400 dark:stroke-gray-400"
               />
               <YAxis 
                 yAxisId="left"
                 tick={{ fontSize: 12 }}
                 tickLine={false}
+                stroke="#6B7280"
+                className="dark:text-gray-400 dark:stroke-gray-400"
               />
               <YAxis 
                 yAxisId="right"
                 orientation="right"
                 tick={{ fontSize: 12 }}
                 tickLine={false}
+                stroke="#6B7280"
+                className="dark:text-gray-400 dark:stroke-gray-400"
               />
               <Tooltip 
                 contentStyle={{ 
-                  backgroundColor: 'white',
-                  border: '1px solid #e5e7eb',
+                  backgroundColor: '#1F2937',
+                  border: '1px solid #374151',
                   borderRadius: '8px',
-                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                  color: '#F9FAFB'
                 }}
                 formatter={(value: number, name: string) => {
                   return [formatNumber(value), name];
                 }}
                 labelFormatter={(label) => `Date: ${label}`}
+                labelStyle={{ color: '#F9FAFB' }}
               />
-              <Legend />
+              <Legend wrapperStyle={{ color: '#6B7280' }} />
               
               {/* Area for total users */}
               <Area
@@ -267,19 +275,19 @@ export const UserActivityChart: React.FC<UserActivityChartProps> = ({
 
         {/* Period Summary */}
         {chartData.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <div className="flex justify-between items-center text-sm">
-              <div className="text-gray-500">
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex flex-col sm:flex-row justify-between items-center text-sm gap-4">
+              <div className="text-gray-500 dark:text-gray-400">
                 Showing {stats?.totalDays || 0} days of data
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <div className="h-3 w-3 rounded-full bg-[#10b981]"></div>
-                  <span>Active Users</span>
+                  <span className="dark:text-gray-300">Active Users</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="h-3 w-3 rounded-full bg-[#3b82f6]"></div>
-                  <span>New Users</span>
+                  <span className="dark:text-gray-300">New Users</span>
                 </div>
               </div>
             </div>

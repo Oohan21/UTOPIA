@@ -1,799 +1,760 @@
-// src/components/dashboard/UserAnalytics.tsx
+// src/components/dashboard/UserAnalytics.tsx - UPDATED
 'use client';
 
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { dashboardApi } from '@/lib/api/dashboard';
-import { adminApi } from '@/lib/api/admin';
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  PieChart,
-  Pie,
-  Cell
-} from 'recharts';
-import { formatNumber } from '@/lib/utils/formatNumber';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
+import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { TrendingUp, TrendingDown, Users, Eye, Search, MessageSquare, AlertCircle, Activity } from 'lucide-react';
-import { AdminUser } from '@/lib/api/admin';
+import { Input } from '@/components/ui/Input';
+import { 
+  BarChart, Bar, LineChart, Line, AreaChart, Area,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  PieChart, Pie, Cell
+} from 'recharts';
+import { 
+  Users, UserPlus, TrendingUp, Activity, Clock, Target,
+  MessageSquare, Eye, Home, CheckCircle,
+  Search, Download, Filter, UserCheck, UserX,
+  Shield, AlertCircle, MoreVertical
+} from 'lucide-react';
+import { analyticsApi } from '@/lib/api/analytics';
+import { UserGrowthData, DailyActivityData, AdminUserAnalyticsResponse } from '@/lib/types/analytics';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/DropdownMenu';
+import { useTranslations } from 'next-intl';
+import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils/formatCurrency';
 
-// Define proper types for our data
-interface DailyActivity {
-  date: string;
-  active_users: number;
-  new_users: number;
-  page_views: number;
-  searches: number;
-  inquiries: number;
-  properties_listed: number;
+interface UserFilter {
+  search: string;
+  userType: string;
+  status: string;
 }
 
-interface UserGrowth {
-  date: string;
-  new_users: number;
-  active_users: number;
-  cumulative_users: number;
-}
+export function UserAnalytics() {
+  const t = useTranslations('analytics.users');
+  const [adminUserData, setAdminUserData] = useState<AdminUserAnalyticsResponse | null>(null);
+  const [growthData, setGrowthData] = useState<UserGrowthData[]>([]);
+  const [activityData, setActivityData] = useState<DailyActivityData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
+  const [filter, setFilter] = useState<UserFilter>({
+    search: '',
+    userType: 'all',
+    status: 'all'
+  });
+  const [selectedUser, setSelectedUser] = useState<number | null>(null);
 
-interface UserTypeDistribution {
-  name: string;
-  value: number;
-  [key: string]: any; // Add index signature for recharts compatibility
-}
+  useEffect(() => {
+    fetchData();
+  }, [timeRange]);
 
-interface PlatformAnalyticsResponse {
-  total_users: number;
-  new_users: number;
-  active_users: number;
-  user_growth_rate: number;
-  avg_session_duration: number;
-  bounce_rate: number;
-  total_page_views: number;
-  _error?: boolean;
-  _errorMessage?: string;
-  _fallback?: boolean;
-  _timestamp?: string;
-}
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const days = timeRange === '7d' ? 7 : timeRange === '90d' ? 90 : 30;
+      
+      const [adminAllUsers, growth, activity] = await Promise.allSettled([
+        analyticsApi.getAdminAllUsers(days),
+        analyticsApi.getUserGrowth(days),
+        analyticsApi.getDailyActivity(days),
+      ]);
 
-export const UserAnalytics: React.FC = () => {
-  const [timeRange, setTimeRange] = useState('30d');
-  const [userTypeFilter, setUserTypeFilter] = useState('all');
-  const [activeTab, setActiveTab] = useState('overview');
-
-  // Convert timeRange to days for API calls
-  const getDaysFromRange = (range: string): number => {
-    switch (range) {
-      case '7d': return 7;
-      case '90d': return 90;
-      case '365d': return 365;
-      default: return 30;
+      if (adminAllUsers.status === 'fulfilled') setAdminUserData(adminAllUsers.value);
+      if (growth.status === 'fulfilled') setGrowthData(growth.value);
+      if (activity.status === 'fulfilled') setActivityData(activity.value);
+    } catch (error) {
+      console.error('Failed to fetch admin user analytics:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const days = getDaysFromRange(timeRange);
+  const formatNumber = (num: number) => {
+    return new Intl.NumberFormat('en-ET').format(num);
+  };
 
-  // Fetch platform analytics
-  const { 
-    data: platformAnalytics, 
-    isLoading: platformLoading,
-    error: platformError,
-    isError: isPlatformError
-  } = useQuery<PlatformAnalyticsResponse>({
-    queryKey: ['platform-analytics', timeRange],
-    queryFn: () => dashboardApi.getPlatformAnalytics(timeRange),
-    staleTime: 5 * 60 * 1000,
-  });
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-ET', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
 
-  // Fetch daily activity
-  const { 
-    data: dailyActivity = [], 
-    isLoading: activityLoading,
-    isError: isActivityError
-  } = useQuery<DailyActivity[]>({
-    queryKey: ['daily-activity', days],
-    queryFn: () => dashboardApi.getDailyActivity(days),
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // Fetch user growth
-  const { 
-    data: userGrowth = [], 
-    isLoading: growthLoading,
-    isError: isGrowthError
-  } = useQuery<UserGrowth[]>({
-    queryKey: ['user-growth', days],
-    queryFn: () => dashboardApi.getUserGrowth(days),
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // Fetch users data
-  const { 
-    data: usersData, 
-    isLoading: usersLoading,
-    isError: isUsersError
-  } = useQuery({
-    queryKey: ['admin-users', userTypeFilter, timeRange],
-    queryFn: () => adminApi.getUsers({ 
-      user_type: userTypeFilter !== 'all' ? userTypeFilter : undefined,
-      created_at__gte: new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
-    }),
-    enabled: activeTab === 'users',
-  });
-
-  // Calculate metrics from real data
-  const calculateMetrics = () => {
-    if (!dailyActivity || dailyActivity.length === 0) {
-      return {
-        totalNewUsers: 0,
-        avgActiveUsers: 0,
-        totalPageViews: 0,
-        totalInquiries: 0,
-        totalSearches: 0,
-        totalPropertiesListed: 0,
-        userRetention: 0,
-        conversionRate: 0,
-        errorRate: 0
-      };
-    }
-
-    const totalNewUsers = dailyActivity.reduce((sum, day) => sum + (day.new_users || 0), 0);
-    const avgActiveUsers = dailyActivity.reduce((sum, day) => sum + (day.active_users || 0), 0) / dailyActivity.length;
-    const totalPageViews = dailyActivity.reduce((sum, day) => sum + (day.page_views || 0), 0);
-    const totalInquiries = dailyActivity.reduce((sum, day) => sum + (day.inquiries || 0), 0);
-    const totalSearches = dailyActivity.reduce((sum, day) => sum + (day.searches || 0), 0);
-    const totalPropertiesListed = dailyActivity.reduce((sum, day) => sum + (day.properties_listed || 0), 0);
+  const calculateUserStats = () => {
+    if (!adminUserData) return { total: 0, activeToday: 0, newToday: 0 };
     
-    // Calculate conversion rate (simplified)
-    const conversionRate = totalPageViews > 0 ? (totalInquiries / totalPageViews) * 100 : 0;
+    const activeToday = adminUserData.users.filter(user => user.is_active_today).length;
+    const newToday = adminUserData.platform_totals.new_users_today;
     
     return {
-      totalNewUsers,
-      avgActiveUsers: Math.round(avgActiveUsers),
-      totalPageViews,
-      totalInquiries,
-      totalSearches,
-      totalPropertiesListed,
-      userRetention: 72.5, // This would come from backend API
-      conversionRate: parseFloat(conversionRate.toFixed(2)),
-      errorRate: platformAnalytics?._error || platformAnalytics?._fallback ? 1 : 0
+      total: adminUserData.users.length,
+      activeToday,
+      newToday,
+      inactiveToday: adminUserData.users.length - activeToday
     };
   };
 
-  const metrics = calculateMetrics();
-
-  // Calculate user type distribution from real user data
-  const calculateUserTypeDistribution = (): UserTypeDistribution[] => {
-    if (!usersData?.results || usersData.results.length === 0) {
-      return [
-        { name: 'Buyers', value: 0, fill: '#3b82f6' },
-        { name: 'Sellers', value: 0, fill: '#10b981' },
-        { name: 'Agents', value: 0, fill: '#8b5cf6' },
-        { name: 'Developers', value: 0, fill: '#f59e0b' }
-      ];
-    }
-
-    const typeCounts: Record<string, number> = {};
-    usersData.results.forEach((user: AdminUser) => {
-      const type = user.user_type || 'user';
-      typeCounts[type] = (typeCounts[type] || 0) + 1;
-    });
-
-    const colors = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444'];
-    let colorIndex = 0;
+  const getFilteredUsers = () => {
+    if (!adminUserData) return [];
     
-    return Object.entries(typeCounts).map(([name, value]) => ({
-      name: name.charAt(0).toUpperCase() + name.slice(1),
-      value,
-      fill: colors[colorIndex++ % colors.length]
-    }));
+    return adminUserData.users.filter(user => {
+      if (filter.search && !user.email.toLowerCase().includes(filter.search.toLowerCase()) && 
+          !user.full_name?.toLowerCase().includes(filter.search.toLowerCase())) {
+        return false;
+      }
+      
+      if (filter.userType !== 'all' && user.user_type !== filter.userType) {
+        return false;
+      }
+      
+      if (filter.status === 'active' && !user.is_active_today) {
+        return false;
+      }
+      if (filter.status === 'inactive' && user.is_active_today) {
+        return false;
+      }
+      
+      return true;
+    });
   };
 
-  const userTypeDistribution = calculateUserTypeDistribution();
-  const COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444'];
+  const getTopUsersByMetric = (metric: 'inquiries' | 'properties' | 'views', limit: number = 5) => {
+    if (!adminUserData) return [];
+    
+    return [...adminUserData.users]
+      .sort((a, b) => {
+        if (metric === 'inquiries') return b.total_inquiries - a.total_inquiries;
+        if (metric === 'properties') return b.total_properties - a.total_properties;
+        return b.total_views - a.total_views;
+      })
+      .slice(0, limit);
+  };
 
-  // Check for any errors
-  const hasErrors = isPlatformError || isActivityError || isGrowthError || isUsersError;
-  const isLoading = platformLoading || activityLoading || growthLoading || (activeTab === 'users' && usersLoading);
+  const exportData = async (format: 'csv' | 'json' = 'csv') => {
+    try {
+      const blob = await analyticsApi.exportAnalytics('users', format);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `users_analytics_${new Date().toISOString().split('T')[0]}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Export failed:', error);
+    }
+  };
 
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <Skeleton className="h-8 w-48 mb-2" />
-            <Skeleton className="h-4 w-64" />
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Skeleton className="h-10 w-40" />
-            <Skeleton className="h-10 w-40" />
-          </div>
+          <Skeleton className="h-8 w-48 bg-gray-300 dark:bg-gray-700" />
+          <Skeleton className="h-10 w-32 bg-gray-300 dark:bg-gray-700" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-32 rounded-lg" />
+            <Skeleton key={i} className="h-20 md:h-32 bg-gray-300 dark:bg-gray-700" />
           ))}
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Skeleton className="h-[300px] rounded-lg" />
-          <Skeleton className="h-[300px] rounded-lg" />
-        </div>
+        <Skeleton className="h-64 md:h-96 bg-gray-300 dark:bg-gray-700" />
       </div>
     );
   }
 
-  if (hasErrors) {
-    return (
-      <Card>
-        <CardContent className="py-12 text-center">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Unable to Load Analytics Data</h3>
-          <p className="text-gray-500 mb-4">
-            {platformError?.message || 
-             platformAnalytics?._errorMessage || 
-             'There was an error loading the analytics data. Please try again.'}
-          </p>
-          {platformAnalytics?._fallback && (
-            <p className="text-sm text-amber-600 mb-4">
-              Showing fallback data for demonstration purposes.
-            </p>
-          )}
-          <button 
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-          >
-            Retry
-          </button>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Format chart data
-  const formatChartData = (data: any[]) => {
-    if (!data || data.length === 0) return [];
-    
-    return data.map(item => ({
-      ...item,
-      date: new Date(item.date).toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric' 
-      }),
-      // Ensure numeric values
-      active_users: Number(item.active_users || 0),
-      new_users: Number(item.new_users || 0),
-      page_views: Number(item.page_views || 0),
-      searches: Number(item.searches || 0),
-      inquiries: Number(item.inquiries || 0)
-    }));
-  };
-
-  const formattedDailyActivity = formatChartData(dailyActivity);
-  const formattedUserGrowth = formatChartData(userGrowth);
+  const userStats = calculateUserStats();
+  const filteredUsers = getFilteredUsers();
+  const topUsersByInquiries = getTopUsersByMetric('inquiries');
+  const topUsersByProperties = getTopUsersByMetric('properties');
 
   return (
-    <div className="space-y-6">
-      {/* Header with filters */}
+    <div className="space-y-4 md:space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">User Analytics</h1>
-          <p className="text-gray-500">Monitor user behavior and engagement metrics</p>
+          <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <Shield className="h-5 w-5 md:h-6 md:w-6 text-blue-600 dark:text-blue-400" />
+            {t('title')}
+          </h2>
+          <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-1">
+            {t('subtitle')}
+          </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Select value={timeRange} onValueChange={setTimeRange} placeholder="Time Range">
-            <SelectContent>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="90d">Last 90 days</SelectItem>
-              <SelectItem value="365d">Last year</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={userTypeFilter} onValueChange={setUserTypeFilter} placeholder="User Type">
-            <SelectContent>
-              <SelectItem value="all">All Users</SelectItem>
-              <SelectItem value="user">Regular Users</SelectItem>
-              <SelectItem value="admin">Administrators</SelectItem>
-            </SelectContent>
-          </Select>
+        
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => exportData('csv')}
+            className="border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+          >
+            <Download className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+            {t('actions.exportCSV')}
+          </Button>
+          <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+            <Button
+              variant={timeRange === '7d' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setTimeRange('7d')}
+              className="rounded-none border-0 h-8 px-2 md:px-3"
+            >
+              {t('timeRanges.7d')}
+            </Button>
+            <Button
+              variant={timeRange === '30d' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setTimeRange('30d')}
+              className="rounded-none border-0 h-8 px-2 md:px-3"
+            >
+              {t('timeRanges.30d')}
+            </Button>
+            <Button
+              variant={timeRange === '90d' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setTimeRange('90d')}
+              className="rounded-none border-0 h-8 px-2 md:px-3"
+            >
+              {t('timeRanges.90d')}
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Data Quality Warning */}
-      {(platformAnalytics?._fallback || platformAnalytics?._error) && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <AlertCircle className="h-5 w-5 text-amber-600 mr-2" />
-            <span className="text-amber-800">
-              Using fallback data. Real analytics data will be available when the backend is fully configured.
-            </span>
+      {/* Platform Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <Card className="border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <CardContent className="p-3 md:p-4">
+            <div className="flex items-start md:items-center justify-between">
+              <div>
+                <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                  {t('cards.totalUsers')}
+                </p>
+                <p className="text-xl md:text-3xl font-bold text-gray-900 dark:text-white mt-1">
+                  {formatNumber(adminUserData?.platform_totals.total_users || 0)}
+                </p>
+              </div>
+              <div className="p-2 md:p-3 bg-blue-100 dark:bg-blue-900/20 rounded-full">
+                <Users className="h-4 w-4 md:h-6 md:w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+            </div>
+            <div className="mt-2 md:mt-4 text-xs md:text-sm text-gray-600 dark:text-gray-400">
+              <span className="text-green-600 dark:text-green-400">+{userStats.newToday}</span> {t('cards.newToday')}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <CardContent className="p-3 md:p-4">
+            <div className="flex items-start md:items-center justify-between">
+              <div>
+                <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                  {t('cards.activeToday')}
+                </p>
+                <p className="text-xl md:text-3xl font-bold text-gray-900 dark:text-white mt-1">
+                  {formatNumber(userStats.activeToday)}
+                </p>
+              </div>
+              <div className="p-2 md:p-3 bg-green-100 dark:bg-green-900/20 rounded-full">
+                <UserCheck className="h-4 w-4 md:h-6 md:w-6 text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+            <div className="mt-2 md:mt-4 text-xs md:text-sm text-gray-600 dark:text-gray-400">
+              {((userStats.activeToday / userStats.total) * 100).toFixed(1)}% {t('cards.ofTotal')}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <CardContent className="p-3 md:p-4">
+            <div className="flex items-start md:items-center justify-between">
+              <div>
+                <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                  {t('cards.totalProperties')}
+                </p>
+                <p className="text-xl md:text-3xl font-bold text-gray-900 dark:text-white mt-1">
+                  {formatNumber(adminUserData?.platform_totals.total_properties || 0)}
+                </p>
+              </div>
+              <div className="p-2 md:p-3 bg-purple-100 dark:bg-purple-900/20 rounded-full">
+                <Home className="h-4 w-4 md:h-6 md:w-6 text-purple-600 dark:text-purple-400" />
+              </div>
+            </div>
+            <div className="mt-2 md:mt-4 text-xs md:text-sm text-gray-600 dark:text-gray-400">
+              {t('cards.avgPerUser', {
+                avg: adminUserData?.platform_totals.total_users ? 
+                  Math.round(adminUserData.platform_totals.total_properties / adminUserData.platform_totals.total_users) : 0
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <CardContent className="p-3 md:p-4">
+            <div className="flex items-start md:items-center justify-between">
+              <div>
+                <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                  {t('cards.totalInquiries')}
+                </p>
+                <p className="text-xl md:text-3xl font-bold text-gray-900 dark:text-white mt-1">
+                  {formatNumber(adminUserData?.platform_totals.total_inquiries || 0)}
+                </p>
+              </div>
+              <div className="p-2 md:p-3 bg-amber-100 dark:bg-amber-900/20 rounded-full">
+                <MessageSquare className="h-4 w-4 md:h-6 md:w-6 text-amber-600 dark:text-amber-400" />
+              </div>
+            </div>
+            <div className="mt-2 md:mt-4 text-xs md:text-sm text-gray-600 dark:text-gray-400">
+              {t('cards.conversionRate', {
+                rate: adminUserData?.platform_totals.total_views ? 
+                  ((adminUserData.platform_totals.total_inquiries / adminUserData.platform_totals.total_views) * 100).toFixed(1) : 0
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card className="border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+        <CardContent className="p-4 md:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                {t('filters.search')}
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 md:h-4 md:w-4 text-gray-400" />
+                <Input
+                  placeholder={t('filters.searchPlaceholder')}
+                  value={filter.search}
+                  onChange={(e) => setFilter({...filter, search: e.target.value})}
+                  className="pl-8 md:pl-10 text-xs md:text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                {t('filters.userType')}
+              </label>
+              <select
+                value={filter.userType}
+                onChange={(e) => setFilter({...filter, userType: e.target.value})}
+                className="w-full px-3 py-2 text-xs md:text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">{t('filters.allTypes')}</option>
+                <option value="user">{t('filters.user')}</option>
+                <option value="admin">{t('filters.admin')}</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                {t('filters.activityStatus')}
+              </label>
+              <select
+                value={filter.status}
+                onChange={(e) => setFilter({...filter, status: e.target.value})}
+                className="w-full px-3 py-2 text-xs md:text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">{t('filters.allUsers')}</option>
+                <option value="active">{t('filters.activeToday')}</option>
+                <option value="inactive">{t('filters.inactiveToday')}</option>
+              </select>
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid grid-cols-4 w-full max-w-md">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="growth">Growth</TabsTrigger>
-          <TabsTrigger value="engagement">Engagement</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
-        </TabsList>
-
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          {/* Key Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-gray-500">
-                    Total Users
-                  </CardTitle>
-                  <Users className="h-4 w-4 text-gray-400" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {formatNumber(platformAnalytics?.total_users || 0)}
-                </div>
-                <div className="flex items-center text-sm text-green-600 mt-1">
-                  <TrendingUp className="h-4 w-4 mr-1" />
-                  +{formatNumber(metrics.totalNewUsers || 0)} new
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-gray-500">
-                    Active Users
-                  </CardTitle>
-                  <Users className="h-4 w-4 text-blue-400" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {formatNumber(platformAnalytics?.active_users || metrics.avgActiveUsers)}
-                </div>
-                <div className="text-sm text-gray-500 mt-1">
-                  Daily average: {formatNumber(metrics.avgActiveUsers)}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-gray-500">
-                    Page Views
-                  </CardTitle>
-                  <Eye className="h-4 w-4 text-purple-400" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {formatNumber(metrics.totalPageViews)}
-                </div>
-                <div className="text-sm text-gray-500 mt-1">
-                  {formatNumber(metrics.totalSearches)} searches
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-gray-500">
-                    Engagement Rate
-                  </CardTitle>
-                  <TrendingUp className="h-4 w-4 text-green-400" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {metrics.conversionRate.toFixed(1)}%
-                </div>
-                <div className="text-sm text-gray-500 mt-1">
-                  {formatNumber(metrics.totalInquiries)} inquiries
-                </div>
-              </CardContent>
-            </Card>
+          
+          <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+              {t('filters.showing', { 
+                showing: filteredUsers.length, 
+                total: adminUserData?.users.length || 0 
+              })}
+              {filter.search && ` "${filter.search}"`}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setFilter({ search: '', userType: 'all', status: 'all' })}
+              className="text-xs md:text-sm dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              {t('filters.clear')}
+            </Button>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Charts - Only show if we have data */}
-          {(formattedUserGrowth.length > 0 || formattedDailyActivity.length > 0) && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {formattedUserGrowth.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>User Growth</CardTitle>
-                    <CardDescription>
-                      New and active users over time
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={formattedUserGrowth}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="date" />
-                          <YAxis />
-                          <Tooltip />
-                          <Area 
-                            type="monotone" 
-                            dataKey="new_users" 
-                            name="New Users" 
-                            stroke="#3b82f6" 
-                            fill="#3b82f622" 
-                            strokeWidth={2}
-                          />
-                          <Area 
-                            type="monotone" 
-                            dataKey="active_users" 
-                            name="Active Users" 
-                            stroke="#10b981" 
-                            fill="#10b98122" 
-                            strokeWidth={2}
-                          />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+      {/* Charts and Top Users */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        {/* User Growth Chart */}
+        <Card className="border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-gray-900 dark:text-white text-lg md:text-xl">
+              {t('charts.userGrowth')}
+            </CardTitle>
+            <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+              {adminUserData?.time_period.date_from} to {adminUserData?.time_period.date_to}
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64 md:h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                {growthData.length > 0 ? (
+                  <AreaChart data={growthData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" strokeOpacity={0.3} />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke="#666"
+                      tick={{ fill: '#666', fontSize: 11 }}
+                    />
+                    <YAxis 
+                      stroke="#666"
+                      tick={{ fill: '#666', fontSize: 11 }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'white',
+                        border: '1px solid #e5e7eb',
+                        color: '#111827',
+                        borderRadius: '8px',
+                        fontSize: '13px',
+                      }}
+                    />
+                    <Legend wrapperStyle={{ color: '#666', fontSize: '12px' }} />
+                    <Area 
+                      type="monotone" 
+                      dataKey="cumulative_users" 
+                      stroke="#3b82f6" 
+                      fill="#3b82f6" 
+                      fillOpacity={0.3}
+                      name={t('charts.totalUsers')}
+                    />
+                    <Bar 
+                      dataKey="new_users" 
+                      fill="#10b981" 
+                      name={t('charts.newUsers')}
+                      radius={[2, 2, 0, 0]}
+                    />
+                  </AreaChart>
+                ) : (
+                  <div className="h-full flex items-center justify-center">
+                    <p className="text-gray-500 dark:text-gray-400 text-center px-4">
+                      {t('charts.noGrowthData')}
+                    </p>
+                  </div>
+                )}
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
 
-              {formattedDailyActivity.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>User Activity</CardTitle>
-                    <CardDescription>
-                      Daily engagement metrics
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={formattedDailyActivity.slice(-14)}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="date" />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          <Bar dataKey="page_views" name="Page Views" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                          <Bar dataKey="searches" name="Searches" fill="#10b981" radius={[4, 4, 0, 0]} />
-                          <Bar dataKey="inquiries" name="Inquiries" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
+        {/* Top Performers */}
+        <Card className="border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-gray-900 dark:text-white text-lg md:text-xl">
+              {t('topPerformers.title')}
+            </CardTitle>
+            <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+              {t('topPerformers.subtitle')}
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2 text-sm md:text-base">
+                  {t('topPerformers.mostInquiries')}
+                </h4>
+                {topUsersByInquiries.map((user, index) => (
+                  <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                    <div className="flex items-center space-x-3 mb-1 sm:mb-0">
+                      <div className={cn(
+                        "w-7 h-7 md:w-8 md:h-8 flex items-center justify-center rounded-full flex-shrink-0",
+                        index === 0 ? 'bg-amber-100 dark:bg-amber-900/20' : 'bg-gray-100 dark:bg-gray-700/50'
+                      )}>
+                        <span className={cn(
+                          "text-xs font-medium",
+                          index === 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-600 dark:text-gray-400'
+                        )}>
+                          {index + 1}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium dark:text-white text-sm truncate">
+                          {user.full_name || user.email}
+                        </p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">{user.user_type}</p>
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              )}
+                    <Badge variant="outline" className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 self-end sm:self-auto">
+                      {formatNumber(user.total_inquiries)} {t('topPerformers.inquiries')}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+              
+              <div>
+                <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2 text-sm md:text-base">
+                  {t('topPerformers.mostProperties')}
+                </h4>
+                {topUsersByProperties.map((user, index) => (
+                  <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                    <div className="flex items-center space-x-3 mb-1 sm:mb-0">
+                      <div className={cn(
+                        "w-7 h-7 md:w-8 md:h-8 flex items-center justify-center rounded-full flex-shrink-0",
+                        index === 0 ? 'bg-purple-100 dark:bg-purple-900/20' : 'bg-gray-100 dark:bg-gray-700/50'
+                      )}>
+                        <span className={cn(
+                          "text-xs font-medium",
+                          index === 0 ? 'text-purple-600 dark:text-purple-400' : 'text-gray-600 dark:text-gray-400'
+                        )}>
+                          {index + 1}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium dark:text-white text-sm truncate">
+                          {user.full_name || user.email}
+                        </p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">{user.user_type}</p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 self-end sm:self-auto">
+                      {formatNumber(user.total_properties)} {t('topPerformers.properties')}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Users Table */}
+      <Card className="border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-gray-900 dark:text-white text-lg md:text-xl">
+            {t('usersTable.title')}
+          </CardTitle>
+          <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+            {t('usersTable.subtitle')}
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto -mx-4 md:mx-0">
+            <table className="w-full min-w-[800px]">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-left py-2 px-4 text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('usersTable.columns.user')}
+                  </th>
+                  <th className="text-left py-2 px-4 text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('usersTable.columns.type')}
+                  </th>
+                  <th className="text-left py-2 px-4 text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('usersTable.columns.properties')}
+                  </th>
+                  <th className="text-left py-2 px-4 text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('usersTable.columns.views')}
+                  </th>
+                  <th className="text-left py-2 px-4 text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('usersTable.columns.inquiries')}
+                  </th>
+                  <th className="text-left py-2 px-4 text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('usersTable.columns.conversion')}
+                  </th>
+                  <th className="text-left py-2 px-4 text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('usersTable.columns.status')}
+                  </th>
+                  <th className="text-left py-2 px-4 text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('usersTable.columns.actions')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.map((user) => (
+                  <tr 
+                    key={user.id} 
+                    className={cn(
+                      "border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors",
+                      selectedUser === user.id && "bg-blue-50 dark:bg-blue-900/20"
+                    )}
+                    onClick={() => setSelectedUser(user.id === selectedUser ? null : user.id)}
+                  >
+                    <td className="py-3 px-4">
+                      <div className="flex items-center space-x-3">
+                        <div className={cn(
+                          "w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center flex-shrink-0",
+                          user.is_active_today ? "bg-green-100 dark:bg-green-900/20" : "bg-gray-100 dark:bg-gray-700"
+                        )}>
+                          {user.is_active_today ? (
+                            <UserCheck className="h-4 w-4 md:h-5 md:w-5 text-green-600 dark:text-green-400" />
+                          ) : (
+                            <UserX className="h-4 w-4 md:h-5 md:w-5 text-gray-400" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium dark:text-white text-sm truncate">
+                            {user.full_name || t('usersTable.noName')}
+                          </p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{user.email}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-500">
+                            {t('usersTable.joined')}: {formatDate(user.joined_date)}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <Badge variant="outline" className={cn(
+                        "text-xs",
+                        user.user_type === 'admin' ? 'bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-300 border-red-200 dark:border-red-800' :
+                        user.user_type === 'agent' ? 'bg-purple-50 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300 border-purple-200 dark:border-purple-800' :
+                        user.user_type === 'seller' ? 'bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800' :
+                        'bg-gray-50 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300 border-gray-200 dark:border-gray-700'
+                      )}>
+                        {user.user_type}
+                      </Badge>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center space-x-2">
+                        <Home className="h-3 w-3 md:h-4 md:w-4 text-gray-400 flex-shrink-0" />
+                        <div>
+                          <p className="font-medium dark:text-white text-sm">{formatNumber(user.total_properties)}</p>
+                          {user.active_properties > 0 && (
+                            <p className="text-xs text-green-600 dark:text-green-400">
+                              {user.active_properties} {t('usersTable.active')}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center space-x-2">
+                        <Eye className="h-3 w-3 md:h-4 md:w-4 text-gray-400 flex-shrink-0" />
+                        <span className="font-medium dark:text-white text-sm">{formatNumber(user.total_views)}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center space-x-2">
+                        <MessageSquare className="h-3 w-3 md:h-4 md:w-4 text-gray-400 flex-shrink-0" />
+                        <div>
+                          <p className="font-medium dark:text-white text-sm">{formatNumber(user.total_inquiries)}</p>
+                          {user.recent_inquiries > 0 && (
+                            <p className="text-xs text-blue-600 dark:text-blue-400">
+                              +{user.recent_inquiries} {t('usersTable.recent')}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center space-x-2">
+                        <TrendingUp className={cn(
+                          "h-3 w-3 md:h-4 md:w-4 flex-shrink-0",
+                          user.conversion_rate > 5 ? 'text-green-500' : 
+                          user.conversion_rate > 2 ? 'text-amber-500' : 'text-gray-400'
+                        )} />
+                        <span className={cn(
+                          "font-medium text-sm",
+                          user.conversion_rate > 5 ? 'text-green-600 dark:text-green-400' : 
+                          user.conversion_rate > 2 ? 'text-amber-600 dark:text-amber-400' : 
+                          'text-gray-600 dark:text-gray-400'
+                        )}>
+                          {user.conversion_rate.toFixed(1)}%
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center">
+                        {user.is_active_today ? (
+                          <div className="flex items-center space-x-1 text-green-600 dark:text-green-400">
+                            <CheckCircle className="h-3 w-3 md:h-4 md:w-4" />
+                            <span className="text-xs md:text-sm">{t('usersTable.activeStatus')}</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-1 text-gray-500 dark:text-gray-400">
+                            <Clock className="h-3 w-3 md:h-4 md:w-4" />
+                            <span className="text-xs md:text-sm">{t('usersTable.inactiveStatus')}</span>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuLabel>{t('usersTable.actionsLabel')}</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={() => window.location.href = `/admin/users/${user.id}`}>
+                            {t('usersTable.viewDetails')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => window.location.href = `/admin/users/${user.id}/properties`}>
+                            {t('usersTable.viewProperties')}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(user.email)}>
+                            {t('usersTable.copyEmail')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-red-600 dark:text-red-400">
+                            {t('usersTable.suspendUser')}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {filteredUsers.length === 0 && (
+            <div className="text-center py-8">
+              <AlertCircle className="h-10 w-10 md:h-12 md:w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base">
+                {t('usersTable.noUsers')}
+              </p>
             </div>
           )}
-
-          {/* User Distribution */}
-          <Card>
-            <CardHeader>
-              <CardTitle>User Distribution & Insights</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="h-[250px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={userTypeDistribution}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {userTypeDistribution.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill || COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => [`${value} users`, 'Count']} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-
-                <div className="lg:col-span-2 space-y-6">
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <div className="text-sm text-gray-500">Avg. Session Duration</div>
-                      <div className="text-2xl font-bold">
-                        {Math.round(platformAnalytics?.avg_session_duration || 0)}s
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        Across all users
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="text-sm text-gray-500">Bounce Rate</div>
-                      <div className="text-2xl font-bold">
-                        {(platformAnalytics?.bounce_rate || 0).toFixed(1)}%
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        Lower is better
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="text-sm text-gray-500">Activity Summary</div>
-                    <div className="flex flex-wrap gap-2">
-                      <Badge variant="secondary" className="flex items-center gap-1">
-                        <Eye className="h-3 w-3" />
-                        Total Views: {formatNumber(metrics.totalPageViews)}
-                      </Badge>
-                      <Badge variant="secondary" className="flex items-center gap-1">
-                        <Search className="h-3 w-3" />
-                        Searches: {formatNumber(metrics.totalSearches)}
-                      </Badge>
-                      <Badge variant="secondary" className="flex items-center gap-1">
-                        <MessageSquare className="h-3 w-3" />
-                        Inquiries: {formatNumber(metrics.totalInquiries)}
-                      </Badge>
-                      <Badge variant="secondary" className="flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        New Users: {formatNumber(metrics.totalNewUsers)}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Growth Tab */}
-        <TabsContent value="growth" className="space-y-6">
-          {formattedUserGrowth.length > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>User Growth Analytics</CardTitle>
-                <CardDescription>
-                  Detailed analysis of user acquisition
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[400px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={formattedUserGrowth}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis yAxisId="left" />
-                      <YAxis yAxisId="right" orientation="right" />
-                      <Tooltip />
-                      <Legend />
-                      <Line 
-                        yAxisId="left"
-                        type="monotone" 
-                        dataKey="new_users" 
-                        name="New Users" 
-                        stroke="#3b82f6" 
-                        strokeWidth={3}
-                        dot={{ r: 4 }}
-                        activeDot={{ r: 8 }}
-                      />
-                      <Line 
-                        yAxisId="left"
-                        type="monotone" 
-                        dataKey="active_users" 
-                        name="Active Users" 
-                        stroke="#10b981" 
-                        strokeWidth={3}
-                        dot={{ r: 4 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">{formatNumber(metrics.totalNewUsers)}</div>
-                    <div className="text-sm text-gray-500">New Users ({days} days)</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">{formatNumber(metrics.avgActiveUsers)}</div>
-                    <div className="text-sm text-gray-500">Avg. Active Users</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">
-                      {platformAnalytics?.user_growth_rate ? platformAnalytics.user_growth_rate.toFixed(1) : '0.0'}%
-                    </div>
-                    <div className="text-sm text-gray-500">Growth Rate</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">
-                      {platformAnalytics?.total_users ? formatNumber(platformAnalytics.total_users) : '0'}
-                    </div>
-                    <div className="text-sm text-gray-500">Total Users</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No Growth Data Available</h3>
-                <p className="text-gray-500">User growth data will appear here once available.</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        {/* Engagement Tab */}
-        <TabsContent value="engagement" className="space-y-6">
-          {formattedDailyActivity.length > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Engagement Metrics</CardTitle>
-                <CardDescription>
-                  User interaction and activity patterns
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[400px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={formattedDailyActivity}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis yAxisId="left" />
-                      <Tooltip />
-                      <Legend />
-                      <Line 
-                        yAxisId="left"
-                        type="monotone" 
-                        dataKey="page_views" 
-                        name="Page Views" 
-                        stroke="#3b82f6" 
-                        strokeWidth={3}
-                        dot={{ r: 4 }}
-                      />
-                      <Line 
-                        yAxisId="left"
-                        type="monotone" 
-                        dataKey="searches" 
-                        name="Searches" 
-                        stroke="#10b981" 
-                        strokeWidth={3}
-                        dot={{ r: 4 }}
-                      />
-                      <Line 
-                        yAxisId="left"
-                        type="monotone" 
-                        dataKey="inquiries" 
-                        name="Inquiries" 
-                        stroke="#8b5cf6" 
-                        strokeWidth={3}
-                        dot={{ r: 4 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Activity className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No Engagement Data Available</h3>
-                <p className="text-gray-500">Engagement data will appear here once available.</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        {/* Users Tab */}
-        <TabsContent value="users" className="space-y-6">
-          {usersData?.results && usersData.results.length > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Users</CardTitle>
-                <CardDescription>
-                  Latest registered users and their activity
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>User</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Properties</TableHead>
-                        <TableHead>Joined</TableHead>
-                        <TableHead>Last Active</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {usersData.results.slice(0, 10).map((user: AdminUser) => (
-                        <TableRow key={user.id}>
-                          <TableCell>
-                            <div className="flex items-center space-x-3">
-                              <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-                                {user.first_name?.[0] || user.email[0].toUpperCase()}
-                                {user.last_name?.[0] || ''}
-                              </div>
-                              <div>
-                                <div className="font-medium">
-                                  {user.first_name && user.last_name 
-                                    ? `${user.first_name} ${user.last_name}`
-                                    : user.email}
-                                </div>
-                                <div className="text-sm text-gray-500">{user.email}</div>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge 
-                              variant={user.user_type === 'admin' ? "default" : "outline"} 
-                              className="capitalize"
-                            >
-                              {user.user_type || 'user'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col gap-1">
-                              <Badge variant={user.is_verified ? "default" : "secondary"}>
-                                {user.is_verified ? 'Verified' : 'Pending'}
-                              </Badge>
-                              <Badge variant={user.is_active ? "default" : "destructive"}>
-                                {user.is_active ? 'Active' : 'Inactive'}
-                              </Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="font-medium">0</div>
-                            <div className="text-xs text-gray-500">Properties listed</div>
-                          </TableCell>
-                          <TableCell>
-                            {new Date(user.created_at).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell>
-                            {user.last_login 
-                              ? new Date(user.last_login).toLocaleDateString()
-                              : 'Never'}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No User Data Available</h3>
-                <p className="text-gray-500">User data will appear here once available.</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
+          
+          <div className="mt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+              {t('usersTable.showing', { 
+                showing: filteredUsers.length, 
+                total: adminUserData?.users.length || 0 
+              })}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchData}
+                className="border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs md:text-sm"
+              >
+                {t('usersTable.refresh')}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => exportData('json')}
+                className="border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs md:text-sm"
+              >
+                <Download className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                {t('usersTable.exportJSON')}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
-};
+}

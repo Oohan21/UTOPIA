@@ -30,36 +30,36 @@ export default function MarketStatsCard({ stats }: MarketStatsCardProps) {
   const data = stats || defaultStats
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Market Overview</CardTitle>
+    <Card className="dark:bg-gray-800 dark:border-gray-700">
+      <CardHeader className="dark:bg-gray-800">
+        <CardTitle className="dark:text-white">Market Overview</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 dark:bg-gray-800">
         {/* Summary Stats */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-lg border p-4">
+          <div className="rounded-lg border p-4 dark:border-gray-700 dark:bg-gray-800">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Avg. Price</span>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground dark:text-gray-400">Avg. Price</span>
+              <DollarSign className="h-4 w-4 text-muted-foreground dark:text-gray-400" />
             </div>
-            <div className="text-2xl font-semibold">
+            <div className="text-2xl font-semibold dark:text-white">
               {data.summary.average_price.toLocaleString()} ETB
             </div>
           </div>
 
-          <div className="rounded-lg border p-4">
+          <div className="rounded-lg border p-4 dark:border-gray-700 dark:bg-gray-800">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Total Listings</span>
-              <Home className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground dark:text-gray-400">Total Listings</span>
+              <Home className="h-4 w-4 text-muted-foreground dark:text-gray-400" />
             </div>
-            <div className="text-2xl font-semibold">
+            <div className="text-2xl font-semibold dark:text-white">
               {data.summary.total_listings.toLocaleString()}
             </div>
           </div>
 
-          <div className="rounded-lg border p-4">
+          <div className="rounded-lg border p-4 dark:border-gray-700 dark:bg-gray-800">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Price Change</span>
+              <span className="text-sm text-muted-foreground dark:text-gray-400">Price Change</span>
               {data.trends.price_change_30d > 0 ? (
                 <TrendingUp className="h-4 w-4 text-green-500" />
               ) : (
@@ -67,64 +67,64 @@ export default function MarketStatsCard({ stats }: MarketStatsCardProps) {
               )}
             </div>
             <div className={`text-2xl font-semibold ${
-              data.trends.price_change_30d > 0 ? 'text-green-600' : 'text-red-600'
+              data.trends.price_change_30d > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
             }`}>
               {data.trends.price_change_30d > 0 ? '+' : ''}{data.trends.price_change_30d}%
             </div>
-            <div className="text-sm text-muted-foreground">Last 30 days</div>
+            <div className="text-sm text-muted-foreground dark:text-gray-400">Last 30 days</div>
           </div>
 
-          <div className="rounded-lg border p-4">
+          <div className="rounded-lg border p-4 dark:border-gray-700 dark:bg-gray-800">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Avg. Days on Market</span>
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground dark:text-gray-400">Avg. Days on Market</span>
+              <BarChart3 className="h-4 w-4 text-muted-foreground dark:text-gray-400" />
             </div>
-            <div className="text-2xl font-semibold">
+            <div className="text-2xl font-semibold dark:text-white">
               {data.trends.average_days_on_market}
             </div>
-            <div className="text-sm text-muted-foreground">days</div>
+            <div className="text-sm text-muted-foreground dark:text-gray-400">days</div>
           </div>
         </div>
 
         {/* Price Distribution */}
         <div>
-          <h4 className="mb-4 font-medium">Price Distribution</h4>
+          <h4 className="mb-4 font-medium dark:text-gray-300">Price Distribution</h4>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm">Under 1M ETB</span>
+              <span className="text-sm dark:text-gray-400">Under 1M ETB</span>
               <div className="w-32">
-                <div className="h-2 rounded-full bg-muted">
+                <div className="h-2 rounded-full bg-muted dark:bg-gray-700">
                   <div className="h-full w-1/4 rounded-full bg-blue-500"></div>
                 </div>
               </div>
-              <span className="text-sm font-medium">25%</span>
+              <span className="text-sm font-medium dark:text-gray-300">25%</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm">1M - 3M ETB</span>
+              <span className="text-sm dark:text-gray-400">1M - 3M ETB</span>
               <div className="w-32">
-                <div className="h-2 rounded-full bg-muted">
+                <div className="h-2 rounded-full bg-muted dark:bg-gray-700">
                   <div className="h-full w-2/5 rounded-full bg-green-500"></div>
                 </div>
               </div>
-              <span className="text-sm font-medium">40%</span>
+              <span className="text-sm font-medium dark:text-gray-300">40%</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm">3M - 5M ETB</span>
+              <span className="text-sm dark:text-gray-400">3M - 5M ETB</span>
               <div className="w-32">
-                <div className="h-2 rounded-full bg-muted">
+                <div className="h-2 rounded-full bg-muted dark:bg-gray-700">
                   <div className="h-full w-1/5 rounded-full bg-yellow-500"></div>
                 </div>
               </div>
-              <span className="text-sm font-medium">20%</span>
+              <span className="text-sm font-medium dark:text-gray-300">20%</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm">5M+ ETB</span>
+              <span className="text-sm dark:text-gray-400">5M+ ETB</span>
               <div className="w-32">
-                <div className="h-2 rounded-full bg-muted">
+                <div className="h-2 rounded-full bg-muted dark:bg-gray-700">
                   <div className="h-full w-1/5 rounded-full bg-red-500"></div>
                 </div>
               </div>
-              <span className="text-sm font-medium">15%</span>
+              <span className="text-sm font-medium dark:text-gray-300">15%</span>
             </div>
           </div>
         </div>
