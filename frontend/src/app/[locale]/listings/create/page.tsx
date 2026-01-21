@@ -1,16 +1,16 @@
-// app/listings/create/page.tsx - UPDATED to use real promotion tiers
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Header from "@/components/common/Header/Header";
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { listingsApi } from '@/lib/api/listings'
 import { subscriptionApi } from '@/lib/api/subscriptions'
 import { PropertyFormData, FileDraft } from '@/lib/types/property'
 import { useAuthStore } from '@/lib/store/authStore'
+import { useLocale, useTranslations } from 'next-intl'
 import toast from 'react-hot-toast'
 import debounce from 'lodash/debounce'
-import Header from '@/components/common/Header/Header'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import {
   PROPERTY_TYPES,
@@ -42,10 +42,8 @@ import {
   CheckSquare,
   Square,
   Compass,
-  Locate,
-  GripVertical,
+  Wrench,
   Eye,
-  Download,
   Globe,
   Calculator,
   Search,
@@ -53,8 +51,138 @@ import {
   Zap,
   TrendingUp,
   Crown,
-  CreditCard
+  CreditCard,
+  ChevronLeft,
+  ChevronDown,
+  Maximize2,
+  Minimize2,
+  Grid,
+  List,
+  Moon,
+  Sun,
+  Wifi,
+  Car,
+  Shield,
+  Droplets,
+  Flame,
+  Snowflake,
+  Dumbbell,
+  Tv,
+  Microwave,
+  Refrigerator,
+  Wind,
+  Fan,
+  Coffee,
+  Utensils,
+  Bath,
+  Bed,
+  Sofa,
+  Table,
+  Lamp,
+  Camera,
+  Bell,
+  Lock,
+  Key,
+  Printer,
+  Phone,
+  Mail,
+  Users,
+  Briefcase,
+  Globe2,
+  Palette,
+  Type,
+  Volume2,
+  ShieldCheck,
+  Award,
+  Target,
+  Rocket,
+  ZapOff,
+  Battery,
+  Power,
+  Cloud,
+  Database,
+  Server,
+  Cpu,
+  HardDrive,
+  Router,
+  Satellite,
+  Bluetooth,
+  WifiOff,
+  Network,
+  SatelliteDish,
+  Radio,
+  Speaker,
+  Headphones,
+  Gamepad,
+  MonitorPlay,
+  Projector,
+  Film,
+  Music,
+  Book,
+  BookOpen,
+  Library,
+  School,
+  GraduationCap,
+  Banknote,
+  Wallet,
+  PiggyBank,
+  CreditCard as CreditCardIcon,
+  Receipt,
+  ShoppingBag,
+  ShoppingCart,
+  Store,
+  Building2,
+  Factory,
+  WarehouseIcon,
+  Ship,
+  Plane,
+  Train,
+  Bus,
+  Bike,
+  CarTaxiFront,
+  ParkingSquare,
+  TrafficCone,
+  Lightbulb,
+  Flashlight,
+  SunDim,
+  Thermometer,
+  ThermometerSnowflake,
+  ThermometerSun,
+  Droplet,
+  Waves,
+  CloudRain,
+  CloudSnow,
+  CloudLightning,
+  CloudFog,
+  Sunrise,
+  Sunset,
+  Calendar,
+  Heart,
+  ThumbsUp,
+  Trophy as TrophyIcon,
+  Target as TargetIcon,
+  Check,
+  XCircle,
+  AlertTriangle,
+  HelpCircle,
+  MessageCircle,
+  MessageSquare,
+  PhoneCall,
+  Video as VideoIcon,
+  Camera as CameraIcon,
+  Mic,
+  File,
+  Truck,
+  Trees,
+  RefreshCw,
+  Package,
+  Layers,
+  RotateCcw,
+  RotateCw,
+  GlassWater,
+  ArrowUpDown,
 } from 'lucide-react'
+
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
@@ -66,7 +194,7 @@ import {
   SelectValue,
 } from "@/components/ui/Select"
 import { Checkbox } from '@/components/ui/Checkbox'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/Card'
 import { Separator } from '@/components/ui/Separator'
 import { Badge } from '@/components/ui/Badge'
 import { Label } from '@/components/ui/Label'
@@ -75,6 +203,105 @@ import { ScrollArea } from '@/components/ui/Scroll-area'
 import { Switch } from '@/components/ui/Switch'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/Alert'
 import { cn } from '@/lib/utils'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/Sheet'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/Collapsible'
+import { Progress } from '@/components/ui/progress'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/Radio-group'
+import { Slider } from '@/components/ui/Slider'
+import LanguageSwitcher from '@/components/common/LanguageSwitcher'
+
+// Enhanced amenities and features
+const AMENITIES_CATEGORIES = {
+  essentials: [
+    { id: 1, name: 'Parking', key: 'has_parking', icon: Car, description: 'Dedicated parking space' },
+    { id: 2, name: 'Security', key: 'has_security', icon: Shield, description: '24/7 security' },
+    { id: 3, name: 'Water Backup', key: 'has_backup_water', icon: Droplets, description: 'Water storage' },
+    { id: 4, name: 'Generator', key: 'has_generator', icon: Zap, description: 'Backup power' },
+    { id: 5, name: 'Fire Safety', key: 'has_fire_safety', icon: Flame, description: 'Fire extinguishers' },
+    { id: 6, name: 'CCTV', key: 'has_cctv', icon: Camera, description: 'Security cameras' },
+    { id: 7, name: 'Intercom', key: 'has_intercom', icon: Phone, description: 'Intercom system' },
+    { id: 8, name: 'Guard House', key: 'has_guard_house', icon: Home, description: 'Security guard house' },
+  ],
+  comfort: [
+    { id: 9, name: 'Air Conditioning', key: 'has_air_conditioning', icon: Snowflake, description: 'AC units' },
+    { id: 10, name: 'Heating', key: 'has_heating', icon: Flame, description: 'Heating system' },
+    { id: 11, name: 'Elevator', key: 'has_elevator', icon: ArrowUpDown, description: 'Elevator access' },
+    { id: 12, name: 'Furnished', key: 'has_furniture', icon: Sofa, description: 'Fully furnished' },
+    { id: 13, name: 'WiFi', key: 'has_internet', icon: Wifi, description: 'High-speed internet' },
+    { id: 14, name: 'Satellite TV', key: 'has_satellite_tv', icon: Satellite, description: 'Satellite television' },
+    { id: 15, name: 'Central Heating', key: 'has_central_heating', icon: Thermometer, description: 'Central heating' },
+    { id: 16, name: 'Central Cooling', key: 'has_central_cooling', icon: Wind, description: 'Central cooling' },
+  ],
+  appliances: [
+    { id: 17, name: 'Refrigerator', key: 'has_refrigerator', icon: Refrigerator, description: 'Refrigerator included' },
+    { id: 18, name: 'Washing Machine', key: 'has_washing_machine', icon: RefreshCw, description: 'Washing machine' },
+    { id: 19, name: 'Dishwasher', key: 'has_dishwasher', icon: Droplets, description: 'Dishwasher' },
+    { id: 20, name: 'Microwave', key: 'has_microwave', icon: Microwave, description: 'Microwave oven' },
+    { id: 21, name: 'Oven', key: 'has_oven', icon: Flame, description: 'Electric/gas oven' },
+    { id: 22, name: 'Stove', key: 'has_stove', icon: Flame, description: 'Cooking stove' },
+    { id: 23, name: 'Coffee Maker', key: 'has_coffee_maker', icon: Coffee, description: 'Coffee machine' },
+    { id: 24, name: 'Water Dispenser', key: 'has_water_dispenser', icon: Droplet, description: 'Water dispenser' },
+  ],
+  lifestyle: [
+    { id: 25, name: 'Swimming Pool', key: 'has_swimming_pool', icon: Waves, description: 'Swimming pool' },
+    { id: 26, name: 'Gym', key: 'has_gym', icon: Dumbbell, description: 'Fitness center' },
+    { id: 27, name: 'Garden', key: 'has_garden', icon: Trees, description: 'Private garden' },
+    { id: 28, name: 'Balcony', key: 'has_balcony', icon: Maximize2, description: 'Balcony/terrace' },
+    { id: 29, name: 'Pet Friendly', key: 'is_pet_friendly', icon: Heart, description: 'Pets allowed' },
+    { id: 30, name: 'Smoking Allowed', key: 'is_smoking_allowed', icon: Flame, description: 'Smoking permitted' },
+    { id: 31, name: 'Wheelchair Access', key: 'is_wheelchair_accessible', icon: HelpCircle, description: 'Accessible' },
+    { id: 32, name: 'Kids Play Area', key: 'has_play_area', icon: Users, description: 'Children play area' },
+  ],
+  technology: [
+    { id: 33, name: 'Smart Home', key: 'has_smart_home', icon: Cpu, description: 'Smart home system' },
+    { id: 34, name: 'Home Theater', key: 'has_home_theater', icon: Tv, description: 'Home theater setup' },
+    { id: 35, name: 'Electric Car Charging', key: 'has_car_charging', icon: Zap, description: 'EV charging' },
+    { id: 36, name: 'Solar Panels', key: 'has_solar_panels', icon: Sun, description: 'Solar power' },
+    { id: 37, name: 'Backup Internet', key: 'has_backup_internet', icon: Wifi, description: 'Redundant internet' },
+    { id: 38, name: 'Automated Lighting', key: 'has_automated_lighting', icon: Lightbulb, description: 'Smart lighting' },
+    { id: 39, name: 'Security System', key: 'has_security_system', icon: ShieldCheck, description: 'Advanced security' },
+    { id: 40, name: 'Voice Control', key: 'has_voice_control', icon: Mic, description: 'Voice assistants' },
+  ],
+  services: [
+    { id: 41, name: 'Cleaning Service', key: 'has_cleaning_service', icon: Trash2, description: 'Regular cleaning' },
+    { id: 42, name: 'Maintenance', key: 'has_maintenance', icon: Wrench, description: 'On-call maintenance' },
+    { id: 43, name: 'Concierge', key: 'has_concierge', icon: Bell, description: 'Concierge service' },
+    { id: 44, name: 'Laundry Service', key: 'has_laundry_service', icon: RefreshCw, description: 'Laundry service' },
+    { id: 45, name: 'Room Service', key: 'has_room_service', icon: Truck, description: 'Room service' },
+    { id: 46, name: 'Valet Parking', key: 'has_valet_parking', icon: Car, description: 'Valet parking' },
+    { id: 47, name: '24/7 Reception', key: 'has_reception', icon: Building, description: '24-hour reception' },
+    { id: 48, name: 'Package Handling', key: 'has_package_handling', icon: Package, description: 'Package reception' },
+  ],
+  community: [
+    { id: 49, name: 'Club House', key: 'has_club_house', icon: Home, description: 'Community club house' },
+    { id: 50, name: 'Conference Room', key: 'has_conference_room', icon: Users, description: 'Meeting rooms' },
+    { id: 51, name: 'Business Center', key: 'has_business_center', icon: Briefcase, description: 'Business facilities' },
+    { id: 52, name: 'Library', key: 'has_library', icon: Book, description: 'Library access' },
+    { id: 53, name: 'Party Hall', key: 'has_party_hall', icon: GlassWater, description: 'Party/event space' },
+    { id: 54, name: 'BBQ Area', key: 'has_bbq_area', icon: Flame, description: 'Barbecue area' },
+    { id: 55, name: 'Playground', key: 'has_playground', icon: Gamepad, description: 'Children playground' },
+    { id: 56, name: 'Tennis Court', key: 'has_tennis_court', icon: Dumbbell, description: 'Tennis court' },
+  ]
+}
+
+const DOCUMENTS = [
+  { id: 1, name: 'Title Deed', key: 'has_title_deed', description: 'Proof of property ownership' },
+  { id: 2, name: 'Construction Permit', key: 'has_construction_permit', description: 'Building approval documents' },
+  { id: 3, name: 'Occupancy Certificate', key: 'has_occupancy_certificate', description: 'Certificate for habitation' },
+  { id: 4, name: 'Tax Clearance', key: 'has_tax_clearance', description: 'Property tax clearance' },
+  { id: 5, name: 'Land Certificate', key: 'has_land_certificate', description: 'Land ownership certificate' },
+  { id: 6, name: 'Building Plans', key: 'has_building_plans', description: 'Architectural plans' },
+  { id: 7, name: 'Insurance', key: 'has_insurance', description: 'Property insurance' },
+  { id: 8, name: 'Utility Bills', key: 'has_utility_bills', description: 'Recent utility bills' },
+]
+
+const DURATION_OPTIONS = [
+  { value: 7, label: '7 days' },
+  { value: 30, label: '30 days' },
+  { value: 60, label: '60 days' },
+  { value: 90, label: '90 days' }
+]
 
 // Interface for geocoding results
 interface GeocodeResult {
@@ -92,43 +319,30 @@ interface GeocodeResult {
   state_district?: string;
 }
 
-const AMENITIES = [
-  { id: 1, name: 'Parking', key: 'has_parking', icon: '🚗' },
-  { id: 2, name: 'Garden', key: 'has_garden', icon: '🌳' },
-  { id: 3, name: 'Security', key: 'has_security', icon: '🔒' },
-  { id: 4, name: 'Furniture', key: 'has_furniture', icon: '🛋️' },
-  { id: 5, name: 'Air Conditioning', key: 'has_air_conditioning', icon: '❄️' },
-  { id: 6, name: 'Heating', key: 'has_heating', icon: '🔥' },
-  { id: 7, name: 'Internet', key: 'has_internet', icon: '🌐' },
-  { id: 8, name: 'Generator', key: 'has_generator', icon: '⚡' },
-  { id: 9, name: 'Elevator', key: 'has_elevator', icon: '🔼' },
-  { id: 10, name: 'Swimming Pool', key: 'has_swimming_pool', icon: '🏊' },
-  { id: 11, name: 'Gym', key: 'has_gym', icon: '💪' },
-  { id: 12, name: 'Conference Room', key: 'has_conference_room', icon: '💼' },
-  { id: 13, name: 'Pet Friendly', key: 'is_pet_friendly', icon: '🐾' },
-  { id: 14, name: 'Wheelchair Accessible', key: 'is_wheelchair_accessible', icon: '♿' },
-  { id: 15, name: 'Backup Water', key: 'has_backup_water', icon: '💧' },
-]
-
-const DOCUMENTS = [
-  { id: 1, name: 'Title Deed', key: 'has_title_deed', description: 'Proof of property ownership' },
-  { id: 2, name: 'Construction Permit', key: 'has_construction_permit', description: 'Building approval documents' },
-  { id: 3, name: 'Occupancy Certificate', key: 'has_occupancy_certificate', description: 'Certificate for habitation' },
-]
-
-const DURATION_OPTIONS = [
-  { value: 7, label: '7 days' },
-  { value: 30, label: '30 days' },
-  { value: 60, label: '60 days' },
-  { value: 90, label: '90 days' }
-]
-
 const isFileDraft = (item: any): item is FileDraft => {
   return item && typeof item === 'object' && item.isPlaceholder === true
 }
 
 const isFile = (image: any): image is File => {
-  return image instanceof File
+  if (!image || typeof image !== 'object') return false
+  
+  // Check if it has File-like properties
+  const isFileLike = 
+    'name' in image && typeof image.name === 'string' &&
+    'size' in image && typeof image.size === 'number' &&
+    'type' in image && typeof image.type === 'string'
+  
+  // Try to use instanceof safely
+  try {
+    if (typeof File !== 'undefined' && File.prototype && image instanceof File) {
+      return true
+    }
+  } catch (error) {
+    // instanceof failed, fall back to property check
+    console.log('instanceof check failed, using property check')
+  }
+  
+  return isFileLike
 }
 
 const getImageUrl = (image: any): string | null => {
@@ -181,6 +395,9 @@ const logFormData = (formData: FormData) => {
 
 export default function CreateListingPage() {
   const router = useRouter()
+  const locale = useLocale()
+  const t = useTranslations('createListing')
+  const tc = useTranslations('common')
   const { isAuthenticated, user } = useAuthStore()
   const [activeTab, setActiveTab] = useState('basic')
   const [listingType, setListingType] = useState<'for_sale' | 'for_rent'>('for_sale')
@@ -192,15 +409,19 @@ export default function CreateListingPage() {
   const [isGeocoding, setIsGeocoding] = useState(false)
   const [geocodeError, setGeocodeError] = useState<string | null>(null)
   const [geocodeResult, setGeocodeResult] = useState<GeocodeResult | null>(null)
-  // Add missing state variables
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
-  // Add promotion tier state
   const [selectedPromotionTier, setSelectedPromotionTier] = useState<'basic' | 'standard' | 'premium'>('basic')
   const [selectedDuration, setSelectedDuration] = useState<number>(30)
   const [promotionPrice, setPromotionPrice] = useState<number>(0)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [showAdvancedFeatures, setShowAdvancedFeatures] = useState(false)
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [selectedAmenities, setSelectedAmenities] = useState<number[]>([])
+  const [uploadProgress, setUploadProgress] = useState(0)
 
   const citySelectRef = useRef<HTMLDivElement>(null)
   const subCitySelectRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [formData, setFormData] = useState<Partial<PropertyFormData>>({
     title: '',
@@ -256,12 +477,11 @@ export default function CreateListingPage() {
     images: [],
     property_video: undefined,
     documents: [],
-    // Add promotion fields
     promotionTier: 'basic',
     is_promoted: false,
   })
 
-  // Fetch promotion tiers from API
+  // Fetch promotion tiers from API isFile
   const { data: promotionTiers, isLoading: isLoadingPromotionTiers } = useQuery({
     queryKey: ['promotion-tiers'],
     queryFn: async () => {
@@ -308,10 +528,10 @@ export default function CreateListingPage() {
 
   const getTierColor = (tierType: string) => {
     switch (tierType) {
-      case 'basic': return 'bg-green-100 text-green-800 border-green-200'
-      case 'standard': return 'bg-blue-100 text-blue-800 border-blue-200'
-      case 'premium': return 'bg-purple-100 text-purple-800 border-purple-200'
-      default: return 'bg-gray-100 text-gray-800 border-gray-200'
+      case 'basic': return 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700'
+      case 'standard': return 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-700'
+      case 'premium': return 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 border-purple-200 dark:border-purple-700'
+      default: return 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700'
     }
   }
 
@@ -453,7 +673,6 @@ export default function CreateListingPage() {
       setGeocodeError(null)
       setGeocodeResult(null)
 
-      // Using OpenStreetMap Nominatim API
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&zoom=18&accept-language=en`
       )
@@ -605,7 +824,6 @@ export default function CreateListingPage() {
 
       if (isPromoted) {
         toast.success('Property listed successfully with promotion! It is now live.')
-        // Redirect to payment page for promoted properties
         router.push(`/listings/${data.id}/promote?from_create=true`)
       } else if (user?.is_staff || user?.is_superuser) {
         toast.success('Property listed successfully! It is now live.')
@@ -616,7 +834,6 @@ export default function CreateListingPage() {
           'You will be notified once it is approved and goes live.'
         )
 
-        // Show promotion suggestion
         setTimeout(() => {
           localStorage.setItem('new_property_id', data.id.toString())
           localStorage.setItem('new_property_title', formData.title || '')
@@ -658,13 +875,11 @@ export default function CreateListingPage() {
       router.push('/auth/login?redirect=/listings/create')
     }
 
-    // Load auto-saved draft on mount
     const savedDraft = localStorage.getItem('property_draft_autosave')
     if (savedDraft) {
       try {
         const draft = JSON.parse(savedDraft)
         const draftAge = new Date().getTime() - new Date(draft.timestamp).getTime()
-        // Only load drafts less than 24 hours old
         if (draftAge < 24 * 60 * 60 * 1000) {
           if (draft.images) {
             draft.images = draft.images.map((img: any) => {
@@ -694,18 +909,15 @@ export default function CreateListingPage() {
     }))
     setHasUnsavedChanges(true)
 
-    // Clear subcity when city changes
     if (field === 'city' && value !== formData.city) {
       setFormData(prevData => ({ ...prevData, sub_city: undefined }))
     }
 
-    // Clear geocode results when coordinates change
     if (field === 'latitude' || field === 'longitude') {
       setGeocodeResult(null)
       setGeocodeError(null)
     }
 
-    // Clear error for field when user starts typing
     if (formErrors[field]) {
       setFormErrors(prev => {
         const newErrors = { ...prev }
@@ -896,12 +1108,6 @@ export default function CreateListingPage() {
     try {
       const formDataObj = new FormData()
 
-      console.log('=== FORM DATA DEBUG ===')
-      console.log('Form state:', formData)
-      console.log('Listing type:', listingType)
-      console.log('Promotion tier:', selectedPromotionTier)
-      console.log('Promotion duration:', selectedDuration)
-
       const now = new Date().toISOString()
       formDataObj.append('created_at', now)
       formDataObj.append('listed_date', now)
@@ -973,7 +1179,7 @@ export default function CreateListingPage() {
         formDataObj.append('property_tax', formData.property_tax.toString())
       }
 
-      AMENITIES.forEach(amenity => {
+      Object.values(AMENITIES_CATEGORIES).flat().forEach(amenity => {
         const value = formData[amenity.key as keyof PropertyFormData]
         if (typeof value === 'boolean') {
           formDataObj.append(amenity.key, value ? 'true' : 'false')
@@ -991,7 +1197,6 @@ export default function CreateListingPage() {
         }
       })
 
-      // Append images
       const validImages = formData.images?.filter(img => isFile(img)) || []
       validImages.forEach((image) => {
         if (isFile(image)) {
@@ -1007,7 +1212,6 @@ export default function CreateListingPage() {
         formDataObj.append('virtual_tour_url', formData.virtual_tour_url)
       }
 
-      // Append documents
       formData.documents?.forEach((doc) => {
         if (isFile(doc)) {
           formDataObj.append('documents', doc)
@@ -1016,11 +1220,9 @@ export default function CreateListingPage() {
 
       formDataObj.append('is_premium', 'false');
 
-      // Add promotion data
       formDataObj.append('promotionTier', selectedPromotionTier)
       formDataObj.append('is_promoted', selectedPromotionTier !== 'basic' ? 'true' : 'false')
 
-      // Auto-approve for staff/superusers OR promoted properties
       if (user?.is_staff || user?.is_superuser || selectedPromotionTier !== 'basic') {
         formDataObj.append('approval_status', 'approved')
         formDataObj.append('is_active', 'true')
@@ -1031,23 +1233,15 @@ export default function CreateListingPage() {
         formDataObj.append('is_active', 'true')
       }
 
-      console.log('FormData being sent:')
-      for (let [key, value] of formDataObj.entries()) {
-        console.log(`${key}:`, value)
-      }
-
-      // If paid promotion, create the listing then redirect to Chapa
       if (selectedPromotionTier !== 'basic') {
         setIsSubmitting(true)
         toast.loading('Creating your listing...')
 
         try {
-          // Create the property first
           const response = await listingsApi.createProperty(formDataObj, selectedPromotionTier)
           toast.dismiss()
           toast.success('Listing created! Redirecting to payment...')
 
-          // Store property info for payment
           localStorage.setItem('last_payment_attempt', JSON.stringify({
             propertyId: response.id,
             tierType: selectedPromotionTier,
@@ -1055,7 +1249,6 @@ export default function CreateListingPage() {
             timestamp: new Date().toISOString()
           }))
 
-          // Try API payment first
           try {
             const paymentResponse = await subscriptionApi.initiatePromotionPayment({
               property_id: response.id,
@@ -1071,7 +1264,6 @@ export default function CreateListingPage() {
             console.log('API payment failed, trying direct Chapa...', paymentError)
           }
 
-          // Fallback to direct Chapa
           const txRef = `utopia-promo-${response.id}-${Date.now()}`
           const chapaPaymentUrl = `https://api.chapa.co/v1/hosted/pay?` + new URLSearchParams({
             public_key: process.env.NEXT_PUBLIC_CHAPA_PUBLIC_KEY || 'chapa_test_XXX',
@@ -1096,7 +1288,6 @@ export default function CreateListingPage() {
             timestamp: new Date().toISOString()
           }))
 
-          // Redirect to Chapa
           setTimeout(() => {
             window.location.href = chapaPaymentUrl
           }, 1000)
@@ -1132,7 +1323,6 @@ export default function CreateListingPage() {
           setIsSubmitting(false)
         }
       } else {
-        // For basic tier, use the normal mutation
         createMutation.mutate(formDataObj)
       }
 
@@ -1226,18 +1416,20 @@ export default function CreateListingPage() {
     }
   }
 
-  // Calculate progress
   const progress = {
     basic: formData.title && formData.description && formData.property_type ? 100 : 0,
     location: formData.city && formData.sub_city && formData.specific_location ? 100 : 0,
     details: formData.bedrooms && formData.total_area ? 100 : 0,
     pricing: (listingType === 'for_sale' ? formData.price_etb : formData.monthly_rent) ? 100 : 0,
-    features: true,
+    features: Object.values(AMENITIES_CATEGORIES).flat().some(amenity =>
+      formData[amenity.key as keyof PropertyFormData]
+    ) ? 100 : 0,
     media: (formData.images?.filter(img => isFile(img)).length || 0) > 0 ? 100 : 0,
-  }
+    promotion: 100,
+  };
 
   const totalProgress = Math.round(
-    Object.values(progress).filter(p => typeof p === 'number').reduce((a, b) => a + b, 0) / 6
+    Object.values(progress).reduce((a, b) => a + b, 0) / 7
   )
 
   if (!isAuthenticated) {
@@ -1249,213 +1441,129 @@ export default function CreateListingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20 dark:from-background dark:via-background dark:to-muted/10">
       <Header />
-
       <div className="container max-w-7xl py-6 px-4 sm:px-6">
+        {/* Mobile Header */}
+        <div className="md:hidden mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.back()}
+              className="h-10 w-10 rounded-full"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-xl font-bold text-foreground bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+              {listingType === 'for_sale' ? t('titles.sellProperty') : t('titles.rentProperty')}
+            </h1>
+          </div>
+
+          <div className="flex items-center gap-2 mb-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLoadDraft}
+              className="flex-1 gap-2 border-primary/20 hover:border-primary/40"
+            >
+              <Clock className="h-4 w-4" />
+              {t('buttons.loadDraft')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSaveDraft}
+              className="flex-1 gap-2 border-primary/20 hover:border-primary/40"
+            >
+              <Save className="h-4 w-4" />
+              {t('buttons.saveDraft')}
+            </Button>
+          </div>
+        </div>
+
         {/* Progress Header */}
-        <div className="mb-8 bg-card rounded-xl shadow-sm border p-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div className="mb-8 bg-card rounded-2xl shadow-lg border border-border/50 dark:border-border/30 p-6 backdrop-blur-sm bg-white/80 dark:bg-gray-900/80">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">
-                {listingType === 'for_sale' ? 'Sell Your Property' : 'Rent Your Property'}
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+                {listingType === 'for_sale' ? t('titles.sellYourProperty') : t('titles.rentYourProperty')}
               </h1>
-              <p className="text-muted-foreground mt-1">
-                Fill in the details below to list your property (Free)
+              <p className="text-muted-foreground mt-2 text-sm md:text-base flex items-center gap-2">
+                <span className="inline-flex items-center gap-1">
+                  <Globe className="h-4 w-4" />
+                  {locale.toUpperCase()}
+                </span>
+                <span>•</span>
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-3">
               {hasUnsavedChanges && (
-                <Badge variant="outline" className="bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700 animate-pulse">
                   <Clock className="h-3 w-3 mr-1" />
-                  Unsaved changes
+                  {t('badges.unsavedChanges')}
                 </Badge>
               )}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleLoadDraft}
-                className="gap-2"
-                aria-label="Load draft"
+                className="gap-2 border-primary/20 hover:border-primary/40"
               >
                 <Clock className="h-4 w-4" />
-                Load Draft
+                {t('buttons.loadDraft')}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleSaveDraft}
-                className="gap-2"
-                aria-label="Save draft"
+                className="gap-2 border-primary/20 hover:border-primary/40"
               >
                 <Save className="h-4 w-4" />
-                Save Draft
+                {t('buttons.saveDraft')}
               </Button>
             </div>
           </div>
 
           {/* Progress Bar */}
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-foreground">
-                Completion: {totalProgress}%
-              </span>
-              <span className="text-sm text-muted-foreground">
-                {Object.values(progress).filter(p => p === 100).length}/6 sections
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-foreground">
+                  {t('progress.completion', { percentage: totalProgress })}
+                </span>
+                <Badge variant="secondary" className="text-xs">
+                  {Object.values(progress).filter(p => p === 100).length}/7
+                </Badge>
+              </div>
+              <span className="text-sm text-muted-foreground hidden md:inline">
+                {t('progress.sections', { completed: Object.values(progress).filter(p => p === 100).length, total: 7 })}
               </span>
             </div>
-            <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-              <div
-                className="h-full bg-primary transition-all duration-500 ease-out"
-                style={{ width: `${totalProgress}%` }}
-              />
-            </div>
-            <div className="grid grid-cols-6 gap-2 text-xs text-muted-foreground">
-              {['Basic', 'Location', 'Details', 'Pricing', 'Features', 'Media'].map((label, index) => (
-                <div
-                  key={label}
-                  className={`text-center ${progress[Object.keys(progress)[index] as keyof typeof progress] === 100
-                    ? 'text-primary font-semibold'
-                    : ''
-                    }`}
-                >
-                  {label}
-                </div>
-              ))}
+            <Progress value={totalProgress} className="h-3 bg-muted/50" />
+            <div className="hidden md:grid grid-cols-7 gap-2 text-xs text-muted-foreground">
+              {['basic', 'location', 'details', 'pricing', 'features', 'media', 'promotion'].map((key, index) => {
+                const sectionKey = Object.keys(progress)[index] as keyof typeof progress;
+                const sectionProgress = progress[sectionKey];
+                const label = t(`progress.${key}`);
+
+                return (
+                  <div
+                    key={key}
+                    className={`text-center font-medium transition-colors ${sectionProgress >= 100
+                      ? 'text-primary font-semibold'
+                      : sectionProgress > 0
+                        ? 'text-primary/70'
+                        : 'text-muted-foreground'
+                      }`}
+                  >
+                    {label}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
-
-        {/* Promotion Selection Section - MATCHING PROMOTION PAGE DESIGN */}
-        <Card className="mb-6 border-border shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              Boost Your Listing Visibility
-            </CardTitle>
-            <CardDescription>
-              Choose a promotion package to get more views and faster approval
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {isLoadingPromotionTiers ? (
-              <div className="flex items-center justify-center p-8">
-                <LoadingSpinner className="h-8 w-8" />
-                <span className="ml-3">Loading promotion options...</span>
-              </div>
-            ) : promotionTiers && promotionTiers.length > 0 ? (
-              <>
-                {/* Promotion tier selection */}
-                <div>
-                  <h3 className="font-semibold mb-4 text-foreground">Select Promotion Tier</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {promotionTiers.map((tier) => (
-                      <div
-                        key={tier.id}
-                        className={cn(
-                          "border-2 rounded-lg p-5 cursor-pointer transition-all h-full",
-                          selectedPromotionTier === tier.tier_type
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:border-primary/50"
-                        )}
-                        onClick={() => setSelectedPromotionTier(tier.tier_type as any)}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault()
-                            setSelectedPromotionTier(tier.tier_type as any)
-                          }
-                        }}
-                      >
-                        <div className="flex items-center gap-2 mb-3">
-                          {getTierIcon(tier.tier_type)}
-                          <h4 className="font-bold text-lg text-foreground">{tier.name}</h4>
-                        </div>
-
-                        <p className="text-sm text-muted-foreground mb-4">{tier.description}</p>
-
-                        {tier.tier_type !== 'basic' ? (
-                          <div className="space-y-2 mb-4">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-foreground">7 days</span>
-                              <span className="font-semibold text-foreground">{tier.price_7?.toLocaleString()} ETB</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-foreground">30 days</span>
-                              <span className="font-semibold text-foreground">{tier.price_30?.toLocaleString()} ETB</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-foreground">60 days</span>
-                              <span className="font-semibold text-foreground">{tier.price_60?.toLocaleString()} ETB</span>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="text-2xl font-bold text-green-600 mb-4">FREE</div>
-                        )}
-
-                        <div className="space-y-2">
-                          {tier.features && tier.features.slice(0, 3).map((feature: string, idx: number) => (
-                            <div key={idx} className="flex items-start gap-2">
-                              <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                              <span className="text-sm text-foreground">{feature}</span>
-                            </div>
-                          ))}
-                          {tier.features && tier.features.length > 3 && (
-                            <p className="text-xs text-muted-foreground">
-                              + {tier.features.length - 3} more features
-                            </p>
-                          )}
-                        </div>
-
-                        {selectedPromotionTier === tier.tier_type && (
-                          <div className="mt-4 flex items-center justify-center">
-                            <Badge className={cn("gap-1", getTierColor(tier.tier_type))}>
-                              <CheckCircle className="h-3 w-3" />
-                              Selected
-                            </Badge>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Duration selection for paid tiers */}
-                {selectedPromotionTier !== 'basic' && (
-                  <div className="p-4 bg-muted rounded-lg">
-                    <h4 className="font-medium mb-4 text-foreground">Select Duration</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {DURATION_OPTIONS.map((duration) => (
-                        <Button
-                          key={duration.value}
-                          variant={selectedDuration === duration.value ? "default" : "outline"}
-                          onClick={() => setSelectedDuration(duration.value)}
-                          className="h-16"
-                        >
-                          <div>
-                            <div className="font-bold text-foreground">{duration.label}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {calculatePrice(selectedPromotionTier, duration.value).toLocaleString()} ETB
-                            </div>
-                          </div>
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>
-                  Unable to load promotion options. Please try again later.
-                </AlertDescription>
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main Form */}
@@ -1465,19 +1573,70 @@ export default function CreateListingPage() {
               onValueChange={setActiveTab}
               className="space-y-6"
             >
-              <div className="sticky top-0 z-10 bg-background border-b pb-2">
-                <TabsList className="grid w-full grid-cols-6 bg-muted p-1 rounded-lg">
-                  {['basic', 'location', 'details', 'pricing', 'features', 'media'].map((tab) => (
+              {/* Mobile Tabs Trigger */}
+              <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" className="w-full md:hidden mb-4 border-primary/20 hover:border-primary/40">
+                    <div className="flex items-center justify-between w-full">
+                      <span className="capitalize font-medium">{activeTab} Information</span>
+                      <ChevronDown className="h-4 w-4" />
+                    </div>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="bottom" className="h-[80vh] rounded-t-2xl">
+                  <SheetHeader className="mb-4">
+                    <SheetTitle className="text-lg font-bold">Navigate Sections</SheetTitle>
+                  </SheetHeader>
+                  <ScrollArea className="h-[calc(100%-80px)]">
+                    <div className="space-y-1">
+                      {['basic', 'location', 'details', 'pricing', 'features', 'media', 'promotion'].map((tab) => (
+                        <Button
+                          key={tab}
+                          variant={activeTab === tab ? "default" : "ghost"}
+                          className="w-full justify-start capitalize h-12 rounded-lg"
+                          onClick={() => {
+                            setActiveTab(tab)
+                            setIsMobileMenuOpen(false)
+                          }}
+                        >
+                          <div className="flex items-center gap-3">
+                            {tab === 'basic' && <Home className="h-4 w-4" />}
+                            {tab === 'location' && <MapPin className="h-4 w-4" />}
+                            {tab === 'details' && <Building className="h-4 w-4" />}
+                            {tab === 'pricing' && <DollarSign className="h-4 w-4" />}
+                            {tab === 'features' && <CheckSquare className="h-4 w-4" />}
+                            {tab === 'media' && <ImageIcon className="h-4 w-4" />}
+                            {tab === 'promotion' && <TrendingUp className="h-4 w-4" />}
+                            <span>{tab.charAt(0).toUpperCase() + tab.slice(1)}</span>
+                          </div>
+                        </Button>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </SheetContent>
+              </Sheet>
+
+              <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b pb-2 hidden md:block">
+                <TabsList className="grid w-full grid-cols-7 bg-muted/50 p-1 rounded-xl border">
+                  {['basic', 'location', 'details', 'pricing', 'features', 'media', 'promotion'].map((tab) => (
                     <TabsTrigger
                       key={tab}
                       value={tab}
-                      className="data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                      className="data-[state=active]:bg-background data-[state=active]:shadow-md data-[state=active]:text-primary text-xs md:text-sm rounded-lg transition-all duration-300"
                       onKeyDown={(e) => handleKeyDown(e, tab)}
                       tabIndex={0}
                       role="tab"
                       aria-label={`${tab} tab`}
                     >
-                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                      {tab === 'basic' && <Home className="h-3 w-3 mr-2 hidden sm:inline" />}
+                      {tab === 'location' && <MapPin className="h-3 w-3 mr-2 hidden sm:inline" />}
+                      {tab === 'details' && <Building className="h-3 w-3 mr-2 hidden sm:inline" />}
+                      {tab === 'pricing' && <DollarSign className="h-3 w-3 mr-2 hidden sm:inline" />}
+                      {tab === 'features' && <CheckSquare className="h-3 w-3 mr-2 hidden sm:inline" />}
+                      {tab === 'media' && <ImageIcon className="h-3 w-3 mr-2 hidden sm:inline" />}
+                      {tab === 'promotion' && <TrendingUp className="h-3 w-3 mr-2 hidden sm:inline" />}
+                      <span className="hidden sm:inline">{tab.charAt(0).toUpperCase() + tab.slice(1)}</span>
+                      <span className="sm:hidden">{tab.charAt(0).toUpperCase()}</span>
                     </TabsTrigger>
                   ))}
                 </TabsList>
@@ -1485,105 +1644,110 @@ export default function CreateListingPage() {
 
               {/* Basic Information */}
               <TabsContent value="basic" className="space-y-6 animate-in fade-in duration-300">
-                <Card className="border-border shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Home className="h-5 w-5 text-primary" />
-                      Basic Information
+                <Card className="border-border shadow-xl rounded-2xl overflow-hidden bg-gradient-to-b from-card to-card/95">
+                  <CardHeader className="p-6 border-b border-border/50">
+                    <CardTitle className="flex items-center gap-3 text-xl">
+                      <div className="p-2 rounded-full bg-primary/10">
+                        <Home className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <span className="text-foreground">{t('sections.basic.title')}</span>
+                        <CardDescription className="mt-1">
+                          {t('sections.basic.subtitle')}
+                        </CardDescription>
+                      </div>
                     </CardTitle>
-                    <CardDescription>
-                      Start by providing the basic details about your property
-                    </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-6">
+                  <CardContent className="p-6 space-y-8">
                     {/* Listing Type */}
-                    <div>
-                      <Label className="mb-3 block text-foreground">What do you want to do? *</Label>
-                      <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-4">
+                      <Label className="text-lg font-semibold text-foreground">
+                        {t('sections.basic.listingType')} *
+                      </Label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <Button
                           type="button"
                           variant={listingType === 'for_sale' ? 'default' : 'outline'}
-                          className="h-16 text-base"
+                          className="h-16 text-base border-2 transition-all duration-300 hover:scale-[1.02]"
                           onClick={() => {
                             setListingType('for_sale')
                             handleInputChange('listing_type', 'for_sale')
                           }}
-                          aria-label="Sell property"
                         >
-                          <DollarSign className="mr-2 h-5 w-5" />
-                          Sell Property
+                          <DollarSign className="mr-3 h-5 w-5" />
+                          <div className="text-left">
+                            <div className="font-semibold">{t('sections.basic.sell')}</div>
+                            <div className="text-xs opacity-80">Sell your property</div>
+                          </div>
                         </Button>
                         <Button
                           type="button"
                           variant={listingType === 'for_rent' ? 'default' : 'outline'}
-                          className="h-16 text-base"
+                          className="h-16 text-base border-2 transition-all duration-300 hover:scale-[1.02]"
                           onClick={() => {
                             setListingType('for_rent')
                             handleInputChange('listing_type', 'for_rent')
                           }}
-                          aria-label="Rent property"
                         >
-                          <Home className="mr-2 h-5 w-5" />
-                          Rent Property
+                          <Home className="mr-3 h-5 w-5" />
+                          <div className="text-left">
+                            <div className="font-semibold">{t('sections.basic.rent')}</div>
+                            <div className="text-xs opacity-80">Rent your property</div>
+                          </div>
                         </Button>
                       </div>
                     </div>
 
-                    <div className="grid gap-6 md:grid-cols-2">
+                    <div className="grid gap-6">
                       <div className="space-y-3">
-                        <Label htmlFor="title" className="font-medium text-foreground">
-                          Property Title *
+                        <Label htmlFor="title" className="font-semibold text-foreground">
+                          {t('sections.basic.propertyTitle')} *
                         </Label>
                         <Input
                           id="title"
-                          value={formData.title}
+                          value={formData.title || ""}
                           onChange={(e) => handleInputChange('title', e.target.value)}
-                          placeholder="Modern 3-bedroom apartment in Bole"
-                          className="h-12"
-                          aria-describedby={formErrors.title ? "title-error" : undefined}
+                          placeholder={t('sections.basic.titlePlaceholder')}
+                          className="h-14 text-base border-2 focus:border-primary"
                         />
                         {formErrors.title && (
-                          <p id="title-error" className="text-sm text-destructive">
+                          <p className="text-sm text-destructive animate-in fade-in">
                             {formErrors.title}
                           </p>
                         )}
-                        <p className="text-xs text-muted-foreground">
-                          Be descriptive and specific
+                        <p className="text-sm text-muted-foreground flex items-center gap-2">
+                          <Info className="h-4 w-4" />
+                          {t('sections.basic.titleTip')}
                         </p>
                       </div>
 
                       <div className="space-y-3">
-                        <Label htmlFor="title_amharic" className="font-medium text-foreground">
-                          Property Title (Amharic)
+                        <Label htmlFor="title_amharic" className="font-semibold text-foreground">
+                          {t('sections.basic.propertyTitle')} (አማርኛ)
                         </Label>
                         <Input
                           id="title_amharic"
                           value={formData.title_amharic || ''}
                           onChange={(e) => handleInputChange('title_amharic', e.target.value)}
                           placeholder="አዲስ ዘመናዊ 3 አልጋ አፓርትመንት ቦሌ"
-                          className="h-12"
+                          className="h-14 text-base border-2 focus:border-primary"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-3">
-                      <Label htmlFor="property_type" className="font-medium text-foreground">
-                        Property Type *
+                      <Label htmlFor="property_type" className="font-semibold text-foreground">
+                        {t('sections.basic.propertyType')} *
                       </Label>
-                      <div className="relative" ref={citySelectRef}>
+                      <div className="relative">
                         <Select
                           value={formData.property_type}
                           onValueChange={(value) => handleInputChange('property_type', value)}
-                          placeholder="Select property type"
-                          aria-label="Property type"
+                          placeholder={t('sections.basic.propertyTypePlaceholder')}
                         >
                           <SelectContent>
                             {PROPERTY_TYPES.map((type) => (
-                              <SelectItem
-                                key={type.value}
-                                value={type.value}
-                                aria-label={`Select ${type.label}`}
-                              >
+                              <SelectItem key={type.value} value={type.value} className="h-12">
                                 {type.label}
                               </SelectItem>
                             ))}
@@ -1593,38 +1757,42 @@ export default function CreateListingPage() {
                     </div>
 
                     <div className="space-y-3">
-                      <Label htmlFor="description" className="font-medium text-foreground">
-                        Description *
+                      <Label htmlFor="description" className="font-semibold text-foreground">
+                        {t('sections.basic.description')} *
                       </Label>
                       <Textarea
                         id="description"
                         value={formData.description}
                         onChange={(e) => handleInputChange('description', e.target.value)}
-                        placeholder="Describe your property in detail. Include key features, condition, nearby amenities, and what makes it special..."
-                        className="min-h-32"
-                        aria-describedby={formErrors.description ? "description-error" : undefined}
+                        placeholder="Describe your property in detail. Include features, condition, and unique selling points..."
+                        className="min-h-48 text-base border-2 focus:border-primary resize-none"
+                        rows={6}
                       />
                       {formErrors.description && (
-                        <p id="description-error" className="text-sm text-destructive">
+                        <p className="text-sm text-destructive animate-in fade-in">
                           {formErrors.description}
                         </p>
                       )}
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>Be as detailed as possible</span>
+                      <div className="flex justify-between text-sm text-muted-foreground">
+                        <span className="flex items-center gap-2">
+                          <Type className="h-4 w-4" />
+                          Be descriptive and detailed
+                        </span>
                         <span>{formData.description?.length || 0}/2000 characters</span>
                       </div>
                     </div>
 
                     <div className="space-y-3">
-                      <Label htmlFor="description_amharic" className="font-medium text-foreground">
-                        Description (Amharic)
+                      <Label htmlFor="description_amharic" className="font-semibold text-foreground">
+                        {t('sections.basic.description')} (አማርኛ)
                       </Label>
                       <Textarea
                         id="description_amharic"
                         value={formData.description_amharic || ''}
                         onChange={(e) => handleInputChange('description_amharic', e.target.value)}
-                        placeholder="የንብረትዎን ዝርዝር መረጃ ይጻፉ..."
-                        className="min-h-32"
+                        placeholder="የንብረትዎን ዝርዝር መረጃ ይጻፉ። ባህሪያት፣ ሁኔታና ልዩ ማሻሻያዎችን ያካትቱ..."
+                        className="min-h-48 text-base border-2 focus:border-primary resize-none"
+                        rows={6}
                       />
                     </div>
                   </CardContent>
@@ -1634,36 +1802,35 @@ export default function CreateListingPage() {
                   <Button
                     variant="outline"
                     onClick={() => router.push('/listings')}
-                    className="gap-2"
+                    className="gap-2 border-primary/20 hover:border-primary/40 h-11"
                   >
-                    Cancel
+                    {tc('cancel')}
                   </Button>
                   <Button
                     onClick={() => setActiveTab('location')}
-                    className="gap-2"
+                    className="gap-2 h-11 px-8"
                   >
-                    Next: Location
+                    {t('buttons.next')}: Location
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
               </TabsContent>
 
-              {/* Location - ENHANCED WITH AUTO-FILL */}
+              {/* Location - Updated from second file */}
               <TabsContent value="location" className="space-y-6 animate-in fade-in duration-300">
                 <Card className="border-border shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
+                  <CardHeader className="p-4 md:p-6">
+                    <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                       <MapPin className="h-5 w-5 text-primary" />
                       Location Details
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="text-sm md:text-base">
                       Tell us where your property is located. Enter coordinates to auto-fill details.
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-6">
-                    {/* City and SubCity Select */}
-                    <div className="grid gap-6 md:grid-cols-2">
-                      <div className="space-y-3 relative" ref={citySelectRef}>
+                  <CardContent className="space-y-6 p-4 md:p-6">
+                    <div className="grid gap-6">
+                      <div className="space-y-3 relative">
                         <Label htmlFor="city" className="font-medium text-foreground">
                           City *
                         </Label>
@@ -1672,11 +1839,8 @@ export default function CreateListingPage() {
                           onValueChange={(value) => {
                             handleInputChange('city', parseInt(value))
                           }}
+                          placeholder={isLoadingCities ? "Loading cities..." : "Select city"}
                           disabled={isLoadingCities}
-                          placeholder={
-                            isLoadingCities ? "Loading cities..." : "Select city"
-                          }
-                          aria-describedby={formErrors.city ? "city-error" : undefined}
                         >
                           <SelectContent>
                             {citiesError ? (
@@ -1689,10 +1853,7 @@ export default function CreateListingPage() {
                               </SelectItem>
                             ) : (
                               cities.map((city) => (
-                                <SelectItem
-                                  key={city.id}
-                                  value={city.id.toString()}
-                                >
+                                <SelectItem key={city.id} value={city.id.toString()}>
                                   <div className="flex flex-col">
                                     <span>{city.name}</span>
                                     <span className="text-xs text-muted-foreground">{city.name_amharic}</span>
@@ -1703,18 +1864,13 @@ export default function CreateListingPage() {
                           </SelectContent>
                         </Select>
                         {formErrors.city && (
-                          <p id="city-error" className="text-sm text-destructive">
+                          <p className="text-sm text-destructive">
                             {formErrors.city}
                           </p>
                         )}
-                        {isLoadingCities && (
-                          <div className="absolute right-3 top-10">
-                            <LoadingSpinner className="h-4 w-4" />
-                          </div>
-                        )}
                       </div>
 
-                      <div className="space-y-3 relative" ref={subCitySelectRef}>
+                      <div className="space-y-3 relative">
                         <Label htmlFor="sub_city" className="font-medium text-foreground">
                           Sub-City *
                         </Label>
@@ -1725,13 +1881,12 @@ export default function CreateListingPage() {
                           }}
                           disabled={!formData.city || isLoadingSubCities}
                           placeholder={
-                            !formData.city
-                              ? "Select city first"
-                              : isLoadingSubCities
-                                ? "Loading..."
-                                : "Select sub-city"
-                          }
-                          aria-describedby={formErrors.sub_city ? "subcity-error" : undefined}
+                              !formData.city
+                                ? "Select city first"
+                                : isLoadingSubCities
+                                  ? "Loading..."
+                                  : "Select sub-city"
+                            } 
                         >
                           <SelectContent>
                             {!formData.city ? (
@@ -1748,10 +1903,7 @@ export default function CreateListingPage() {
                               </SelectItem>
                             ) : (
                               subCities.map((subCity) => (
-                                <SelectItem
-                                  key={subCity.id}
-                                  value={subCity.id.toString()}
-                                >
+                                <SelectItem key={subCity.id} value={subCity.id.toString()}>
                                   <div className="flex flex-col">
                                     <span>{subCity.name}</span>
                                     <span className="text-xs text-muted-foreground">{subCity.name_amharic}</span>
@@ -1762,14 +1914,9 @@ export default function CreateListingPage() {
                           </SelectContent>
                         </Select>
                         {formErrors.sub_city && (
-                          <p id="subcity-error" className="text-sm text-destructive">
+                          <p className="text-sm text-destructive">
                             {formErrors.sub_city}
                           </p>
-                        )}
-                        {formData.city && isLoadingSubCities && (
-                          <div className="absolute right-3 top-10">
-                            <LoadingSpinner className="h-4 w-4" />
-                          </div>
                         )}
                       </div>
                     </div>
@@ -1782,21 +1929,17 @@ export default function CreateListingPage() {
                         id="specific_location"
                         value={formData.specific_location || ''}
                         onChange={(e) => handleInputChange('specific_location', e.target.value)}
-                        placeholder="e.g., Bole Road, near Edna Mall, opposite Friendship Center"
+                        placeholder="e.g., Bole Road, near Edna Mall"
                         className="h-12"
-                        aria-describedby={formErrors.specific_location ? "location-error" : undefined}
                       />
                       {formErrors.specific_location && (
-                        <p id="location-error" className="text-sm text-destructive">
+                        <p className="text-sm text-destructive">
                           {formErrors.specific_location}
                         </p>
                       )}
-                      <p className="text-xs text-muted-foreground">
-                        Be specific to help potential buyers find your property
-                      </p>
                     </div>
 
-                    <div className="grid gap-6 md:grid-cols-2">
+                    <div className="grid gap-6">
                       <div className="space-y-3">
                         <Label htmlFor="address_line_1" className="font-medium text-foreground">
                           Address Line 1
@@ -1826,9 +1969,9 @@ export default function CreateListingPage() {
 
                     <div className="pt-4 border-t">
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <h3 className="text-base md:text-lg font-semibold flex items-center gap-2">
                           <Navigation className="h-5 w-5 text-primary" />
-                          Exact Coordinates (Auto-Fill Location)
+                          Exact Coordinates
                         </h3>
                         <Button
                           type="button"
@@ -1860,12 +2003,8 @@ export default function CreateListingPage() {
                           {isGeocoding ? 'Detecting...' : 'Auto-detect'}
                         </Button>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Enter coordinates to automatically fill city, sub-city, and location fields.
-                        This information is only shown to verified buyers upon inquiry.
-                      </p>
 
-                      <div className="grid gap-6 md:grid-cols-2">
+                      <div className="grid gap-6">
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
                             <Label htmlFor="latitude" className="font-medium text-foreground">
@@ -1898,8 +2037,6 @@ export default function CreateListingPage() {
                               id="latitude"
                               type="number"
                               step="any"
-                              min="-90"
-                              max="90"
                               value={formData.latitude || ''}
                               onChange={(e) => {
                                 const value = e.target.value ? parseFloat(e.target.value) : undefined
@@ -1908,22 +2045,7 @@ export default function CreateListingPage() {
                               placeholder="e.g., 9.0320"
                               className="h-12"
                             />
-                            <div className="absolute right-3 top-0 h-12 flex items-center text-muted-foreground">
-                              °
-                            </div>
                           </div>
-                          {isGeocoding && (
-                            <p className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                              <LoadingSpinner className="h-3 w-3" />
-                              Detecting location...
-                            </p>
-                          )}
-                          {geocodeError && (
-                            <p className="text-xs text-destructive">{geocodeError}</p>
-                          )}
-                          <p className="text-xs text-muted-foreground">
-                            Between -90 (South) and 90 (North). Ethiopia is around 9°
-                          </p>
                         </div>
 
                         <div className="space-y-3">
@@ -1935,8 +2057,6 @@ export default function CreateListingPage() {
                               id="longitude"
                               type="number"
                               step="any"
-                              min="-180"
-                              max="180"
                               value={formData.longitude || ''}
                               onChange={(e) => {
                                 const value = e.target.value ? parseFloat(e.target.value) : undefined
@@ -1945,17 +2065,10 @@ export default function CreateListingPage() {
                               placeholder="e.g., 38.7460"
                               className="h-12"
                             />
-                            <div className="absolute right-3 top-0 h-12 flex items-center text-muted-foreground">
-                              °
-                            </div>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            Between -180 (West) and 180 (East). Ethiopia is around 39°
-                          </p>
                         </div>
                       </div>
 
-                      {/* Geocoding Results */}
                       {geocodeResult && (
                         <div className="mt-4 p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
                           <div className="flex items-start gap-3">
@@ -1967,7 +2080,6 @@ export default function CreateListingPage() {
                               {geocodeResult.city && (
                                 <p className="text-xs text-green-700 dark:text-green-400">
                                   <span className="font-medium">City:</span> {geocodeResult.city}
-                                  {geocodeResult.state && `, ${geocodeResult.state}`}
                                 </p>
                               )}
                               {geocodeResult.subcity && (
@@ -1975,56 +2087,16 @@ export default function CreateListingPage() {
                                   <span className="font-medium">Area:</span> {geocodeResult.subcity}
                                 </p>
                               )}
-                              {geocodeResult.street && (
-                                <p className="text-xs text-green-700 dark:text-green-400">
-                                  <span className="font-medium">Street:</span> {geocodeResult.street}
-                                </p>
-                              )}
-                              {geocodeResult.country && (
-                                <p className="text-xs text-green-700 dark:text-green-400">
-                                  <span className="font-medium">Country:</span> {geocodeResult.country}
-                                </p>
-                              )}
                             </div>
                           </div>
                         </div>
                       )}
-
-                      <div className="flex gap-2 mt-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            handleInputChange('latitude', 9.0320)
-                            handleInputChange('longitude', 38.7460)
-                            setTimeout(() => {
-                              autoFillLocationFromCoordinates(9.0320, 38.7460)
-                            }, 100)
-                          }}
-                          className="flex-1 text-xs"
-                        >
-                          Use Addis Ababa
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            handleInputChange('latitude', undefined)
-                            handleInputChange('longitude', undefined)
-                            setGeocodeResult(null)
-                            setGeocodeError(null)
-                          }}
-                          className="flex-1 text-xs"
-                        >
-                          Clear Coordinates
-                        </Button>
-                      </div>
                     </div>
 
                     <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-900">
                       <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                       <AlertTitle className="text-blue-800 dark:text-blue-300">Location Privacy</AlertTitle>
-                      <AlertDescription className="text-blue-700 dark:text-blue-400">
+                      <AlertDescription className="text-blue-700 dark:text-blue-400 text-sm">
                         Exact coordinates are only shared with verified buyers after inquiry approval.
                         Public listings show only the general area.
                       </AlertDescription>
@@ -2036,82 +2108,93 @@ export default function CreateListingPage() {
                   <Button
                     variant="outline"
                     onClick={() => setActiveTab('basic')}
-                    className="gap-2"
+                    className="gap-2 border-primary/20 hover:border-primary/40 h-11"
                   >
                     <ChevronRight className="h-4 w-4 rotate-180" />
-                    Previous
+                    {t('buttons.previous')}
                   </Button>
                   <Button
                     onClick={() => setActiveTab('details')}
-                    className="gap-2"
+                    className="gap-2 h-11 px-8"
                   >
-                    Next: Details
+                    {t('buttons.next')}: Details
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
               </TabsContent>
 
-              {/* Property Details */}
+              {/* Property Details - Enhanced */}
               <TabsContent value="details" className="space-y-6 animate-in fade-in duration-300">
-                <Card className="border-border shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Building className="h-5 w-5 text-primary" />
-                      Property Specifications
+                <Card className="border-border shadow-xl rounded-2xl overflow-hidden bg-gradient-to-b from-card to-card/95">
+                  <CardHeader className="p-6 border-b border-border/50">
+                    <CardTitle className="flex items-center gap-3 text-xl">
+                      <div className="p-2 rounded-full bg-purple-500/10">
+                        <Building className="h-6 w-6 text-purple-500" />
+                      </div>
+                      <div>
+                        <span className="text-foreground">Property Specifications</span>
+                        <CardDescription className="mt-1">
+                          Provide detailed specifications of your property
+                        </CardDescription>
+                      </div>
                     </CardTitle>
-                    <CardDescription>
-                      Provide detailed specifications of your property
-                    </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="grid gap-6 md:grid-cols-2">
-                      <div className="space-y-3">
-                        <Label htmlFor="bedrooms" className="font-medium text-foreground">
+                  <CardContent className="p-6 space-y-8">
+                    {/* Room Counts */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <Label htmlFor="bedrooms" className="font-semibold text-foreground">
                           Bedrooms
                         </Label>
-                        <Select
-                          value={formData.bedrooms?.toString() || '1'}
-                          onValueChange={(value) => handleInputChange('bedrooms', parseInt(value))}
-                          placeholder="Select bedrooms"
-                          aria-label="Number of bedrooms"
-                        >
-                          <SelectContent>
-                            {BEDROOM_OPTIONS.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="relative">
+                          <Bed className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                          <Select
+                            value={formData.bedrooms?.toString() || '1'}
+                            onValueChange={(value) => handleInputChange('bedrooms', parseInt(value))}
+                            placeholder="Select bedrooms"
+                          >
+                            <SelectContent>
+                              {BEDROOM_OPTIONS.map((option) => (
+                                <SelectItem key={option.value} value={option.value} className="h-12">
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
 
-                      <div className="space-y-3">
-                        <Label htmlFor="bathrooms" className="font-medium text-foreground">
+                      <div className="space-y-4">
+                        <Label htmlFor="bathrooms" className="font-semibold text-foreground">
                           Bathrooms
                         </Label>
-                        <Select
-                          value={formData.bathrooms?.toString() || '1'}
-                          onValueChange={(value) => handleInputChange('bathrooms', parseInt(value))}
-                          placeholder="Select bathrooms"
-                          aria-label="Number of bathrooms"
-                        >
-                          <SelectContent>
-                            {BATHROOM_OPTIONS.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="relative">
+                          <Bath className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                          <Select
+                            value={formData.bathrooms?.toString() || '1'}
+                            onValueChange={(value) => handleInputChange('bathrooms', parseInt(value))}
+                            placeholder="Select bathrooms"
+                          >
+                            <SelectContent>
+                              {BATHROOM_OPTIONS.map((option) => (
+                                <SelectItem key={option.value} value={option.value} className="h-12">
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="grid gap-6 md:grid-cols-2">
-                      <div className="space-y-3">
-                        <Label htmlFor="total_area" className="font-medium text-foreground">
+                    {/* Area Measurements */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <Label htmlFor="total_area" className="font-semibold text-foreground">
                           Total Area (m²) *
                         </Label>
                         <div className="relative">
+                          <Maximize2 className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                           <Input
                             id="total_area"
                             type="number"
@@ -2120,25 +2203,22 @@ export default function CreateListingPage() {
                             value={formData.total_area || ''}
                             onChange={(e) => handleInputChange('total_area', parseFloat(e.target.value) || 0)}
                             placeholder="e.g., 150"
-                            className="h-12 pl-12"
-                            aria-describedby={formErrors.total_area ? "area-error" : undefined}
+                            className="h-14 text-base border-2 pl-12 focus:border-purple-500"
                           />
-                          <div className="absolute left-3 top-0 h-12 flex items-center text-muted-foreground">
-                            m²
-                          </div>
                         </div>
                         {formErrors.total_area && (
-                          <p id="area-error" className="text-sm text-destructive">
+                          <p className="text-sm text-destructive mt-2 animate-in fade-in">
                             {formErrors.total_area}
                           </p>
                         )}
                       </div>
 
-                      <div className="space-y-3">
-                        <Label htmlFor="plot_size" className="font-medium text-foreground">
+                      <div className="space-y-4">
+                        <Label htmlFor="plot_size" className="font-semibold text-foreground">
                           Plot Size (m²)
                         </Label>
                         <div className="relative">
+                          <Square className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                           <Input
                             id="plot_size"
                             type="number"
@@ -2147,65 +2227,72 @@ export default function CreateListingPage() {
                             value={formData.plot_size || ''}
                             onChange={(e) => handleInputChange('plot_size', parseFloat(e.target.value) || 0)}
                             placeholder="For houses and land"
-                            className="h-12 pl-12"
+                            className="h-14 text-base border-2 pl-12 focus:border-purple-500"
                           />
-                          <div className="absolute left-3 top-0 h-12 flex items-center text-muted-foreground">
-                            m²
-                          </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="grid gap-6 md:grid-cols-2">
-                      <div className="space-y-3">
-                        <Label htmlFor="built_year" className="font-medium text-foreground">
+                    {/* Year & Floors */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <Label htmlFor="built_year" className="font-semibold text-foreground">
                           Built Year
                         </Label>
-                        <Input
-                          id="built_year"
-                          type="number"
-                          min="1800"
-                          max={new Date().getFullYear()}
-                          value={formData.built_year || ''}
-                          onChange={(e) => handleInputChange('built_year', parseInt(e.target.value))}
-                          placeholder="e.g., 2020"
-                          className="h-12"
-                        />
+                        <div className="relative">
+                          <Calendar className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                          <Input
+                            id="built_year"
+                            type="number"
+                            min="1800"
+                            max={new Date().getFullYear()}
+                            value={formData.built_year || ''}
+                            onChange={(e) => handleInputChange('built_year', parseInt(e.target.value))}
+                            placeholder="e.g., 2020"
+                            className="h-14 text-base border-2 pl-12 focus:border-purple-500"
+                          />
+                        </div>
                       </div>
 
-                      <div className="space-y-3">
-                        <Label htmlFor="floors" className="font-medium text-foreground">
+                      <div className="space-y-4">
+                        <Label htmlFor="floors" className="font-semibold text-foreground">
                           Number of Floors
                         </Label>
-                        <Input
-                          id="floors"
-                          type="number"
-                          min="1"
-                          value={formData.floors || 1}
-                          onChange={(e) => handleInputChange('floors', parseInt(e.target.value))}
-                          className="h-12"
-                        />
+                        <div className="relative">
+                          <Layers className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                          <Input
+                            id="floors"
+                            type="number"
+                            min="1"
+                            value={formData.floors || 1}
+                            onChange={(e) => handleInputChange('floors', parseInt(e.target.value))}
+                            className="h-14 text-base border-2 pl-12 focus:border-purple-500"
+                          />
+                        </div>
                       </div>
                     </div>
 
-                    <div className="space-y-3">
-                      <Label htmlFor="furnishing_type" className="font-medium text-foreground">
+                    {/* Furnishing Type */}
+                    <div className="space-y-4">
+                      <Label htmlFor="furnishing_type" className="font-semibold text-foreground">
                         Furnishing Type
                       </Label>
-                      <Select
-                        value={formData.furnishing_type}
-                        onValueChange={(value) => handleInputChange('furnishing_type', value)}
-                        placeholder="Select furnishing type"
-                        aria-label="Furnishing type"
-                      >
-                        <SelectContent>
-                          {FURNISHING_TYPES.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="relative">
+                        <Sofa className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Select
+                          value={formData.furnishing_type}
+                          onValueChange={(value) => handleInputChange('furnishing_type', value)}
+                          placeholder="Select furnishing type"
+                        >
+                          <SelectContent>
+                            {FURNISHING_TYPES.map((type) => (
+                              <SelectItem key={type.value} value={type.value} className="h-12">
+                                {type.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -2214,39 +2301,45 @@ export default function CreateListingPage() {
                   <Button
                     variant="outline"
                     onClick={() => setActiveTab('location')}
-                    className="gap-2"
+                    className="gap-2 border-primary/20 hover:border-primary/40 h-11"
                   >
                     <ChevronRight className="h-4 w-4 rotate-180" />
-                    Previous
+                    {t('buttons.previous')}
                   </Button>
                   <Button
                     onClick={() => setActiveTab('pricing')}
-                    className="gap-2"
+                    className="gap-2 h-11 px-8"
                   >
-                    Next: Pricing
+                    {t('buttons.next')}: Pricing
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
               </TabsContent>
 
-              {/* Pricing */}
+              {/* Pricing - Enhanced */}
               <TabsContent value="pricing" className="space-y-6 animate-in fade-in duration-300">
-                <Card className="border-border shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <DollarSign className="h-5 w-5 text-primary" />
-                      {listingType === 'for_sale' ? 'Sale Price' : 'Rental Information'}
+                <Card className="border-border shadow-xl rounded-2xl overflow-hidden bg-gradient-to-b from-card to-card/95">
+                  <CardHeader className="p-6 border-b border-border/50">
+                    <CardTitle className="flex items-center gap-3 text-xl">
+                      <div className="p-2 rounded-full bg-green-500/10">
+                        <DollarSign className="h-6 w-6 text-green-500" />
+                      </div>
+                      <div>
+                        <span className="text-foreground">
+                          {listingType === 'for_sale' ? 'Sale Price' : 'Rental Information'}
+                        </span>
+                        <CardDescription className="mt-1">
+                          Set your asking price and additional costs
+                        </CardDescription>
+                      </div>
                     </CardTitle>
-                    <CardDescription>
-                      Set your asking price and additional costs
-                    </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-6">
+                  <CardContent className="p-6 space-y-8">
                     {listingType === 'for_sale' ? (
                       <>
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <Label className="font-medium text-foreground">
+                        <div className="space-y-6">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <Label className="text-lg font-semibold text-foreground">
                               Price Calculation
                             </Label>
                             <div className="flex gap-2">
@@ -2255,26 +2348,29 @@ export default function CreateListingPage() {
                                 variant={priceCalculationMode === 'etb' ? 'default' : 'outline'}
                                 size="sm"
                                 onClick={() => setPriceCalculationMode('etb')}
+                                className="gap-2"
                               >
-                                Enter ETB
+                                <span>ETB</span>
                               </Button>
                               <Button
                                 type="button"
                                 variant={priceCalculationMode === 'usd' ? 'default' : 'outline'}
                                 size="sm"
                                 onClick={() => setPriceCalculationMode('usd')}
+                                className="gap-2"
                               >
-                                Enter USD
+                                <span>USD</span>
                               </Button>
                             </div>
                           </div>
 
-                          <div className="grid gap-6 md:grid-cols-2">
-                            <div className="space-y-3">
-                              <Label htmlFor="price_etb" className="font-medium text-foreground">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div className="space-y-4">
+                              <Label htmlFor="price_etb" className="font-semibold text-foreground">
                                 Price (ETB) *
                               </Label>
                               <div className="relative">
+                                <DollarSign className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                                 <Input
                                   id="price_etb"
                                   type="number"
@@ -2283,31 +2379,23 @@ export default function CreateListingPage() {
                                   value={formData.price_etb || ''}
                                   onChange={(e) => handleInputChange('price_etb', parseFloat(e.target.value) || 0)}
                                   placeholder="e.g., 5,000,000"
-                                  className="h-12 pl-12"
-                                  aria-describedby={formErrors.price_etb ? "price-error" : undefined}
+                                  className="h-14 text-base border-2 pl-12 focus:border-green-500"
                                   disabled={priceCalculationMode === 'usd'}
                                 />
-                                <div className="absolute left-3 top-0 h-12 flex items-center font-medium">
-                                  ETB
-                                </div>
-                                {priceCalculationMode === 'usd' && (
-                                  <div className="absolute right-3 top-0 h-12 flex items-center">
-                                    <Calculator className="h-4 w-4 text-muted-foreground" />
-                                  </div>
-                                )}
                               </div>
                               {formErrors.price_etb && (
-                                <p id="price-error" className="text-sm text-destructive">
+                                <p className="text-sm text-destructive mt-2 animate-in fade-in">
                                   {formErrors.price_etb}
                                 </p>
                               )}
                             </div>
 
-                            <div className="space-y-3">
-                              <Label htmlFor="price_usd" className="font-medium text-foreground">
+                            <div className="space-y-4">
+                              <Label htmlFor="price_usd" className="font-semibold text-foreground">
                                 Price (USD)
                               </Label>
                               <div className="relative">
+                                <span className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground">$</span>
                                 <Input
                                   id="price_usd"
                                   type="number"
@@ -2316,30 +2404,20 @@ export default function CreateListingPage() {
                                   value={formData.price_usd || ''}
                                   onChange={(e) => handleInputChange('price_usd', parseFloat(e.target.value) || 0)}
                                   placeholder="e.g., 90,000"
-                                  className="h-12 pl-12"
+                                  className="h-14 text-base border-2 pl-12 focus:border-green-500"
                                   disabled={priceCalculationMode === 'etb'}
                                 />
-                                <div className="absolute left-3 top-0 h-12 flex items-center font-medium">
-                                  $
-                                </div>
-                                {priceCalculationMode === 'etb' && (
-                                  <div className="absolute right-3 top-0 h-12 flex items-center">
-                                    <Calculator className="h-4 w-4 text-muted-foreground" />
-                                  </div>
-                                )}
                               </div>
-                              <p className="text-xs text-muted-foreground">
-                                Exchange rate: 1 USD = {USD_TO_ETB_RATE} ETB
-                              </p>
                             </div>
                           </div>
                         </div>
 
-                        <div className="space-y-3">
-                          <Label htmlFor="property_tax" className="font-medium text-foreground">
+                        <div className="space-y-4">
+                          <Label htmlFor="property_tax" className="font-semibold text-foreground">
                             Annual Property Tax (ETB)
                           </Label>
                           <div className="relative">
+                            <Receipt className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                             <Input
                               id="property_tax"
                               type="number"
@@ -2348,22 +2426,20 @@ export default function CreateListingPage() {
                               value={formData.property_tax || ''}
                               onChange={(e) => handleInputChange('property_tax', parseFloat(e.target.value) || 0)}
                               placeholder="e.g., 10,000"
-                              className="h-12 pl-12"
+                              className="h-14 text-base border-2 pl-12 focus:border-green-500"
                             />
-                            <div className="absolute left-3 top-0 h-12 flex items-center font-medium">
-                              ETB
-                            </div>
                           </div>
                         </div>
                       </>
                     ) : (
                       <>
-                        <div className="grid gap-6 md:grid-cols-2">
-                          <div className="space-y-3">
-                            <Label htmlFor="monthly_rent" className="font-medium text-foreground">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                          <div className="space-y-4">
+                            <Label htmlFor="monthly_rent" className="font-semibold text-foreground">
                               Monthly Rent (ETB) *
                             </Label>
                             <div className="relative">
+                              <DollarSign className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                               <Input
                                 id="monthly_rent"
                                 type="number"
@@ -2372,25 +2448,22 @@ export default function CreateListingPage() {
                                 value={formData.monthly_rent || ''}
                                 onChange={(e) => handleInputChange('monthly_rent', parseFloat(e.target.value) || 0)}
                                 placeholder="e.g., 15,000"
-                                className="h-12 pl-12"
-                                aria-describedby={formErrors.monthly_rent ? "rent-error" : undefined}
+                                className="h-14 text-base border-2 pl-12 focus:border-green-500"
                               />
-                              <div className="absolute left-3 top-0 h-12 flex items-center font-medium">
-                                ETB
-                              </div>
                             </div>
                             {formErrors.monthly_rent && (
-                              <p id="rent-error" className="text-sm text-destructive">
+                              <p className="text-sm text-destructive mt-2 animate-in fade-in">
                                 {formErrors.monthly_rent}
                               </p>
                             )}
                           </div>
 
-                          <div className="space-y-3">
-                            <Label htmlFor="security_deposit" className="font-medium text-foreground">
+                          <div className="space-y-4">
+                            <Label htmlFor="security_deposit" className="font-semibold text-foreground">
                               Security Deposit (ETB)
                             </Label>
                             <div className="relative">
+                              <Shield className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                               <Input
                                 id="security_deposit"
                                 type="number"
@@ -2399,21 +2472,19 @@ export default function CreateListingPage() {
                                 value={formData.security_deposit || ''}
                                 onChange={(e) => handleInputChange('security_deposit', parseFloat(e.target.value) || 0)}
                                 placeholder="e.g., 30,000"
-                                className="h-12 pl-12"
+                                className="h-14 text-base border-2 pl-12 focus:border-green-500"
                               />
-                              <div className="absolute left-3 top-0 h-12 flex items-center font-medium">
-                                ETB
-                              </div>
                             </div>
                           </div>
                         </div>
 
-                        <div className="grid gap-6 md:grid-cols-2">
-                          <div className="space-y-3">
-                            <Label htmlFor="maintenance_fee" className="font-medium text-foreground">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                          <div className="space-y-4">
+                            <Label htmlFor="maintenance_fee" className="font-semibold text-foreground">
                               Monthly Maintenance (ETB)
                             </Label>
                             <div className="relative">
+                              <Wrench className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                               <Input
                                 id="maintenance_fee"
                                 type="number"
@@ -2422,19 +2493,17 @@ export default function CreateListingPage() {
                                 value={formData.maintenance_fee || ''}
                                 onChange={(e) => handleInputChange('maintenance_fee', parseFloat(e.target.value) || 0)}
                                 placeholder="e.g., 2,000"
-                                className="h-12 pl-12"
+                                className="h-14 text-base border-2 pl-12 focus:border-green-500"
                               />
-                              <div className="absolute left-3 top-0 h-12 flex items-center font-medium">
-                                ETB
-                              </div>
                             </div>
                           </div>
 
-                          <div className="space-y-3">
-                            <Label htmlFor="property_tax" className="font-medium text-foreground">
+                          <div className="space-y-4">
+                            <Label htmlFor="property_tax" className="font-semibold text-foreground">
                               Property Tax (ETB/year)
                             </Label>
                             <div className="relative">
+                              <Receipt className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                               <Input
                                 id="property_tax"
                                 type="number"
@@ -2443,11 +2512,8 @@ export default function CreateListingPage() {
                                 value={formData.property_tax || ''}
                                 onChange={(e) => handleInputChange('property_tax', parseFloat(e.target.value) || 0)}
                                 placeholder="e.g., 10,000"
-                                className="h-12 pl-12"
+                                className="h-14 text-base border-2 pl-12 focus:border-green-500"
                               />
-                              <div className="absolute left-3 top-0 h-12 flex items-center font-medium">
-                                ETB
-                              </div>
                             </div>
                           </div>
                         </div>
@@ -2455,39 +2521,49 @@ export default function CreateListingPage() {
                     )}
 
                     {formErrors.price && (
-                      <Alert className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-900">
-                        <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                        <AlertTitle className="text-amber-800 dark:text-amber-300">Price Check</AlertTitle>
-                        <AlertDescription className="text-amber-700 dark:text-amber-400">
-                          {formErrors.price}
-                        </AlertDescription>
+                      <Alert variant="destructive" className="animate-in fade-in">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Price Check Required</AlertTitle>
+                        <AlertDescription>{formErrors.price}</AlertDescription>
                       </Alert>
                     )}
 
-                    <div className="flex items-center space-x-3 p-4 bg-muted rounded-lg">
+                    {/* Negotiable Switch */}
+                    <div className="flex items-center space-x-4 p-4 bg-muted/30 rounded-xl border border-border/50">
                       <Switch
                         id="price_negotiable"
                         checked={formData.price_negotiable}
                         onCheckedChange={(checked) => handleInputChange('price_negotiable', checked)}
-                        aria-label="Price negotiable"
+                        className="data-[state=checked]:bg-green-500"
                       />
-                      <div>
-                        <Label htmlFor="price_negotiable" className="font-medium cursor-pointer text-foreground">
+                      <div className="flex-1">
+                        <Label htmlFor="price_negotiable" className="font-semibold cursor-pointer text-foreground">
                           Price is negotiable
                         </Label>
                         <p className="text-sm text-muted-foreground">
                           Allow potential buyers/renters to negotiate the price
                         </p>
                       </div>
+                      {formData.price_negotiable && (
+                        <Badge variant="outline" className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300">
+                          Negotiable
+                        </Badge>
+                      )}
                     </div>
 
-                    <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-900">
-                      <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    {/* Pricing Tips */}
+                    <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-900 rounded-xl">
+                      <Calculator className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                       <AlertTitle className="text-blue-800 dark:text-blue-300">Pricing Tips</AlertTitle>
-                      <AlertDescription className="text-blue-700 dark:text-blue-400">
-                        {listingType === 'for_sale'
-                          ? 'Research similar properties in your area for competitive pricing. Consider market trends and property condition.'
-                          : 'Include all monthly costs. Security deposit is typically 1-2 months rent.'}
+                      <AlertDescription className="text-blue-700 dark:text-blue-400 text-sm space-y-2">
+                        <p className="font-medium">
+                          {listingType === 'for_sale'
+                            ? '💡 Research similar properties in your area for competitive pricing.'
+                            : '💡 Include all monthly costs. Security deposit is typically 1-2 months rent.'}
+                        </p>
+                        <p>📊 Check market trends for accurate pricing</p>
+                        <p>🎯 Competitive pricing attracts more buyers/renters</p>
+                        <p>💰 Consider including utilities in rent for better value</p>
                       </AlertDescription>
                     </Alert>
                   </CardContent>
@@ -2497,154 +2573,548 @@ export default function CreateListingPage() {
                   <Button
                     variant="outline"
                     onClick={() => setActiveTab('details')}
-                    className="gap-2"
+                    className="gap-2 border-primary/20 hover:border-primary/40 h-11"
                   >
                     <ChevronRight className="h-4 w-4 rotate-180" />
-                    Previous
+                    {t('buttons.previous')}
                   </Button>
                   <Button
                     onClick={() => setActiveTab('features')}
-                    className="gap-2"
+                    className="gap-2 h-11 px-8"
                   >
-                    Next: Features
+                    {t('buttons.next')}: Features
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
               </TabsContent>
 
-              {/* Features & Amenities */}
+              {/* Features & Amenities - Enhanced with categories */}
               <TabsContent value="features" className="space-y-6 animate-in fade-in duration-300">
-                <Card className="border-border shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <CheckSquare className="h-5 w-5 text-primary" />
-                      Features & Amenities
+                <Card className="border-border shadow-xl rounded-2xl overflow-hidden bg-gradient-to-b from-card to-card/95">
+                  <CardHeader className="p-6 border-b border-border/50">
+                    <CardTitle className="flex items-center gap-3 text-xl">
+                      <div className="p-2 rounded-full bg-yellow-500/10">
+                        <CheckSquare className="h-6 w-6 text-yellow-500" />
+                      </div>
+                      <div>
+                        <span className="text-foreground">Features & Amenities</span>
+                        <CardDescription className="mt-1">
+                          Select all the features and amenities your property offers
+                        </CardDescription>
+                      </div>
                     </CardTitle>
-                    <CardDescription>
-                      Select all the features and amenities your property offers
-                    </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-8">
-                    {/* Basic Features */}
-                    <div>
-                      <h3 className="mb-4 text-lg font-semibold text-foreground">Basic Features</h3>
-                      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
-                        {AMENITIES.map((amenity) => (
-                          <div
-                            key={amenity.id}
-                            className={cn(
-                              "relative cursor-pointer rounded-lg border-2 p-4 transition-all hover:border-primary hover:bg-primary/5",
-                              formData[amenity.key as keyof PropertyFormData]
-                                ? "border-primary bg-primary/10"
-                                : "border-border"
-                            )}
-                            onClick={() => handleBooleanToggle(amenity.key as keyof PropertyFormData)}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault()
-                                handleBooleanToggle(amenity.key as keyof PropertyFormData)
-                              }
-                            }}
-                            aria-label={`${amenity.name} - ${formData[amenity.key as keyof PropertyFormData] ? 'Selected' : 'Not selected'}`}
-                          >
-                            <div className="flex flex-col items-center gap-2">
-                              <span className="text-2xl" aria-hidden="true">{amenity.icon}</span>
-                              <span className="text-center text-sm font-medium text-foreground">
-                                {amenity.name}
-                              </span>
+                  <CardContent className="p-6">
+                    <ScrollArea className="h-[600px] pr-4">
+                      <div className="space-y-8">
+                        {/* View Mode Toggle */}
+                        <div className="flex items-center justify-between mb-6">
+                          <div className="text-sm text-muted-foreground">
+                            Select amenities by category
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant={viewMode === 'grid' ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setViewMode('grid')}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Grid className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={viewMode === 'list' ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setViewMode('list')}
+                              className="h-8 w-8 p-0"
+                            >
+                              <List className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Essentials Category */}
+                        <Collapsible defaultOpen className="space-y-4">
+                          <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-muted/30 rounded-xl hover:bg-muted/50 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 rounded-lg bg-red-500/10">
+                                <Shield className="h-5 w-5 text-red-500" />
+                              </div>
+                              <div className="text-left">
+                                <h3 className="font-semibold text-lg text-foreground">Essentials</h3>
+                                <p className="text-sm text-muted-foreground">Basic safety and utility features</p>
+                              </div>
                             </div>
-                            {formData[amenity.key as keyof PropertyFormData] && (
-                              <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                                <CheckCircle className="h-4 w-4" />
+                            <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-300 ui-open:rotate-180" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="space-y-4">
+                            <div className={cn(
+                              "grid gap-3",
+                              viewMode === 'grid' ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-4" : "grid-cols-1"
+                            )}>
+                              {AMENITIES_CATEGORIES.essentials.map((amenity) => (
+                                <div
+                                  key={amenity.id}
+                                  className={cn(
+                                    "relative cursor-pointer rounded-xl border-2 p-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg",
+                                    formData[amenity.key as keyof PropertyFormData]
+                                      ? "border-red-500 bg-red-500/10"
+                                      : "border-border hover:border-red-500/50"
+                                  )}
+                                  onClick={() => handleBooleanToggle(amenity.key as keyof PropertyFormData)}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className={cn(
+                                      "p-2 rounded-lg",
+                                      formData[amenity.key as keyof PropertyFormData]
+                                        ? "bg-red-500 text-white"
+                                        : "bg-muted"
+                                    )}>
+                                      <amenity.icon className="h-5 w-5" />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="font-medium text-foreground">{amenity.name}</div>
+                                      <div className="text-xs text-muted-foreground">{amenity.description}</div>
+                                    </div>
+                                  </div>
+                                  {formData[amenity.key as keyof PropertyFormData] && (
+                                    <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white flex items-center justify-center">
+                                      <CheckCircle className="h-3 w-3" />
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+
+                        {/* Comfort Category */}
+                        <Collapsible defaultOpen className="space-y-4">
+                          <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-muted/30 rounded-xl hover:bg-muted/50 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 rounded-lg bg-blue-500/10">
+                                <Snowflake className="h-5 w-5 text-blue-500" />
+                              </div>
+                              <div className="text-left">
+                                <h3 className="font-semibold text-lg text-foreground">Comfort</h3>
+                                <p className="text-sm text-muted-foreground">Climate control and living comforts</p>
+                              </div>
+                            </div>
+                            <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-300 ui-open:rotate-180" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="space-y-4">
+                            <div className={cn(
+                              "grid gap-3",
+                              viewMode === 'grid' ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-4" : "grid-cols-1"
+                            )}>
+                              {AMENITIES_CATEGORIES.comfort.map((amenity) => (
+                                <div
+                                  key={amenity.id}
+                                  className={cn(
+                                    "relative cursor-pointer rounded-xl border-2 p-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg",
+                                    formData[amenity.key as keyof PropertyFormData]
+                                      ? "border-blue-500 bg-blue-500/10"
+                                      : "border-border hover:border-blue-500/50"
+                                  )}
+                                  onClick={() => handleBooleanToggle(amenity.key as keyof PropertyFormData)}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className={cn(
+                                      "p-2 rounded-lg",
+                                      formData[amenity.key as keyof PropertyFormData]
+                                        ? "bg-blue-500 text-white"
+                                        : "bg-muted"
+                                    )}>
+                                      <amenity.icon className="h-5 w-5" />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="font-medium text-foreground">{amenity.name}</div>
+                                      <div className="text-xs text-muted-foreground">{amenity.description}</div>
+                                    </div>
+                                  </div>
+                                  {formData[amenity.key as keyof PropertyFormData] && (
+                                    <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-blue-500 text-white flex items-center justify-center">
+                                      <CheckCircle className="h-3 w-3" />
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+
+                        {/* Appliances Category */}
+                        <Collapsible defaultOpen className="space-y-4">
+                          <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-muted/30 rounded-xl hover:bg-muted/50 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 rounded-lg bg-green-500/10">
+                                <Refrigerator className="h-5 w-5 text-green-500" />
+                              </div>
+                              <div className="text-left">
+                                <h3 className="font-semibold text-lg text-foreground">Appliances</h3>
+                                <p className="text-sm text-muted-foreground">Kitchen and laundry appliances</p>
+                              </div>
+                            </div>
+                            <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-300 ui-open:rotate-180" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="space-y-4">
+                            <div className={cn(
+                              "grid gap-3",
+                              viewMode === 'grid' ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-4" : "grid-cols-1"
+                            )}>
+                              {AMENITIES_CATEGORIES.appliances.map((amenity) => (
+                                <div
+                                  key={amenity.id}
+                                  className={cn(
+                                    "relative cursor-pointer rounded-xl border-2 p-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg",
+                                    formData[amenity.key as keyof PropertyFormData]
+                                      ? "border-green-500 bg-green-500/10"
+                                      : "border-border hover:border-green-500/50"
+                                  )}
+                                  onClick={() => handleBooleanToggle(amenity.key as keyof PropertyFormData)}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className={cn(
+                                      "p-2 rounded-lg",
+                                      formData[amenity.key as keyof PropertyFormData]
+                                        ? "bg-green-500 text-white"
+                                        : "bg-muted"
+                                    )}>
+                                      <amenity.icon className="h-5 w-5" />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="font-medium text-foreground">{amenity.name}</div>
+                                      <div className="text-xs text-muted-foreground">{amenity.description}</div>
+                                    </div>
+                                  </div>
+                                  {formData[amenity.key as keyof PropertyFormData] && (
+                                    <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-green-500 text-white flex items-center justify-center">
+                                      <CheckCircle className="h-3 w-3" />
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+
+                        {/* Lifestyle Category */}
+                        <Collapsible defaultOpen className="space-y-4">
+                          <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-muted/30 rounded-xl hover:bg-muted/50 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 rounded-lg bg-purple-500/10">
+                                <Waves className="h-5 w-5 text-purple-500" />
+                              </div>
+                              <div className="text-left">
+                                <h3 className="font-semibold text-lg text-foreground">Lifestyle</h3>
+                                <p className="text-sm text-muted-foreground">Recreational and lifestyle amenities</p>
+                              </div>
+                            </div>
+                            <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-300 ui-open:rotate-180" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="space-y-4">
+                            <div className={cn(
+                              "grid gap-3",
+                              viewMode === 'grid' ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-4" : "grid-cols-1"
+                            )}>
+                              {AMENITIES_CATEGORIES.lifestyle.map((amenity) => (
+                                <div
+                                  key={amenity.id}
+                                  className={cn(
+                                    "relative cursor-pointer rounded-xl border-2 p-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg",
+                                    formData[amenity.key as keyof PropertyFormData]
+                                      ? "border-purple-500 bg-purple-500/10"
+                                      : "border-border hover:border-purple-500/50"
+                                  )}
+                                  onClick={() => handleBooleanToggle(amenity.key as keyof PropertyFormData)}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className={cn(
+                                      "p-2 rounded-lg",
+                                      formData[amenity.key as keyof PropertyFormData]
+                                        ? "bg-purple-500 text-white"
+                                        : "bg-muted"
+                                    )}>
+                                      <amenity.icon className="h-5 w-5" />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="font-medium text-foreground">{amenity.name}</div>
+                                      <div className="text-xs text-muted-foreground">{amenity.description}</div>
+                                    </div>
+                                  </div>
+                                  {formData[amenity.key as keyof PropertyFormData] && (
+                                    <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-purple-500 text-white flex items-center justify-center">
+                                      <CheckCircle className="h-3 w-3" />
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+
+                        {/* Technology Category */}
+                        <Collapsible defaultOpen className="space-y-4">
+                          <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-muted/30 rounded-xl hover:bg-muted/50 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 rounded-lg bg-indigo-500/10">
+                                <Cpu className="h-5 w-5 text-indigo-500" />
+                              </div>
+                              <div className="text-left">
+                                <h3 className="font-semibold text-lg text-foreground">Technology</h3>
+                                <p className="text-sm text-muted-foreground">Smart home and tech features</p>
+                              </div>
+                            </div>
+                            <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-300 ui-open:rotate-180" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="space-y-4">
+                            <div className={cn(
+                              "grid gap-3",
+                              viewMode === 'grid' ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-4" : "grid-cols-1"
+                            )}>
+                              {AMENITIES_CATEGORIES.technology.map((amenity) => (
+                                <div
+                                  key={amenity.id}
+                                  className={cn(
+                                    "relative cursor-pointer rounded-xl border-2 p-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg",
+                                    formData[amenity.key as keyof PropertyFormData]
+                                      ? "border-indigo-500 bg-indigo-500/10"
+                                      : "border-border hover:border-indigo-500/50"
+                                  )}
+                                  onClick={() => handleBooleanToggle(amenity.key as keyof PropertyFormData)}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className={cn(
+                                      "p-2 rounded-lg",
+                                      formData[amenity.key as keyof PropertyFormData]
+                                        ? "bg-indigo-500 text-white"
+                                        : "bg-muted"
+                                    )}>
+                                      <amenity.icon className="h-5 w-5" />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="font-medium text-foreground">{amenity.name}</div>
+                                      <div className="text-xs text-muted-foreground">{amenity.description}</div>
+                                    </div>
+                                  </div>
+                                  {formData[amenity.key as keyof PropertyFormData] && (
+                                    <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-indigo-500 text-white flex items-center justify-center">
+                                      <CheckCircle className="h-3 w-3" />
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+
+                        {/* Services Category */}
+                        <Collapsible defaultOpen className="space-y-4">
+                          <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-muted/30 rounded-xl hover:bg-muted/50 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 rounded-lg bg-amber-500/10">
+                                <Bell className="h-5 w-5 text-amber-500" />
+                              </div>
+                              <div className="text-left">
+                                <h3 className="font-semibold text-lg text-foreground">Services</h3>
+                                <p className="text-sm text-muted-foreground">Additional services included</p>
+                              </div>
+                            </div>
+                            <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-300 ui-open:rotate-180" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="space-y-4">
+                            <div className={cn(
+                              "grid gap-3",
+                              viewMode === 'grid' ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-4" : "grid-cols-1"
+                            )}>
+                              {AMENITIES_CATEGORIES.services.map((amenity) => (
+                                <div
+                                  key={amenity.id}
+                                  className={cn(
+                                    "relative cursor-pointer rounded-xl border-2 p-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg",
+                                    formData[amenity.key as keyof PropertyFormData]
+                                      ? "border-amber-500 bg-amber-500/10"
+                                      : "border-border hover:border-amber-500/50"
+                                  )}
+                                  onClick={() => handleBooleanToggle(amenity.key as keyof PropertyFormData)}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className={cn(
+                                      "p-2 rounded-lg",
+                                      formData[amenity.key as keyof PropertyFormData]
+                                        ? "bg-amber-500 text-white"
+                                        : "bg-muted"
+                                    )}>
+                                      <amenity.icon className="h-5 w-5" />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="font-medium text-foreground">{amenity.name}</div>
+                                      <div className="text-xs text-muted-foreground">{amenity.description}</div>
+                                    </div>
+                                  </div>
+                                  {formData[amenity.key as keyof PropertyFormData] && (
+                                    <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-amber-500 text-white flex items-center justify-center">
+                                      <CheckCircle className="h-3 w-3" />
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+
+                        {/* Community Category */}
+                        <Collapsible defaultOpen className="space-y-4">
+                          <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-muted/30 rounded-xl hover:bg-muted/50 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 rounded-lg bg-pink-500/10">
+                                <Users className="h-5 w-5 text-pink-500" />
+                              </div>
+                              <div className="text-left">
+                                <h3 className="font-semibold text-lg text-foreground">Community</h3>
+                                <p className="text-sm text-muted-foreground">Shared community facilities</p>
+                              </div>
+                            </div>
+                            <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-300 ui-open:rotate-180" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="space-y-4">
+                            <div className={cn(
+                              "grid gap-3",
+                              viewMode === 'grid' ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-4" : "grid-cols-1"
+                            )}>
+                              {AMENITIES_CATEGORIES.community.map((amenity) => (
+                                <div
+                                  key={amenity.id}
+                                  className={cn(
+                                    "relative cursor-pointer rounded-xl border-2 p-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg",
+                                    formData[amenity.key as keyof PropertyFormData]
+                                      ? "border-pink-500 bg-pink-500/10"
+                                      : "border-border hover:border-pink-500/50"
+                                  )}
+                                  onClick={() => handleBooleanToggle(amenity.key as keyof PropertyFormData)}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className={cn(
+                                      "p-2 rounded-lg",
+                                      formData[amenity.key as keyof PropertyFormData]
+                                        ? "bg-pink-500 text-white"
+                                        : "bg-muted"
+                                    )}>
+                                      <amenity.icon className="h-5 w-5" />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="font-medium text-foreground">{amenity.name}</div>
+                                      <div className="text-xs text-muted-foreground">{amenity.description}</div>
+                                    </div>
+                                  </div>
+                                  {formData[amenity.key as keyof PropertyFormData] && (
+                                    <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-pink-500 text-white flex items-center justify-center">
+                                      <CheckCircle className="h-3 w-3" />
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+
+                        {/* Additional Amenities from API */}
+                        <Collapsible className="space-y-4">
+                          <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-muted/30 rounded-xl hover:bg-muted/50 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 rounded-lg bg-gray-500/10">
+                                <Plus className="h-5 w-5 text-gray-500" />
+                              </div>
+                              <div className="text-left">
+                                <h3 className="font-semibold text-lg text-foreground">Additional Amenities</h3>
+                                <p className="text-sm text-muted-foreground">Custom amenities from database</p>
+                              </div>
+                            </div>
+                            <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-300 ui-open:rotate-180" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="space-y-4">
+                            {isLoadingAmenities ? (
+                              <div className="flex items-center justify-center p-8">
+                                <LoadingSpinner className="h-8 w-8" />
+                                <span className="ml-3">Loading amenities...</span>
+                              </div>
+                            ) : amenitiesList.length > 0 ? (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {amenitiesList.map((amenity) => (
+                                  <div key={amenity.id} className="flex items-center space-x-3 p-3 border border-border rounded-lg hover:border-primary/50 transition-colors">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleAmenityToggle(amenity.id)}
+                                      className={cn(
+                                        "flex h-5 w-5 items-center justify-center rounded-full border transition-colors",
+                                        formData.amenities?.includes(amenity.id)
+                                          ? "border-primary bg-primary text-primary-foreground"
+                                          : "border-border hover:border-primary"
+                                      )}
+                                    >
+                                      {formData.amenities?.includes(amenity.id) && (
+                                        <CheckCircle className="h-3 w-3" />
+                                      )}
+                                    </button>
+                                    <Label className="cursor-pointer flex-1">
+                                      <div className="font-medium text-foreground">{amenity.name}</div>
+                                      {amenity.name_amharic && (
+                                        <div className="text-xs text-muted-foreground">{amenity.name_amharic}</div>
+                                      )}
+                                    </Label>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-center p-8 text-muted-foreground">
+                                No additional amenities available
                               </div>
                             )}
-                          </div>
-                        ))}
+                          </CollapsibleContent>
+                        </Collapsible>
                       </div>
-                    </div>
-
-                    <Separator />
-
-                    {/* Additional Amenities */}
-                    <div>
-                      <h3 className="mb-4 text-lg font-semibold text-foreground">Additional Amenities</h3>
-                      <p className="mb-4 text-sm text-muted-foreground">
-                        Select amenities available in your property or building complex
-                      </p>
-                      <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-                        {amenitiesList.map((amenity) => (
-                          <div key={amenity.id} className="flex items-center space-x-3">
-                            <button
-                              type="button"
-                              onClick={() => handleAmenityToggle(amenity.id)}
-                              className={cn(
-                                "flex h-6 w-6 items-center justify-center rounded border",
-                                formData.amenities?.includes(amenity.id)
-                                  ? "border-primary bg-primary text-primary-foreground"
-                                  : "border-border"
-                              )}
-                              aria-label={`Toggle ${amenity.name}`}
-                            >
-                              {formData.amenities?.includes(amenity.id) && (
-                                <CheckCircle className="h-4 w-4" />
-                              )}
-                            </button>
-                            <Label className="cursor-pointer text-foreground">
-                              <div className="font-medium">{amenity.name}</div>
-                              {amenity.name_amharic && (
-                                <div className="text-sm text-muted-foreground">{amenity.name_amharic}</div>
-                              )}
-                            </Label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <Separator />
+                    </ScrollArea>
 
                     {/* Documentation */}
-                    <div>
-                      <h3 className="mb-4 text-lg font-semibold text-foreground">Property Documents</h3>
-                      <p className="mb-4 text-sm text-muted-foreground">
-                        Indicate which documents are available (increases buyer confidence)
+                    <Separator className="my-8" />
+
+                    <div className="space-y-6">
+                      <h3 className="text-lg font-bold text-foreground">Property Documents</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Select all relevant documents available for this property
                       </p>
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {DOCUMENTS.map((doc) => (
                           <div
                             key={doc.id}
                             className={cn(
-                              "cursor-pointer rounded-lg border-2 p-4 transition-all hover:border-primary hover:bg-primary/5",
+                              "cursor-pointer rounded-xl border-2 p-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg",
                               formData[doc.key as keyof PropertyFormData]
                                 ? "border-primary bg-primary/10"
-                                : "border-border"
+                                : "border-border hover:border-primary/50"
                             )}
                             onClick={() => handleBooleanToggle(doc.key as keyof PropertyFormData)}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault()
-                                handleBooleanToggle(doc.key as keyof PropertyFormData)
-                              }
-                            }}
-                            aria-label={`${doc.name} - ${formData[doc.key as keyof PropertyFormData] ? 'Available' : 'Not available'}`}
                           >
                             <div className="flex items-center gap-3">
                               <div className={cn(
-                                "flex h-8 w-8 items-center justify-center rounded-full",
+                                "p-2 rounded-lg",
                                 formData[doc.key as keyof PropertyFormData]
                                   ? "bg-primary text-primary-foreground"
                                   : "bg-muted"
                               )}>
-                                <CheckCircle className="h-4 w-4" />
+                                <FileText className="h-5 w-5" />
                               </div>
                               <div>
                                 <div className="font-medium text-foreground">{doc.name}</div>
-                                <div className="text-sm text-muted-foreground">{doc.description}</div>
+                                <div className="text-xs text-muted-foreground">{doc.description}</div>
                               </div>
                             </div>
+                            {formData[doc.key as keyof PropertyFormData] && (
+                              <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                                <CheckCircle className="h-3 w-3" />
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -2656,59 +3126,72 @@ export default function CreateListingPage() {
                   <Button
                     variant="outline"
                     onClick={() => setActiveTab('pricing')}
-                    className="gap-2"
+                    className="gap-2 border-primary/20 hover:border-primary/40 h-11"
                   >
                     <ChevronRight className="h-4 w-4 rotate-180" />
-                    Previous
+                    {t('buttons.previous')}
                   </Button>
                   <Button
                     onClick={() => setActiveTab('media')}
-                    className="gap-2"
+                    className="gap-2 h-11 px-8"
                   >
-                    Next: Media
+                    {t('buttons.next')}: Media
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
               </TabsContent>
 
-              {/* Media */}
+              {/* Media - Enhanced */}
               <TabsContent value="media" className="space-y-6 animate-in fade-in duration-300">
-                <Card className="border-border shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <ImageIcon className="h-5 w-5 text-primary" />
-                      Photos & Videos
+                <Card className="border-border shadow-xl rounded-2xl overflow-hidden bg-gradient-to-b from-card to-card/95">
+                  <CardHeader className="p-6 border-b border-border/50">
+                    <CardTitle className="flex items-center gap-3 text-xl">
+                      <div className="p-2 rounded-full bg-pink-500/10">
+                        <ImageIcon className="h-6 w-6 text-pink-500" />
+                      </div>
+                      <div>
+                        <span className="text-foreground">Photos & Videos</span>
+                        <CardDescription className="mt-1">
+                          Upload high-quality media to showcase your property
+                        </CardDescription>
+                      </div>
                     </CardTitle>
-                    <CardDescription>
-                      Upload high-quality media to showcase your property
-                    </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-8">
+                  <CardContent className="p-6 space-y-8">
                     {/* Images Upload */}
-                    <div>
-                      <div className="flex items-center justify-between mb-4">
+                    <div className="space-y-6">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div>
-                          <h3 className="text-lg font-semibold text-foreground">Property Photos *</h3>
+                          <h3 className="text-lg font-bold text-foreground">Property Photos *</h3>
                           <p className="text-sm text-muted-foreground">
-                            Upload at least 5 high-quality photos. First image will be the cover.
+                            Upload at least 5 high-quality photos for better visibility
                           </p>
                         </div>
-                        <span className="text-sm font-medium text-foreground">
-                          {formData.images?.filter(img => isFile(img)).length || 0}/20 photos
-                        </span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-medium text-foreground">
+                            {formData.images?.filter(img => isFile(img)).length || 0}/20 photos
+                          </span>
+                          <Badge variant="outline" className="bg-primary/10 text-primary">
+                            Required
+                          </Badge>
+                        </div>
                       </div>
 
                       {formErrors.images && (
-                        <p className="text-sm text-destructive mb-4">
-                          {formErrors.images}
-                        </p>
+                        <Alert variant="destructive" className="animate-in fade-in">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertTitle>Images Required</AlertTitle>
+                          <AlertDescription>{formErrors.images}</AlertDescription>
+                        </Alert>
                       )}
 
-                      <div className="space-y-4">
-                        {/* Image Upload Area */}
-                        <div className="border-3 border-dashed border-border rounded-xl p-8 text-center transition-colors hover:border-primary">
-                          <ImageIcon className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                          <p className="mb-2 text-lg font-medium text-foreground">Drag & drop images here</p>
+                      {/* Image Upload Area */}
+                      <div className="border-3 border-dashed border-border rounded-2xl p-8 text-center transition-all duration-300 hover:border-pink-500 hover:bg-pink-500/5 hover:shadow-lg group">
+                        <div className="mb-6">
+                          <div className="inline-flex p-4 rounded-full bg-pink-500/10 mb-4 group-hover:scale-110 transition-transform duration-300">
+                            <Upload className="h-8 w-8 text-pink-500" />
+                          </div>
+                          <h4 className="text-lg font-bold text-foreground mb-2">Drag & drop images here</h4>
                           <p className="text-sm text-muted-foreground mb-6">
                             or click to browse files (PNG, JPG, WEBP up to 10MB each)
                           </p>
@@ -2725,120 +3208,143 @@ export default function CreateListingPage() {
                             }}
                           />
 
-                          <div
-                            className="cursor-pointer mt-4"
+                          <Button
                             onClick={() => document.getElementById('images')?.click()}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault()
-                                document.getElementById('images')?.click()
-                              }
-                            }}
+                            className="mt-2 md:mt-4"
                           >
-                            <span className="text-sm text-primary hover:underline">Click here to select images</span>
-                          </div>
+                            <ImageIcon className="h-5 w-5" />
+                            Select Images
+                          </Button>
                         </div>
 
-                        {/* Image Previews */}
-                        {formData.images && formData.images.length > 0 && (
-                          <div>
-                            <h4 className="mb-3 font-medium text-foreground">Uploaded Photos</h4>
-                            <p className="text-sm text-muted-foreground mb-4">
-                              Drag to reorder images. First image will be used as cover.
+                        {/* Upload Tips */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <Camera className="h-3 w-3" />
+                            <span>Use good lighting</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Maximize2 className="h-3 w-3" />
+                            <span>Show all rooms</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Eye className="h-3 w-3" />
+                            <span>Clean and tidy</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Image Previews */}
+                      {formData.images && formData.images.length > 0 && (
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-semibold text-foreground">Uploaded Photos</h4>
+                            <p className="text-sm text-muted-foreground">
+                              Drag to reorder (first image is cover)
                             </p>
-                            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-                              {formData.images.map((image, index) => {
-                                const imageUrl = getImageUrl(image)
-                                const isFileImage = isFile(image)
+                          </div>
+                          <div className={cn(
+                            "gap-4",
+                            viewMode === 'grid' ? "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4" : "flex flex-col"
+                          )}>
+                            {formData.images.map((image, index) => {
+                              const imageUrl = getImageUrl(image)
+                              const isFileImage = isFile(image)
 
-                                return (
-                                  <div
-                                    key={index}
-                                    className="relative group"
-                                    draggable={isFileImage}
-                                    onDragStart={() => isFileImage && setDraggedIndex(index)}
-                                    onDragOver={(e) => {
-                                      e.preventDefault()
-                                    }}
-                                    onDrop={() => {
-                                      if (draggedIndex !== null && draggedIndex !== index && isFileImage) {
-                                        handleImageReorder(draggedIndex, index)
-                                      }
-                                      setDraggedIndex(null)
-                                    }}
-                                  >
-                                    <div className="aspect-square overflow-hidden rounded-lg border border-border bg-muted/30">
-                                      {imageUrl ? (
-                                        <img
-                                          src={imageUrl}
-                                          alt={`Property image ${index + 1}`}
-                                          className="h-full w-full object-cover transition-transform group-hover:scale-110"
-                                        />
-                                      ) : (
-                                        <div className="h-full w-full flex items-center justify-center">
-                                          <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div className="absolute top-2 left-2 flex gap-1">
-                                      {isFileImage && (
-                                        <div
-                                          className="h-6 w-6 rounded-full bg-black/50 text-white flex items-center justify-center cursor-move"
-                                          draggable
-                                          onDragStart={() => setDraggedIndex(index)}
-                                          aria-label="Drag to reorder"
-                                        >
-                                          <GripVertical className="h-3 w-3" />
-                                        </div>
-                                      )}
-                                      {index === 0 && (
-                                        <Badge className="bg-primary">
-                                          Cover
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    <Button
-                                      size="icon"
-                                      variant="destructive"
-                                      className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
-                                      onClick={() => handleRemoveFile('images', index)}
-                                      aria-label={`Remove image ${index + 1}`}
-                                    >
-                                      <X className="h-3 w-3" />
-                                    </Button>
-
-                                    {!isFileImage && image.isPlaceholder && (
-                                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg">
-                                        <span className="text-xs text-white text-center p-2">
-                                          Re-upload needed
-                                        </span>
+                              return (
+                                <div
+                                  key={index}
+                                  className={cn(
+                                    "relative group rounded-xl overflow-hidden border-2 border-transparent hover:border-pink-500 transition-all duration-300",
+                                    viewMode === 'list' && "flex items-center gap-4 p-4 bg-muted/30"
+                                  )}
+                                  draggable={isFileImage}
+                                  onDragStart={() => isFileImage && setDraggedIndex(index)}
+                                  onDragOver={(e) => {
+                                    e.preventDefault()
+                                  }}
+                                  onDrop={() => {
+                                    if (draggedIndex !== null && draggedIndex !== index && isFileImage) {
+                                      handleImageReorder(draggedIndex, index)
+                                    }
+                                    setDraggedIndex(null)
+                                  }}
+                                >
+                                  <div className={cn(
+                                    "overflow-hidden bg-muted/30",
+                                    viewMode === 'grid' ? "aspect-square" : "h-20 w-20 rounded-lg flex-shrink-0"
+                                  )}>
+                                    {imageUrl ? (
+                                      <img
+                                        src={imageUrl}
+                                        alt={`Property image ${index + 1}`}
+                                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                      />
+                                    ) : (
+                                      <div className="h-full w-full flex items-center justify-center">
+                                        <ImageIcon className="h-8 w-8 text-muted-foreground" />
                                       </div>
                                     )}
                                   </div>
-                                )
-                              })}
-                            </div>
+                                  <div className={cn(
+                                    "absolute top-2 left-2 flex gap-1",
+                                    viewMode === 'list' && "top-4 left-24"
+                                  )}>
+                                    {index === 0 && (
+                                      <Badge className="bg-pink-500 text-xs border-0">
+                                        Cover
+                                      </Badge>
+                                    )}
+                                    <Badge variant="outline" className="bg-black/70 text-white border-0 text-xs">
+                                      {index + 1}
+                                    </Badge>
+                                  </div>
+                                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button
+                                      size="icon"
+                                      variant="destructive"
+                                      className="h-7 w-7 bg-destructive/90 hover:bg-destructive"
+                                      onClick={() => handleRemoveFile('images', index)}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                  {viewMode === 'list' && (
+                                    <div className="flex-1 p-2">
+                                      <p className="font-medium text-foreground truncate">
+                                        {isFile(image) ? image.name : `Image ${index + 1}`}
+                                      </p>
+                                      {isFile(image) && (
+                                        <p className="text-xs text-muted-foreground">
+                                          {(image.size / (1024 * 1024)).toFixed(2)} MB
+                                        </p>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
 
                     <Separator />
 
                     {/* Video Upload */}
-                    <div>
-                      <h3 className="mb-4 text-lg font-semibold text-foreground">Video Tour</h3>
-                      <p className="mb-4 text-sm text-muted-foreground">
+                    <div className="space-y-6">
+                      <h3 className="text-lg font-bold text-foreground">Video Tour</h3>
+                      <p className="text-sm text-muted-foreground">
                         Upload a video tour of your property (optional, up to 100MB)
                       </p>
 
                       {formData.property_video ? (
                         <div className="space-y-4">
-                          <div className="flex items-center justify-between p-4 border border-border rounded-lg bg-muted">
+                          <div className="flex items-center justify-between p-4 border-2 border-green-500/20 rounded-xl bg-green-500/5">
                             <div className="flex items-center gap-3">
-                              <Video className="h-5 w-5 text-primary" />
+                              <div className="p-2 rounded-full bg-green-500/10">
+                                <Video className="h-5 w-5 text-green-500" />
+                              </div>
                               <div>
                                 <p className="font-medium text-foreground">
                                   {formData.property_video.name || 'Video file'}
@@ -2850,57 +3356,60 @@ export default function CreateListingPage() {
                                 )}
                               </div>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveFile('property_video')}
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                              aria-label="Remove video"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const url = getImageUrl(formData.property_video)
+                                  if (url) window.open(url, '_blank')
+                                }}
+                                className="gap-1"
+                              >
+                                <Eye className="h-3 w-3" />
+                                Preview
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveFile('property_video')}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
-
-                          {isFile(formData.property_video) && (
-                            <video
-                              src={URL.createObjectURL(formData.property_video)}
-                              controls
-                              className="w-full rounded-lg"
-                            />
-                          )}
                         </div>
                       ) : (
-                        <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-                          <Video className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                          <p className="mb-2 font-medium text-foreground">Upload property video tour</p>
-                          <p className="text-sm text-muted-foreground mb-6">
-                            MP4, MOV up to 100MB
-                          </p>
+                        <div className="border-3 border-dashed border-border rounded-2xl p-8 text-center transition-all duration-300 hover:border-green-500 hover:bg-green-500/5 hover:shadow-lg group">
+                          <div className="mb-6">
+                            <div className="inline-flex p-4 rounded-full bg-green-500/10 mb-4 group-hover:scale-110 transition-transform duration-300">
+                              <Video className="h-8 w-8 text-green-500" />
+                            </div>
+                            <h4 className="text-lg font-bold text-foreground mb-2">Upload property video tour</h4>
+                            <p className="text-sm text-muted-foreground mb-6">
+                              MP4, MOV up to 100MB
+                            </p>
 
-                          <input
-                            id="property_video"
-                            type="file"
-                            accept="video/*"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0]
-                              if (file) handleFileUpload('property_video', file)
-                            }}
-                          />
+                            <input
+                              id="property_video"
+                              type="file"
+                              accept="video/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0]
+                                if (file) handleFileUpload('property_video', file)
+                              }}
+                            />
 
-                          <div
-                            className="cursor-pointer mt-4"
-                            onClick={() => document.getElementById('property_video')?.click()}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault()
-                                document.getElementById('property_video')?.click()
-                              }
-                            }}
-                          >
-                            <span className="text-sm text-primary hover:underline">Click here to select video</span>
+                            <Button
+                              onClick={() => document.getElementById('property_video')?.click()}
+                              variant="outline"
+                              className="gap-2 h-12 px-6 border-green-500/20 hover:border-green-500/40"
+                            >
+                              <Video className="h-5 w-5" />
+                              Select Video
+                            </Button>
                           </div>
                         </div>
                       )}
@@ -2909,39 +3418,44 @@ export default function CreateListingPage() {
                     <Separator />
 
                     {/* Virtual Tour */}
-                    <div>
-                      <h3 className="mb-4 text-lg font-semibold text-foreground">Virtual Tour Link</h3>
-                      <p className="mb-4 text-sm text-muted-foreground">
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-bold text-foreground">Virtual Tour Link</h3>
+                      <p className="text-sm text-muted-foreground">
                         Add a link to 3D virtual tour (Matterport, Kuula, etc.)
                       </p>
-                      <Input
-                        type="url"
-                        value={formData.virtual_tour_url || ''}
-                        onChange={(e) => handleInputChange('virtual_tour_url', e.target.value)}
-                        placeholder="https://my.matterport.com/show/..."
-                        className="h-12"
-                      />
+                      <div className="relative">
+                        <Globe className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input
+                          type="url"
+                          value={formData.virtual_tour_url || ''}
+                          onChange={(e) => handleInputChange('virtual_tour_url', e.target.value)}
+                          placeholder="https://my.matterport.com/show/..."
+                          className="h-14 text-base border-2 pl-12 focus:border-blue-500"
+                        />
+                      </div>
                     </div>
 
                     <Separator />
 
                     {/* Document Upload */}
-                    <div>
-                      <h3 className="mb-4 text-lg font-semibold text-foreground">Additional Documents</h3>
-                      <p className="mb-4 text-sm text-muted-foreground">
+                    <div className="space-y-6">
+                      <h3 className="text-lg font-bold text-foreground">Additional Documents</h3>
+                      <p className="text-sm text-muted-foreground">
                         Upload floor plans, contracts, or other documents (optional)
                       </p>
 
                       {formData.documents && formData.documents.length > 0 && (
-                        <div className="mb-4 space-y-3">
+                        <div className="space-y-3">
                           {formData.documents.map((doc, index) => (
-                            <div key={index} className="flex items-center justify-between p-3 border border-border rounded-lg bg-muted">
+                            <div key={index} className="flex items-center justify-between p-4 border border-border rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
                               <div className="flex items-center gap-3">
-                                <FileText className="h-5 w-5 text-muted-foreground" />
+                                <div className="p-2 rounded-lg bg-blue-500/10">
+                                  <FileText className="h-5 w-5 text-blue-500" />
+                                </div>
                                 <div>
                                   <p className="font-medium text-foreground">{doc.name}</p>
                                   <p className="text-sm text-muted-foreground">
-                                    {(doc.size / 1024).toFixed(2)} KB
+                                    {(doc.size / 1024).toFixed(2)} KB • {doc.type || 'Document'}
                                   </p>
                                 </div>
                               </div>
@@ -2949,8 +3463,7 @@ export default function CreateListingPage() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleRemoveFile('documents', index)}
-                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                aria-label={`Remove document ${doc.name}`}
+                                className="text-destructive hover:text-destructive"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -2959,79 +3472,310 @@ export default function CreateListingPage() {
                         </div>
                       )}
 
-                      <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-                        <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                        <p className="mb-2 font-medium text-foreground">Upload additional documents</p>
-                        <p className="text-sm text-muted-foreground mb-6">
-                          PDF, DOC, XLS up to 20MB each
-                        </p>
+                      <div className="border-3 border-dashed border-border rounded-2xl p-8 text-center transition-all duration-300 hover:border-blue-500 hover:bg-blue-500/5 hover:shadow-lg group">
+                        <div className="mb-6">
+                          <div className="inline-flex p-4 rounded-full bg-blue-500/10 mb-4 group-hover:scale-110 transition-transform duration-300">
+                            <FileText className="h-8 w-8 text-blue-500" />
+                          </div>
+                          <h4 className="text-lg font-bold text-foreground mb-2">Upload additional documents</h4>
+                          <p className="text-sm text-muted-foreground mb-6">
+                            PDF, DOC, XLS up to 20MB each
+                          </p>
 
-                        <input
-                          id="documents"
-                          type="file"
-                          accept=".pdf,.doc,.docx,.xls,.xlsx"
-                          multiple
-                          className="hidden"
-                          onChange={(e) => {
-                            const files = Array.from(e.target.files || [])
-                            files.forEach(file => handleFileUpload('documents', file))
-                          }}
-                        />
+                          <input
+                            id="documents"
+                            type="file"
+                            accept=".pdf,.doc,.docx,.xls,.xlsx"
+                            multiple
+                            className="hidden"
+                            onChange={(e) => {
+                              const files = Array.from(e.target.files || [])
+                              files.forEach(file => handleFileUpload('documents', file))
+                            }}
+                          />
 
-                        <div
-                          className="cursor-pointer mt-4"
-                          onClick={() => document.getElementById('documents')?.click()}
-                          role="button"
-                          tabIndex={0}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault()
-                              document.getElementById('documents')?.click()
-                            }
-                          }}
-                        >
-                          <span className="text-sm text-primary hover:underline">Click here to select documents</span>
+                          <Button
+                            onClick={() => document.getElementById('documents')?.click()}
+                            variant="outline"
+                            className="gap-2 h-12 px-6 border-blue-500/20 hover:border-blue-500/40"
+                          >
+                            <FileText className="h-5 w-5" />
+                            Select Documents
+                          </Button>
                         </div>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* In the Media tab footer - Update the submit button section */}
                 <div className="flex justify-between pt-4">
                   <Button
                     variant="outline"
                     onClick={() => setActiveTab('features')}
-                    className="gap-2"
+                    className="gap-2 border-primary/20 hover:border-primary/40 h-11"
                   >
                     <ChevronRight className="h-4 w-4 rotate-180" />
-                    Previous
+                    {t('buttons.previous')}
                   </Button>
                   <div className="flex gap-3">
                     <Button
                       variant="outline"
                       onClick={handleSaveDraft}
-                      className="gap-2"
-                      aria-label="Save draft"
+                      className="gap-2 border-primary/20 hover:border-primary/40 h-11"
                     >
                       <Save className="h-4 w-4" />
-                      Save Draft
+                      {t('buttons.saveDraft')}
                     </Button>
-                    {/* Update the submit button text */}
+                    <Button
+                      onClick={() => setActiveTab('promotion')}
+                      className="gap-2 h-11 px-8"
+                    >
+                      {t('buttons.next')}: Promotion
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* Promotion - Enhanced */}
+              <TabsContent value="promotion" className="space-y-6 animate-in fade-in duration-300">
+                <Card className="border-border shadow-xl rounded-2xl overflow-hidden bg-gradient-to-b from-card to-card/95">
+                  <CardHeader className="p-6 border-b border-border/50">
+                    <CardTitle className="flex items-center gap-3 text-xl">
+                      <div className="p-2 rounded-full bg-orange-500/10">
+                        <TrendingUp className="h-6 w-6 text-orange-500" />
+                      </div>
+                      <div>
+                        <span className="text-foreground">Boost Your Listing Visibility</span>
+                        <CardDescription className="mt-1">
+                          Choose a promotion package to get more views and faster approval
+                        </CardDescription>
+                      </div>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6 space-y-8">
+                    {isLoadingPromotionTiers ? (
+                      <div className="flex items-center justify-center p-12">
+                        <div className="text-center space-y-4">
+                          <LoadingSpinner className="h-12 w-12 mx-auto" />
+                          <p className="text-muted-foreground">Loading promotion options...</p>
+                        </div>
+                      </div>
+                    ) : promotionTiers && promotionTiers.length > 0 ? (
+                      <>
+                        {/* Promotion tier selection */}
+                        <div className="space-y-6">
+                          <div>
+                            <h3 className="text-lg font-bold text-foreground mb-2">Select Promotion Tier</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Choose the promotion level that best fits your needs
+                            </p>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {promotionTiers.map((tier) => (
+                              <div
+                                key={tier.id}
+                                className={cn(
+                                  "border-2 rounded-2xl p-6 cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-xl h-full",
+                                  selectedPromotionTier === tier.tier_type
+                                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                                    : "border-border hover:border-primary/50"
+                                )}
+                                onClick={() => setSelectedPromotionTier(tier.tier_type as any)}
+                              >
+                                <div className="flex items-center gap-3 mb-4">
+                                  <div className={cn(
+                                    "p-3 rounded-xl",
+                                    selectedPromotionTier === tier.tier_type
+                                      ? "bg-primary/10"
+                                      : "bg-muted"
+                                  )}>
+                                    {getTierIcon(tier.tier_type)}
+                                  </div>
+                                  <div>
+                                    <h4 className="font-bold text-xl text-foreground">{tier.name}</h4>
+                                    <p className="text-sm text-muted-foreground">{tier.description}</p>
+                                  </div>
+                                </div>
+
+                                <p className="text-sm text-muted-foreground mb-6">{tier.description}</p>
+
+                                {tier.tier_type !== 'basic' ? (
+                                  <div className="space-y-3 mb-6">
+                                    <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                                      <span className="text-foreground">7 days</span>
+                                      <span className="font-bold text-foreground">{tier.price_7?.toLocaleString()} ETB</span>
+                                    </div>
+                                    <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                                      <span className="text-foreground">30 days</span>
+                                      <span className="font-bold text-foreground">{tier.price_30?.toLocaleString()} ETB</span>
+                                    </div>
+                                    {tier.price_60 && (
+                                      <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                                        <span className="text-foreground">60 days</span>
+                                        <span className="font-bold text-foreground">{tier.price_60?.toLocaleString()} ETB</span>
+                                      </div>
+                                    )}
+                                    {tier.price_90 && (
+                                      <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                                        <span className="text-foreground">90 days</span>
+                                        <span className="font-bold text-foreground">{tier.price_90?.toLocaleString()} ETB</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="text-3xl font-bold text-green-600 mb-6">FREE</div>
+                                )}
+
+                                <div className="space-y-2 mb-6">
+                                  {tier.features && tier.features.slice(0, 4).map((feature: string, idx: number) => (
+                                    <div key={idx} className="flex items-start gap-2">
+                                      <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                      <span className="text-sm text-foreground">{feature}</span>
+                                    </div>
+                                  ))}
+                                </div>
+
+                                {selectedPromotionTier === tier.tier_type && (
+                                  <div className="mt-4 flex items-center justify-center">
+                                    <Badge className={cn("gap-2 px-4 py-2 text-sm", getTierColor(tier.tier_type))}>
+                                      <CheckCircle className="h-4 w-4" />
+                                      Currently Selected
+                                    </Badge>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Duration selection for paid tiers */}
+                        {selectedPromotionTier !== 'basic' && (
+                          <div className="p-6 bg-gradient-to-r from-orange-500/5 to-yellow-500/5 rounded-2xl border border-orange-500/20">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+                              <div>
+                                <h4 className="font-bold text-lg text-foreground">Select Duration</h4>
+                                <p className="text-sm text-muted-foreground">
+                                  Choose how long you want to promote your listing
+                                </p>
+                              </div>
+                              <Badge variant="outline" className="bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/20">
+                                Total: {promotionPrice.toLocaleString()} ETB
+                              </Badge>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                              {DURATION_OPTIONS.map((duration) => (
+                                <Button
+                                  key={duration.value}
+                                  variant={selectedDuration === duration.value ? "default" : "outline"}
+                                  onClick={() => setSelectedDuration(duration.value)}
+                                  className={cn(
+                                    "h-16 flex-col gap-1",
+                                    selectedDuration === duration.value && "bg-gradient-to-r from-orange-500 to-yellow-500"
+                                  )}
+                                >
+                                  <div className="font-bold text-foreground text-sm md:text-base">{duration.label}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {calculatePrice(selectedPromotionTier, duration.value).toLocaleString()} ETB
+                                  </div>
+                                </Button>
+                              ))}
+                            </div>
+                            <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+                              <Info className="h-4 w-4" />
+                              <span>Longer durations provide better value per day</span>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <Alert variant="destructive" className="animate-in fade-in">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Error Loading Promotion Options</AlertTitle>
+                        <AlertDescription>
+                          Unable to load promotion options. Please try again later or contact support.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {/* Promotion Benefits */}
+                    <Alert className="bg-gradient-to-r from-blue-500/5 to-purple-500/5 border-blue-500/20 dark:border-blue-500/20 rounded-2xl">
+                      <div className="flex items-start gap-3">
+                        <Rocket className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <AlertTitle className="text-blue-800 dark:text-blue-300 text-lg font-bold">
+                            Promotion Benefits
+                          </AlertTitle>
+                          <AlertDescription className="text-blue-700 dark:text-blue-400 text-sm space-y-3 mt-2">
+                            {selectedPromotionTier === 'basic' ? (
+                              <>
+                                <p className="flex items-center gap-2">
+                                  <Clock className="h-4 w-4" />
+                                  <span className="font-medium">Free listings require admin approval (usually within 24 hours)</span>
+                                </p>
+                                <p className="flex items-center gap-2">
+                                  <Eye className="h-4 w-4" />
+                                  <span>Standard visibility in search results</span>
+                                </p>
+                                <p className="flex items-center gap-2">
+                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                  <span>Perfect for testing the platform</span>
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="flex items-center gap-2">
+                                  <Zap className="h-4 w-4 text-yellow-500" />
+                                  <span className="font-medium">Promoted listings are automatically approved immediately</span>
+                                </p>
+                                <p className="flex items-center gap-2">
+                                  <TrendingUp className="h-4 w-4 text-green-500" />
+                                  <span>Get 3-5x more views than regular listings</span>
+                                </p>
+                                <p className="flex items-center gap-2">
+                                  <Crown className="h-4 w-4 text-purple-500" />
+                                  <span>Priority placement in search results</span>
+                                </p>
+                                <p className="flex items-center gap-2">
+                                  <Target className="h-4 w-4 text-red-500" />
+                                  <span>Featured badge attracts more clicks</span>
+                                </p>
+                              </>
+                            )}
+                          </AlertDescription>
+                        </div>
+                      </div>
+                    </Alert>
+                  </CardContent>
+                </Card>
+
+                <div className="flex justify-between pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setActiveTab('media')}
+                    className="gap-2 border-primary/20 hover:border-primary/40 h-11"
+                  >
+                    <ChevronRight className="h-4 w-4 rotate-180" />
+                    {t('buttons.previous')}
+                  </Button>
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={handleSaveDraft}
+                      className="gap-2 border-primary/20 hover:border-primary/40 h-11"
+                    >
+                      <Save className="h-4 w-4" />
+                      {t('buttons.saveDraft')}
+                    </Button>
                     <Button
                       onClick={handleSubmit}
                       disabled={isSubmitting}
                       className={cn(
-                        "gap-2 min-w-[200px]",
-                        selectedPromotionTier !== 'basic' && "bg-green-600 hover:bg-green-700"
+                        "gap-2 h-11 px-8 min-w-[160px] md:min-w-[200px] transition-all duration-300 hover:scale-[1.02]",
+                        selectedPromotionTier !== 'basic'
+                          ? "bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600"
+                          : "bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
                       )}
-                      aria-label={
-                        isSubmitting
-                          ? "Processing..."
-                          : selectedPromotionTier === 'basic'
-                            ? "List property for free"
-                            : `Create & Pay - ${promotionPrice.toLocaleString()} ETB`
-                      }
                     >
                       {isSubmitting ? (
                         <>
@@ -3046,8 +3790,10 @@ export default function CreateListingPage() {
                       ) : (
                         <>
                           <CreditCard className="h-4 w-4" />
-                          Create & Pay Now
-                          <span className="ml-2 font-bold">{promotionPrice.toLocaleString()} ETB</span>
+                          <div className="flex flex-col items-center">
+                            <span>Create & Pay</span>
+                            <span className="text-xs font-bold">{promotionPrice.toLocaleString()} ETB</span>
+                          </div>
                         </>
                       )}
                     </Button>
@@ -3058,52 +3804,68 @@ export default function CreateListingPage() {
           </div>
 
           {/* Sidebar - Preview & Tips */}
-          <div className="space-y-6">
+          <div className="space-y-6 hidden lg:block">
             {/* Preview Card */}
-            <Card className="top-6 border-border shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-foreground">Listing Preview</CardTitle>
+            <Card className="border-border shadow-xl rounded-2xl overflow-hidden sticky top-24 bg-gradient-to-b from-card to-card/95">
+              <CardHeader className="p-6 border-b border-border/50">
+                <CardTitle className="text-foreground flex items-center gap-2">
+                  <Eye className="h-5 w-5 text-primary" />
+                  Listing Preview
+                </CardTitle>
                 <CardDescription>
                   This is how your property will appear to buyers
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="aspect-video rounded-lg bg-muted flex items-center justify-center overflow-hidden">
+              <CardContent className="p-6 space-y-6">
+                <div className="aspect-video rounded-xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center overflow-hidden group relative">
                   {formData.images && formData.images.length > 0 ? (
-                    <img
-                      src={getImageUrl(formData.images[0]) || ''}
-                      alt="Property preview"
-                      className="h-full w-full object-cover"
-                    />
+                    <>
+                      <img
+                        src={getImageUrl(formData.images[0]) || ''}
+                        alt="Property preview"
+                        className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-700"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                    </>
                   ) : (
-                    <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                    <div className="text-center p-6">
+                      <ImageIcon className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                      <p className="text-sm text-muted-foreground">No images yet</p>
+                    </div>
+                  )}
+                  {formData.images && formData.images.length > 0 && (
+                    <div className="absolute bottom-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
+                      {formData.images.length} photos
+                    </div>
                   )}
                 </div>
+
                 <div>
-                  <h3 className="font-semibold text-lg truncate text-foreground">
+                  <h3 className="font-bold text-xl text-foreground truncate">
                     {formData.title || 'Your property title'}
                   </h3>
-                  <p className="text-sm text-muted-foreground truncate">
+                  <p className="text-sm text-muted-foreground truncate flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
                     {formData.specific_location || 'Location will appear here'}
                   </p>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-3 bg-muted rounded-lg">
-                    <div className="text-xl font-bold text-foreground">{formData.bedrooms || 0}</div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="text-center p-3 bg-gradient-to-br from-blue-500/10 to-blue-500/5 rounded-xl border border-blue-500/20">
+                    <div className="text-2xl font-bold text-foreground">{formData.bedrooms || 0}</div>
                     <div className="text-xs text-muted-foreground">Bedrooms</div>
                   </div>
-                  <div className="text-center p-3 bg-muted rounded-lg">
-                    <div className="text-xl font-bold text-foreground">{formData.bathrooms || 0}</div>
+                  <div className="text-center p-3 bg-gradient-to-br from-green-500/10 to-green-500/5 rounded-xl border border-green-500/20">
+                    <div className="text-2xl font-bold text-foreground">{formData.bathrooms || 0}</div>
                     <div className="text-xs text-muted-foreground">Bathrooms</div>
                   </div>
-                  <div className="text-center p-3 bg-muted rounded-lg">
-                    <div className="text-xl font-bold text-foreground">{formData.total_area || 0}</div>
+                  <div className="text-center p-3 bg-gradient-to-br from-purple-500/10 to-purple-500/5 rounded-xl border border-purple-500/20">
+                    <div className="text-2xl font-bold text-foreground">{formData.total_area || 0}</div>
                     <div className="text-xs text-muted-foreground">m²</div>
                   </div>
                 </div>
 
-                <div className="text-2xl font-bold text-primary">
+                <div className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
                   {listingType === 'for_sale' ? (
                     <>
                       {formData.price_etb
@@ -3120,66 +3882,125 @@ export default function CreateListingPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline" className="capitalize">
+                  <Badge variant="outline" className="capitalize bg-gradient-to-r from-gray-500/10 to-gray-500/5">
                     {formData.property_type?.replace('_', ' ') || 'house'}
                   </Badge>
-                  <Badge variant="outline">
+                  <Badge variant="outline" className="bg-gradient-to-r from-blue-500/10 to-blue-500/5">
                     {listingType === 'for_sale' ? 'For Sale' : 'For Rent'}
                   </Badge>
                   {selectedPromotionTier !== 'basic' && (
-                    <Badge className={cn(getTierColor(selectedPromotionTier))}>
+                    <Badge className={cn("gap-1", getTierColor(selectedPromotionTier))}>
+                      {getTierIcon(selectedPromotionTier)}
                       {selectedPromotionTier === 'standard' ? 'Promoted' : 'Premium'}
+                    </Badge>
+                  )}
+                  {formData.price_negotiable && (
+                    <Badge variant="outline" className="bg-gradient-to-r from-green-500/10 to-green-500/5">
+                      Negotiable
                     </Badge>
                   )}
                 </div>
 
+                {/* Status Alert */}
                 {selectedPromotionTier !== 'basic' ? (
-                  <Alert className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-900 mt-4">
-                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-                    <AlertTitle className="text-green-800 dark:text-green-300">Auto-Approval</AlertTitle>
-                    <AlertDescription className="text-green-700 dark:text-green-400">
-                      Your listing will be automatically approved and go live immediately.
+                  <Alert className="bg-gradient-to-r from-green-500/10 to-emerald-500/5 border-green-500/20 rounded-xl">
+                    <Rocket className="h-4 w-4 text-green-500" />
+                    <AlertTitle className="text-green-800 dark:text-green-300">Auto-Approval Active</AlertTitle>
+                    <AlertDescription className="text-green-700 dark:text-green-400 text-sm">
+                      Your listing will be automatically approved and go live immediately after payment.
                     </AlertDescription>
                   </Alert>
                 ) : (user?.is_staff || user?.is_superuser) ? (
-                  <Alert className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-900 mt-4">
-                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-                    <AlertTitle className="text-green-800 dark:text-green-300">Admin Listing</AlertTitle>
-                    <AlertDescription className="text-green-700 dark:text-green-400">
-                      Your listing will be immediately published as an admin.
+                  <Alert className="bg-gradient-to-r from-blue-500/10 to-cyan-500/5 border-blue-500/20 rounded-xl">
+                    <ShieldCheck className="h-4 w-4 text-blue-500" />
+                    <AlertTitle className="text-blue-800 dark:text-blue-300">Admin Listing</AlertTitle>
+                    <AlertDescription className="text-blue-700 dark:text-blue-400 text-sm">
+                      Your listing will be immediately published as an admin user.
                     </AlertDescription>
                   </Alert>
                 ) : (
-                  <Alert className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-900 mt-4">
-                    <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <Alert className="bg-gradient-to-r from-amber-500/10 to-yellow-500/5 border-amber-500/20 rounded-xl">
+                    <Clock className="h-4 w-4 text-amber-500" />
                     <AlertTitle className="text-amber-800 dark:text-amber-300">Pending Approval</AlertTitle>
-                    <AlertDescription className="text-amber-700 dark:text-amber-400">
+                    <AlertDescription className="text-amber-700 dark:text-amber-400 text-sm">
                       Your listing requires admin approval before going live (usually within 24 hours).
                     </AlertDescription>
                   </Alert>
                 )}
+
+                {/* Quick Stats */}
+                <div className="pt-4 border-t border-border/50">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <div className="text-muted-foreground">Progress</div>
+                      <div className="font-semibold text-foreground">{totalProgress}% Complete</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground">Sections</div>
+                      <div className="font-semibold text-foreground">
+                        {Object.values(progress).filter(p => p === 100).length}/7
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
             {/* Tips Card */}
-            <Card className="border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950">
-              <CardHeader>
-                <CardTitle className="text-blue-800 dark:text-blue-300">Listing Tips</CardTitle>
+            <Card className="border-border shadow-xl rounded-2xl overflow-hidden bg-gradient-to-br from-blue-500/5 to-cyan-500/5 border-blue-500/20">
+              <CardHeader className="p-6">
+                <CardTitle className="text-blue-800 dark:text-blue-300 flex items-center gap-2">
+                  <Award className="h-5 w-5" />
+                  Listing Tips & Best Practices
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {[
-                  'Use natural daylight for photos',
-                  'Clean and declutter before taking photos',
-                  'Highlight unique features in description',
-                  'Be responsive to inquiries',
-                  'Price competitively based on market'
-                ].map((tip, index) => (
-                  <div key={index} className="flex items-start gap-3">
-                    <CheckCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-blue-700 dark:text-blue-400">{tip}</p>
-                  </div>
-                ))}
+              <CardContent className="p-6 pt-0">
+                <div className="space-y-4">
+                  {[
+                    {
+                      icon: <Camera className="h-4 w-4" />,
+                      title: 'High-Quality Photos',
+                      description: 'Use natural daylight and clean spaces'
+                    },
+                    {
+                      icon: <Type className="h-4 w-4" />,
+                      title: 'Detailed Description',
+                      description: 'Include all features and unique selling points'
+                    },
+                    {
+                      icon: <Calculator className="h-4 w-4" />,
+                      title: 'Competitive Pricing',
+                      description: 'Research similar properties in your area'
+                    },
+                    {
+                      icon: <CheckCircle className="h-4 w-4" />,
+                      title: 'Accurate Information',
+                      description: 'Verify all details before submission'
+                    },
+                    {
+                      icon: <MessageCircle className="h-4 w-4" />,
+                      title: 'Quick Responses',
+                      description: 'Be responsive to buyer inquiries'
+                    },
+                  ].map((tip, index) => (
+                    <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-white/50 dark:bg-gray-900/50">
+                      <div className="p-2 rounded-full bg-blue-500/10">
+                        {tip.icon}
+                      </div>
+                      <div>
+                        <div className="font-medium text-foreground">{tip.title}</div>
+                        <div className="text-sm text-muted-foreground">{tip.description}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
+              <CardFooter className="p-6 pt-0">
+                <Button variant="outline" className="w-full gap-2 border-blue-500/20 hover:border-blue-500/40">
+                  <Info className="h-4 w-4" />
+                  View Complete Guide
+                </Button>
+              </CardFooter>
             </Card>
           </div>
         </div>

@@ -1,298 +1,234 @@
-// app/inquiries/create/page.tsx - SIMPLIFIED VERSION
 'use client'
 
-import React, { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-    CardFooter,
-} from "@/components/ui/Card"
-import { Button } from "@/components/ui/Button"
-import { Input } from "@/components/ui/Input"
-import { Textarea } from "@/components/ui/Textarea"
-import { Label } from "@/components/ui/Label"
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/Select"
-import { ArrowLeft, Mail, Phone, MessageSquare, User, Home } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
-import { listingsApi } from '@/lib/api/listings'
-import { inquiryApi } from '@/lib/api/inquiry'
-import toast from 'react-hot-toast'
+import React, { useEffect, useState } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import Header from "@/components/common/Header/Header";
+import { useInquiries } from '@/lib/hooks/useInquiries';
+import { InquiryForm } from '@/components/inquiries/InquiryForm';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Alert, AlertDescription } from '@/components/ui/Alert';
+import { Loader2, ArrowLeft, Home } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { listingsApi } from '@/lib/api/listings';
+import { useTranslations } from 'next-intl';
+import { cn } from '@/lib/utils';
 
-export default function CreateInquiryPage() {
-    const router = useRouter()
-    const [isSubmitting, setIsSubmitting] = useState(false)
-    const [selectedPropertyId, setSelectedPropertyId] = useState<string>('')
-    const [formData, setFormData] = useState({
-        inquiry_type: 'general',
-        message: '',
-        contact_preference: 'any',
-        full_name: '',
-        email: '',
-        phone: '',
-    })
+const CreateInquiryPage: React.FC = () => {
+  const params = useParams();
+  const propertyId = params?.propertyId as string;
+  const router = useRouter();
+  const { toast } = useToast();
+  const t = useTranslations('inquiries');
+  const tProperty = useTranslations('propertyDetail');
+  
+  const [property, setProperty] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [propertyError, setPropertyError] = useState<string | null>(null);
+  
+  const { createInquiry, loading: submitting } = useInquiries();
 
-    // Fetch properties for selection
-    const { data: properties, isLoading: isLoadingProperties } = useQuery({
-        queryKey: ['properties-for-inquiry'],
-        queryFn: () => listingsApi.getProperties({ limit: 50 }),
-    })
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-
-        if (!selectedPropertyId) {
-            toast.error('Please select a property')
-            return
-        }
-
-        if (!formData.full_name || !formData.email || !formData.message) {
-            toast.error('Please fill in all required fields')
-            return
-        }
-
-        setIsSubmitting(true)
-
-        try {
-            const inquiryData = {
-                property_id: parseInt(selectedPropertyId),
-                inquiry_type: formData.inquiry_type,
-                message: formData.message,
-                contact_preference: formData.contact_preference,
-                full_name: formData.full_name,
-                email: formData.email,
-                phone: formData.phone || '',
-                category: 'general',
-                source: 'website',
-            }
-
-            console.log('Submitting inquiry:', inquiryData)
-            await inquiryApi.createInquiry(inquiryData)
-            toast.success('Inquiry sent successfully!')
-            router.push('/inquiries')
-        } catch (error: any) {
-            console.error('Error creating inquiry:', error)
-            toast.error(error.response?.data?.error || error.message || 'Failed to send inquiry')
-        } finally {
-            setIsSubmitting(false)
-        }
+  useEffect(() => {
+    if (propertyId) {
+      loadProperty();
+    } else {
+      setPropertyError('No property specified');
+      setLoading(false);
     }
+  }, [propertyId]);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target
-        setFormData(prev => ({ ...prev, [name]: value }))
+  const loadProperty = async () => {
+    try {
+      setLoading(true);
+      setPropertyError(null);
+      const data = await listingsApi.getPropertyById(parseInt(propertyId!));
+      setProperty(data);
+    } catch (err: any) {
+      setPropertyError(err.message || t('loadError'));
+      toast({
+        title: t('error'),
+        description: t('loadError'),
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const handleSelectChange = (name: string, value: string) => {
-        if (name === 'property_id') {
-            setSelectedPropertyId(value)
-        } else {
-            setFormData(prev => ({ ...prev, [name]: value }))
-        }
+  const handleSubmit = async (data: any) => {
+    try {
+      await createInquiry(data);
+      toast({
+        title: t('success'),
+        description: t('inquirySentSuccess'),
+      });
+      
+      setTimeout(() => {
+        router.push(`/properties/${propertyId}`);
+      }, 2000);
+    } catch (error: any) {
+      toast({
+        title: t('error'),
+        description: error.message || t('inquirySentFailed'),
+        variant: 'destructive',
+      });
     }
+  };
 
+  if (loading) {
     return (
-        <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
-            <div className="container py-8">
-                <Button
-                    variant="ghost"
-                    onClick={() => router.back()}
-                    className="mb-6 gap-2"
-                >
-                    <ArrowLeft className="h-4 w-4" />
-                    Back
-                </Button>
-
-                <div className="max-w-2xl mx-auto">
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 rounded-full bg-primary/10">
-                                    <MessageSquare className="h-6 w-6 text-primary" />
-                                </div>
-                                <div>
-                                    <CardTitle>Send New Inquiry</CardTitle>
-                                    <CardDescription>
-                                        Submit an inquiry for a property
-                                    </CardDescription>
-                                </div>
-                            </div>
-                        </CardHeader>
-
-                        <CardContent>
-                            <form onSubmit={handleSubmit} className="space-y-6">
-                                {/* Property Selection */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="property_id">Select Property *</Label>
-                                    <Select
-                                        value={selectedPropertyId}
-                                        onValueChange={(value) => handleSelectChange('property_id', value)}
-                                        placeholder="Select a property"
-                                    >
-                                        <SelectContent>
-                                            {isLoadingProperties ? (
-                                                <SelectItem value="loading" disabled>Loading properties...</SelectItem>
-                                            ) : properties?.results?.length ? (
-                                                properties.results.map((property) => (
-                                                    <SelectItem key={property.id} value={property.id.toString()}>
-                                                        <div className="flex items-center gap-2">
-                                                            <Home className="h-4 w-4" />
-                                                            <span className="truncate">{property.title}</span>
-                                                            <span className="text-muted-foreground text-xs whitespace-nowrap">
-                                                                - {property.city?.name}
-                                                            </span>
-                                                        </div>
-                                                    </SelectItem>
-                                                ))
-                                            ) : (
-                                                <SelectItem value="none" disabled>No properties found</SelectItem>
-                                            )}
-                                        </SelectContent>
-                                    </Select>
-                                    {!selectedPropertyId && (
-                                        <p className="text-sm text-destructive">Please select a property</p>
-                                    )}
-                                </div>
-
-                                {/* Inquiry Type */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="inquiry_type">Inquiry Type *</Label>
-                                    <Select
-                                        value={formData.inquiry_type}
-                                        onValueChange={(value) => handleSelectChange('inquiry_type', value)}
-                                        placeholder="Select inquiry type"
-                                    >
-                                        <SelectContent>
-                                            <SelectItem value="general">General Inquiry</SelectItem>
-                                            <SelectItem value="viewing">Schedule Viewing</SelectItem>
-                                            <SelectItem value="price">Price Inquiry</SelectItem>
-                                            <SelectItem value="details">More Details</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                {/* Contact Preference */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="contact_preference">Contact Preference *</Label>
-                                    <Select
-                                        value={formData.contact_preference}
-                                        onValueChange={(value) => handleSelectChange('contact_preference', value)}
-                                        placeholder="Select contact method"
-                                    >
-                                        <SelectContent>
-                                            <SelectItem value="call">Phone Call</SelectItem>
-                                            <SelectItem value="email">Email</SelectItem>
-                                            <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                                            <SelectItem value="any">Any Method</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                {/* Message */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="message">Your Message *</Label>
-                                    <Textarea
-                                        id="message"
-                                        name="message"
-                                        placeholder="I'm interested in this property. Could you please provide more details about..."
-                                        className="min-h-[120px]"
-                                        value={formData.message}
-                                        onChange={handleChange}
-                                        required
-                                    />
-                                    <p className="text-sm text-muted-foreground">
-                                        Be specific to get a faster response
-                                    </p>
-                                </div>
-
-                                {/* Contact Information */}
-                                <div className="space-y-4">
-                                    <h3 className="text-lg font-semibold">Contact Information</h3>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="full_name">Full Name *</Label>
-                                        <div className="relative">
-                                            <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                            <Input
-                                                id="full_name"
-                                                name="full_name"
-                                                className="pl-10"
-                                                placeholder="John Doe"
-                                                value={formData.full_name}
-                                                onChange={handleChange}
-                                                required
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="email">Email Address *</Label>
-                                            <div className="relative">
-                                                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                                <Input
-                                                    id="email"
-                                                    name="email"
-                                                    type="email"
-                                                    className="pl-10"
-                                                    placeholder="john@example.com"
-                                                    value={formData.email}
-                                                    onChange={handleChange}
-                                                    required
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label htmlFor="phone">Phone Number (Optional)</Label>
-                                            <div className="relative">
-                                                <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                                <Input
-                                                    id="phone"
-                                                    name="phone"
-                                                    className="pl-10"
-                                                    placeholder="+251911223344"
-                                                    value={formData.phone}
-                                                    onChange={handleChange}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <CardFooter className="px-0 pt-6">
-                                    <div className="flex gap-3 w-full">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() => router.back()}
-                                            className="flex-1"
-                                        >
-                                            Cancel
-                                        </Button>
-                                        <Button
-                                            type="submit"
-                                            disabled={isSubmitting || !selectedPropertyId}
-                                            className="flex-1 gap-2"
-                                        >
-                                            {isSubmitting ? 'Sending...' : 'Send Inquiry'}
-                                        </Button>
-                                    </div>
-                                </CardFooter>
-                            </form>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <Header/>
+        <div className="container mx-auto px-3 md:px-4 py-12">
+          <Card className="border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <CardContent className="pt-12 pb-12 text-center">
+              <Loader2 className="w-12 h-12 animate-spin text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-gray-400">{t('loadingProperty')}</p>
+            </CardContent>
+          </Card>
         </div>
-    )
-}
+      </div>
+    );
+  }
+
+  if (propertyError || !property) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <Header/>
+        <div className="container mx-auto px-3 md:px-4 py-12">
+          <Alert variant="destructive">
+            <AlertDescription>
+              {propertyError || t('propertyNotFound')}
+            </AlertDescription>
+          </Alert>
+          <div className="flex flex-wrap gap-2 mt-4">
+            <Button 
+              onClick={() => router.push('/properties')}
+              className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              <Home className="w-4 h-4 mr-2" />
+              {t('browseProperties')}
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => router.back()}
+              className="border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              {t('goBack')}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <Header/>
+      <div className="container mx-auto px-3 md:px-4 py-6 md:py-8">
+        <div className="max-w-2xl mx-auto">
+          {/* Header */}
+          <div className="mb-6 md:mb-8">
+            <Button
+              variant="ghost"
+              onClick={() => router.push(`/properties/${propertyId}`)}
+              className="mb-3 md:mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              {t('backToProperty')}
+            </Button>
+            
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+              {t('sendInquiry')}
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1 md:mt-2">
+              {t('contactOwnerAgent', { propertyTitle: property.title })}
+            </p>
+          </div>
+
+          {/* Property Preview */}
+          <Card className="mb-6 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <CardHeader>
+              <CardTitle className="dark:text-white">{t('propertyDetailsTitle')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col sm:flex-row items-start gap-4">
+                {property.images && property.images[0] && (
+                  <img
+                    src={property.images[0].image}
+                    alt={property.title}
+                    className="w-24 h-24 object-cover rounded-lg flex-shrink-0"
+                  />
+                )}
+                <div className="flex-1">
+                  <h3 className="font-semibold text-lg dark:text-white break-words">
+                    {property.title}
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    {property.city?.name} {property.sub_city && `• ${property.sub_city.name}`}
+                  </p>
+                  <p className="text-xl font-bold mt-2 dark:text-white">
+                    {property.listing_type === 'for_sale'
+                      ? `${property.price_etb?.toLocaleString() || 0} ETB`
+                      : `${property.monthly_rent?.toLocaleString() || 0} ETB/month`
+                    }
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <span className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded dark:text-gray-300">
+                      {t('beds', { count: property.bedrooms || 0 })}
+                    </span>
+                    <span className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded dark:text-gray-300">
+                      {t('baths', { count: property.bathrooms || 0 })}
+                    </span>
+                    <span className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded dark:text-gray-300">
+                      {t('area', { area: property.total_area || 0 })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Inquiry Form */}
+          <InquiryForm
+            propertyId={property.id}
+            propertyTitle={property.title}
+            onSubmit={handleSubmit}
+            isLoading={submitting}
+            successMessage={t('inquirySentSuccess')}
+          />
+
+          {/* Additional Info */}
+          <Card className="mt-6 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <CardHeader>
+              <CardTitle className="text-sm dark:text-gray-300">{t('whatHappensNext')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                <li className="flex items-start gap-2">
+                  <div className="w-2 h-2 bg-blue-500 dark:bg-blue-600 rounded-full mt-1.5 flex-shrink-0"></div>
+                  <span>{t('nextTip1')}</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <div className="w-2 h-2 bg-blue-500 dark:bg-blue-600 rounded-full mt-1.5 flex-shrink-0"></div>
+                  <span>{t('nextTip2')}</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <div className="w-2 h-2 bg-blue-500 dark:bg-blue-600 rounded-full mt-1.5 flex-shrink-0"></div>
+                  <span>{t('nextTip3')}</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <div className="w-2 h-2 bg-blue-500 dark:bg-blue-600 rounded-full mt-1.5 flex-shrink-0"></div>
+                  <span>{t('nextTip4')}</span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CreateInquiryPage;

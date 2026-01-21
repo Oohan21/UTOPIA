@@ -4,12 +4,15 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/hooks/useAuth";
+import { authApi } from "@/lib/api/auth";
+import type { RegisterData } from "@/lib/types/user";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Label } from "@/components/ui/Label";
 import toast from "react-hot-toast";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
+import { validateEmail, validatePhone, validatePassword, sanitizeInput } from "@/lib/utils/validation";
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -23,80 +26,138 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [formErrors, setFormErrors] = useState<string[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const router = useRouter();
   const { register } = useAuth();
 
+  const validateForm = (): boolean => {
+    const errors: string[] = [];
+    const fieldErrors: Record<string, string> = {};
+
+    // Validate email
+    if (!formData.email.trim()) {
+      errors.push("Email is required");
+      fieldErrors.email = "Email is required";
+    } else if (!validateEmail(formData.email)) {
+      errors.push("Invalid email format");
+      fieldErrors.email = "Invalid email format";
+    }
+
+    // Validate names
+    if (!formData.first_name.trim()) {
+      errors.push("First name is required");
+      fieldErrors.first_name = "First name is required";
+    } else if (formData.first_name.trim().length < 2) {
+      errors.push("First name must be at least 2 characters");
+      fieldErrors.first_name = "First name must be at least 2 characters";
+    }
+
+    if (!formData.last_name.trim()) {
+      errors.push("Last name is required");
+      fieldErrors.last_name = "Last name is required";
+    } else if (formData.last_name.trim().length < 2) {
+      errors.push("Last name must be at least 2 characters");
+      fieldErrors.last_name = "Last name must be at least 2 characters";
+    }
+
+    // Validate phone number
+    if (!formData.phone_number.trim()) {
+      errors.push("Phone number is required");
+      fieldErrors.phone_number = "Phone number is required";
+    } else if (!validatePhone(formData.phone_number)) {
+      errors.push("Invalid phone number format. Use +251 followed by 9 digits");
+      fieldErrors.phone_number = "Invalid phone number format";
+    }
+
+    // Validate passwords
+    const passwordValidation = validatePassword(formData.password);
+    if (!passwordValidation.isValid) {
+      errors.push(...Object.values(passwordValidation.errors));
+      fieldErrors.password = Object.values(passwordValidation.errors).join(", ");
+    }
+
+    if (formData.password !== formData.password2) {
+      errors.push("Passwords don't match");
+      fieldErrors.password2 = "Passwords don't match";
+    }
+
+    setFormErrors(errors);
+    setFieldErrors(fieldErrors);
+
+    return errors.length === 0;
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
+
+    // Clear field-specific errors when user starts typing
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+
+    // Clear general form errors
+    if (formErrors.length > 0) {
+      setFormErrors([]);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Frontend validation
-    if (formData.password !== formData.password2) {
-      toast.error("Passwords don't match");
+    if (!validateForm()) {
+      toast.error("Please fix the errors in the form");
       return;
     }
 
-    if (formData.password.length < 8) {
-      toast.error("Password must be at least 8 characters");
-      return;
-    }
-
-    if (!formData.first_name || !formData.last_name) {
-      toast.error("First name and last name are required");
-      return;
-    }
-
-    if (!formData.phone_number) {
-      toast.error("Phone number is required");
-      return;
-    }
-
-    if (!formData.email) {
-      toast.error("Email is required");
-      return;
-    }
-
-    const registrationData = {
-      email: formData.email.toLowerCase(),
-      password: formData.password,
-      password2: formData.password2,
-      first_name: formData.first_name,
-      last_name: formData.last_name,
-      phone_number: formData.phone_number,
-      user_type: "user", 
+    const registrationData: RegisterData = {
+      email: sanitizeInput(formData.email.toLowerCase()),
+      password: sanitizeInput(formData.password),
+      password2: sanitizeInput(formData.password2),
+      first_name: sanitizeInput(formData.first_name),
+      last_name: sanitizeInput(formData.last_name),
+      phone_number: sanitizeInput(formData.phone_number),
+      user_type: "user",
     };
 
     setIsLoading(true);
 
     try {
-      await register(registrationData);
-      toast.success("Registration successful!");
-      router.push("/");
-    } catch (error: any) {
-      console.error("Registration error:", error);
-      
-      // Handle specific error messages from backend
-      if (error.response?.data) {
-        const errors = error.response.data;
-        
-        if (errors.email) {
-          toast.error(errors.email[0]);
-        } else if (errors.phone_number) {
-          toast.error(errors.phone_number[0]);
-        } else if (errors.password) {
-          toast.error(errors.password[0]);
-        } else {
-          toast.error(error.message || "Registration failed. Please try again.");
+      // Use the store's register method instead of direct API call
+      const result = await register(registrationData);
+
+      if (result.user) {
+        toast.success("Registration successful! Please check your email for verification.");
+
+        // Store user info for verification page
+        sessionStorage.setItem('pending_verification_email', formData.email);
+        sessionStorage.setItem('pending_user_id', result.user.id);
+
+        // Show debug link in development
+        if (result.debug_verification_link) {
+          console.log("Debug verification link:", result.debug_verification_link);
+          toast.success(`Verification link: ${result.debug_verification_link}`, {
+            duration: 10000,
+          });
         }
+
+        // Redirect to verification page
+        router.push(`/auth/verify-email?email=${encodeURIComponent(formData.email)}&new_user=true`);
       } else {
-        toast.error(error.message || "Registration failed. Please try again.");
+        toast.error("Registration failed - no user data returned");
       }
+    } catch (error: any) {
+      // Error handling remains similar but uses store state
+      const errorMessage = error.message || "Registration failed";
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -111,11 +172,27 @@ export default function RegisterPage() {
             Join UTOPIA - Ethiopian Real Estate Platform
           </CardDescription>
         </CardHeader>
+
+        {formErrors.length > 0 && (
+          <div className="mx-6 mb-4 rounded-md bg-destructive/10 p-3">
+            <div className="flex items-start">
+              <AlertCircle className="mr-2 mt-0.5 h-4 w-4 text-destructive flex-shrink-0" />
+              <div className="space-y-1">
+                {formErrors.map((error, index) => (
+                  <p key={index} className="text-sm font-medium text-destructive">
+                    {error}
+                  </p>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="first_name">
+                <Label htmlFor="first_name" className={fieldErrors.first_name ? "text-destructive" : ""}>
                   First Name <span className="text-red-500">*</span>
                 </Label>
                 <Input
@@ -126,10 +203,12 @@ export default function RegisterPage() {
                   onChange={handleChange}
                   disabled={isLoading}
                   required
+                  error={fieldErrors.first_name}
+                  aria-invalid={!!fieldErrors.first_name}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="last_name">
+                <Label htmlFor="last_name" className={fieldErrors.last_name ? "text-destructive" : ""}>
                   Last Name <span className="text-red-500">*</span>
                 </Label>
                 <Input
@@ -140,12 +219,14 @@ export default function RegisterPage() {
                   onChange={handleChange}
                   disabled={isLoading}
                   required
+                  error={fieldErrors.last_name}
+                  aria-invalid={!!fieldErrors.last_name}
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">
+              <Label htmlFor="email" className={fieldErrors.email ? "text-destructive" : ""}>
                 Email <span className="text-red-500">*</span>
               </Label>
               <Input
@@ -157,6 +238,8 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 disabled={isLoading}
                 required
+                error={fieldErrors.email}
+                aria-invalid={!!fieldErrors.email}
               />
               <p className="text-xs text-gray-500">
                 This will be your username for login
@@ -164,7 +247,7 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone_number">
+              <Label htmlFor="phone_number" className={fieldErrors.phone_number ? "text-destructive" : ""}>
                 Phone Number <span className="text-red-500">*</span>
               </Label>
               <Input
@@ -175,15 +258,17 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 disabled={isLoading}
                 required
+                error={fieldErrors.phone_number}
+                aria-invalid={!!fieldErrors.phone_number}
               />
               <p className="text-xs text-gray-500">
-                Format: +251911223344 (up to 15 digits)
+                Format: +251911223344 (Ethiopian format)
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="password">
+                <Label htmlFor="password" className={fieldErrors.password ? "text-destructive" : ""}>
                   Password <span className="text-red-500">*</span>
                 </Label>
                 <div className="relative">
@@ -197,19 +282,22 @@ export default function RegisterPage() {
                     disabled={isLoading}
                     required
                     minLength={8}
+                    error={fieldErrors.password}
+                    aria-invalid={!!fieldErrors.password}
                   />
                   <button
                     type="button"
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 disabled:opacity-50"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={isLoading}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password2">
+                <Label htmlFor="password2" className={fieldErrors.password2 ? "text-destructive" : ""}>
                   Confirm Password <span className="text-red-500">*</span>
                 </Label>
                 <div className="relative">
@@ -223,12 +311,15 @@ export default function RegisterPage() {
                     disabled={isLoading}
                     required
                     minLength={8}
+                    error={fieldErrors.password2}
+                    aria-invalid={!!fieldErrors.password2}
                   />
                   <button
                     type="button"
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 disabled:opacity-50"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     disabled={isLoading}
+                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                   >
                     {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -252,6 +343,7 @@ export default function RegisterPage() {
               type="submit"
               className="w-full"
               disabled={isLoading}
+              aria-busy={isLoading}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isLoading ? "Creating Account..." : "Create Account"}

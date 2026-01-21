@@ -1,19 +1,17 @@
-// app/inquiries/page.tsx
 'use client'
 
-import React, { useState, useCallback, useEffect } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/Card"
-import { Button } from "@/components/ui/Button"
-import { Input } from "@/components/ui/Input"
-import { Badge } from "@/components/ui/Badge"
+import React, { useState, useEffect } from 'react';
+import { useInquiries } from '@/lib/hooks/useInquiries';
+import Header from "@/components/common/Header/Header";
+import { useInquiryStats } from '@/lib/hooks/useInquiryStats';
+import { InquiryListItem } from '@/components/inquiries/InquiryListItem';
+import { InquiryFilters } from '@/components/inquiries/InquiryFilters';
+import { InquiryStats } from '@/components/inquiries/InquiryStats';
+import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Alert, AlertDescription } from '@/components/ui/Alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
 import {
   Select,
   SelectContent,
@@ -21,999 +19,523 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/Select"
+import { Pagination } from '@/components/ui/Pagination';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/DropdownMenu"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/Dialog"
-import { Textarea } from "@/components/ui/Textarea"
-import { Label } from "@/components/ui/Label"
-import { Checkbox } from "@/components/ui/Checkbox"
-import {
-  Search,
-  Filter,
-  Plus,
   Download,
-  MoreVertical,
-  User,
-  Phone,
-  Mail,
-  Clock,
-  Calendar,
-  MessageSquare,
-  ExternalLink,
-  Copy,
+  Filter,
   RefreshCw,
-  Inbox,
-  XCircle,
-  CheckCircle,
   AlertCircle,
-  Zap,
-  Shield,
-  Building,
-  Tag as TagIcon,
-} from 'lucide-react'
-import { inquiryApi, type Inquiry, type InquiryFilters } from '@/lib/api/inquiry'
-import { formatTimeAgo, formatDateTime } from '@/lib/utils/formatDate'
-import { formatCurrency } from '@/lib/utils/formatCurrency'
-import toast from 'react-hot-toast'
-import { InquiryStats } from '@/components/inquiries/InquiryStats'
-import { InquiryTimeline } from '@/components/inquiries/InquiryTimeline'
-import { CreateInquiryModal } from '@/components/inquiries/CreateInquiryModal'
+  Inbox,
+  CheckCircle,
+  Calendar,
+  Users
+} from 'lucide-react';
+import { useAuth } from '@/lib/hooks/useAuth';
+import { InquiryFilters as FiltersType } from '@/lib/types/inquiry';
+import { useToast } from '@/components/ui/use-toast';
+import { useTranslations } from 'next-intl';
+import { cn } from '@/lib/utils';
 
-interface FilterState {
-  status: string[]
-  priority: string[]
-  inquiry_type: string
-  assigned_to: string
-  search: string
-  date_range: 'today' | 'week' | 'month' | 'all'
-  sort_by: 'created_at' | 'priority' | 'status' | 'property__title'
-  sort_order: 'asc' | 'desc'
-}
+const InquiriesPage: React.FC = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const t = useTranslations('inquiries');
+  const isAdmin = user?.user_type === 'admin';
+  const [bulkAction, setBulkAction] = useState<string>('');
+  const [activeTab, setActiveTab] = useState('all');
+  const [filters, setFilters] = useState<FiltersType>({});
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedInquiries, setSelectedInquiries] = useState<string[]>([]);
+  const [mounted, setMounted] = useState(false);
 
-export default function InquiriesPage() {
-  const router = useRouter()
-  const queryClient = useQueryClient()
-  const [selectedInquiries, setSelectedInquiries] = useState<number[]>([])
-  const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null)
-  const [filters, setFilters] = useState<FilterState>({
-    status: [],
-    priority: [],
-    inquiry_type: '',
-    assigned_to: '',
-    search: '',
-    date_range: 'all',
-    sort_by: 'created_at',
-    sort_order: 'desc'
-  })
-  const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false)
-  const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false)
-  const [notes, setNotes] = useState('')
-  const [viewingTime, setViewingTime] = useState('')
-  const [viewingAddress, setViewingAddress] = useState('')
-  const [activityData, setActivityData] = useState<any[]>([])
-
-  // Build API filters
-  const buildApiFilters = useCallback((): InquiryFilters => {
-    const apiFilters: InquiryFilters = {}
-
-    if (filters.status.length > 0) {
-      apiFilters.status = filters.status
-    }
-
-    if (filters.priority.length > 0) {
-      apiFilters.priority = filters.priority[0]
-    }
-
-    if (filters.inquiry_type) {
-      apiFilters.inquiry_type = filters.inquiry_type
-    }
-
-    if (filters.assigned_to) {
-      if (filters.assigned_to === 'unassigned') {
-        apiFilters.assigned_to = 'unassigned'
-      } else {
-        apiFilters.assigned_to = parseInt(filters.assigned_to)
-      }
-    }
-
-    if (filters.search) {
-      apiFilters.search = filters.search
-    }
-
-    // Date range filter
-    const now = new Date()
-    switch (filters.date_range) {
-      case 'today':
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        apiFilters.created_at__gte = today.toISOString()
-        break
-      case 'week':
-        const weekAgo = new Date()
-        weekAgo.setDate(weekAgo.getDate() - 7)
-        apiFilters.created_at__gte = weekAgo.toISOString()
-        break
-      case 'month':
-        const monthAgo = new Date()
-        monthAgo.setMonth(monthAgo.getMonth() - 1)
-        apiFilters.created_at__gte = monthAgo.toISOString()
-        break
-    }
-
-    // Sorting
-    if (filters.sort_by) {
-      const orderPrefix = filters.sort_order === 'desc' ? '-' : ''
-      apiFilters.ordering = `${orderPrefix}${filters.sort_by}`
-    }
-
-    return apiFilters
-  }, [filters])
-
-  // Fetch dashboard stats
-  const { data: dashboardStats } = useQuery({
-    queryKey: ['inquiry-dashboard-stats'],
-    queryFn: () => inquiryApi.getDashboardStats(),
-    refetchInterval: 30000,
-  })
-
-  // Fetch inquiries
   const {
-    data: inquiriesData,
-    isLoading,
-    refetch,
-  } = useQuery({
-    queryKey: ['inquiries', filters],
-    queryFn: () => inquiryApi.getInquiries(buildApiFilters()),
-  })
+    inquiries,
+    loading,
+    error,
+    pagination,
+    fetchInquiries,
+    assignToMe,
+    markAsContacted,
+    exportInquiries,
+    bulkUpdate,
+    isAdmin: hookIsAdmin,
+  } = useInquiries();
 
-  const inquiries = inquiriesData?.results || []
-  const totalCount = inquiriesData?.count || 0
+  const { stats, loading: statsLoading } = useInquiryStats();
 
-  // Fetch activity data when inquiry is selected
   useEffect(() => {
-    const fetchActivity = async () => {
-      if (selectedInquiry) {
-        try {
-          const activity = await inquiryApi.getInquiryActivity(selectedInquiry.id)
-          setActivityData(activity)
-        } catch (error) {
-          console.error('Error fetching activity:', error)
-        }
-      }
-    }
-    fetchActivity()
-  }, [selectedInquiry])
+    setMounted(true);
+  }, []);
 
-  // Mutations
-  const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status, notes }: { id: number; status: string; notes?: string }) =>
-      inquiryApi.updateInquiryStatus(id, status, notes),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['inquiries'] })
-      queryClient.invalidateQueries({ queryKey: ['inquiry-dashboard-stats'] })
-      toast.success('Status updated successfully')
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to update status')
-    }
-  })
+  useEffect(() => {
+    const tabFilters: FiltersType = { ...filters };
 
-  const assignToMeMutation = useMutation({
-    mutationFn: (inquiryId: number) => inquiryApi.assignToMe(inquiryId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['inquiries'] })
-      queryClient.invalidateQueries({ queryKey: ['inquiry-dashboard-stats'] })
-      toast.success('Inquiry assigned to you')
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to assign inquiry')
-    }
-  })
-
-  const scheduleViewingMutation = useMutation({
-    mutationFn: ({ id, viewing_time, address, notes }: { id: number; viewing_time: string; address?: string; notes?: string }) =>
-      inquiryApi.scheduleViewing(id, { viewing_time, address, notes }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['inquiries'] })
-      toast.success('Viewing scheduled successfully')
-      setIsScheduleDialogOpen(false)
-      setViewingTime('')
-      setViewingAddress('')
-      setNotes('')
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to schedule viewing')
-    }
-  })
-
-  const exportMutation = useMutation({
-    mutationFn: () => inquiryApi.exportInquiries(buildApiFilters()),
-    onSuccess: () => {
-      toast.success('Export started successfully')
-    },
-    onError: () => {
-      toast.error('Failed to export inquiries')
-    }
-  })
-
-  // Status badge configuration
-  const getStatusBadge = (status: string) => {
-    const config = {
-      pending: {
-        label: 'Pending',
-        className: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-        icon: Clock
-      },
-      contacted: {
-        label: 'Contacted',
-        className: 'bg-blue-100 text-blue-800 border-blue-200',
-        icon: CheckCircle
-      },
-      viewing_scheduled: {
-        label: 'Viewing Scheduled',
-        className: 'bg-purple-100 text-purple-800 border-purple-200',
-        icon: Calendar
-      },
-      follow_up: {
-        label: 'Follow Up',
-        className: 'bg-orange-100 text-orange-800 border-orange-200',
-        icon: AlertCircle
-      },
-      closed: {
-        label: 'Closed',
-        className: 'bg-green-100 text-green-800 border-green-200',
-        icon: CheckCircle
-      },
-      spam: {
-        label: 'Spam',
-        className: 'bg-red-100 text-red-800 border-red-200',
-        icon: Shield
-      }
+    switch (activeTab) {
+      case 'pending':
+        tabFilters.status = 'pending';
+        break;
+      case 'assigned':
+        tabFilters.assigned_to = user?.id;
+        break;
+      case 'urgent':
+        tabFilters.priority = 'urgent';
+        tabFilters.status = 'pending';
+        break;
+      case 'unassigned':
+        tabFilters.assigned_to = 'unassigned';
+        break;
+      case 'closed':
+        tabFilters.status = 'closed';
+        break;
     }
 
-    const cfg = config[status as keyof typeof config] || {
-      label: status,
-      className: 'bg-gray-100 text-gray-800 border-gray-200',
-      icon: AlertCircle
+    fetchInquiries(tabFilters);
+  }, [activeTab, filters, user?.id]);
+
+  const handleFilterChange = (newFilters: FiltersType) => {
+    setFilters(newFilters);
+  };
+
+  const handleResetFilters = () => {
+    setFilters({});
+  };
+
+  const handleAssign = async (id: string) => {
+    try {
+      await assignToMe(id);
+      toast({
+        title: t('success'),
+        description: t('assignedSuccess'),
+      });
+    } catch (error) {
+      toast({
+        title: t('error'),
+        description: t('assignFailed'),
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleContact = async (id: string) => {
+    try {
+      await markAsContacted(id, t('markedAsContacted'));
+      toast({
+        title: t('success'),
+        description: t('contactedSuccess'),
+      });
+    } catch (error) {
+      toast({
+        title: t('error'),
+        description: t('contactedFailed'),
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      await exportInquiries(filters);
+      toast({
+        title: t('success'),
+        description: t('exportSuccess'),
+      });
+    } catch (error) {
+      toast({
+        title: t('error'),
+        description: t('exportFailed'),
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleBulkAction = async (action: string, data?: any) => {
+    if (selectedInquiries.length === 0) {
+      toast({
+        title: t('warning'),
+        description: t('noInquiriesSelected'),
+        variant: 'destructive',
+      });
+      return;
     }
 
-    const Icon = cfg.icon
-
-    return (
-      <Badge className={`${cfg.className} gap-1.5 px-3 py-1.5`}>
-        <Icon className="h-3 w-3" />
-        {cfg.label}
-      </Badge>
-    )
-  }
-
-  // Priority badge configuration
-  const getPriorityBadge = (priority: string) => {
-    const config = {
-      low: {
-        label: 'Low',
-        className: 'bg-green-100 text-green-800 border-green-200'
-      },
-      medium: {
-        label: 'Medium',
-        className: 'bg-yellow-100 text-yellow-800 border-yellow-200'
-      },
-      high: {
-        label: 'High',
-        className: 'bg-orange-100 text-orange-800 border-orange-200'
-      },
-      urgent: {
-        label: 'Urgent',
-        className: 'bg-red-100 text-red-800 border-red-200'
-      }
+    try {
+      await bulkUpdate({
+        inquiry_ids: selectedInquiries,
+        ...data,
+      });
+      setSelectedInquiries([]);
+      toast({
+        title: t('success'),
+        description: t('bulkActionSuccess'),
+      });
+    } catch (error: any) {
+      toast({
+        title: t('error'),
+        description: error.message || t('bulkActionFailed'),
+        variant: 'destructive',
+      });
     }
+  };
 
-    const cfg = config[priority as keyof typeof config] || {
-      label: priority,
-      className: 'bg-gray-100 text-gray-800 border-gray-200'
-    }
-
-    return <Badge className={cfg.className}>{cfg.label}</Badge>
-  }
-
-  // Contact method badge
-  const getContactBadge = (preference: string) => {
-    const config = {
-      call: { label: 'Call', icon: Phone, className: 'bg-blue-50 text-blue-700 border-blue-200' },
-      email: { label: 'Email', icon: Mail, className: 'bg-green-50 text-green-700 border-green-200' },
-      whatsapp: { label: 'WhatsApp', icon: MessageSquare, className: 'bg-green-100 text-green-800 border-green-200' },
-      any: { label: 'Any', icon: MessageSquare, className: 'bg-gray-50 text-gray-700 border-gray-200' }
-    }
-
-    const cfg = config[preference as keyof typeof config] || {
-      label: preference,
-      icon: MessageSquare,
-      className: 'bg-gray-50 text-gray-700 border-gray-200'
-    }
-
-    const Icon = cfg.icon
-
-    return (
-      <Badge className={`${cfg.className} gap-1.5`} variant="outline">
-        {Icon && <Icon className="h-3 w-3" />}
-        {cfg.label}
-      </Badge>
-    )
-  }
-
-  // Handlers
-  const handleStatusUpdate = (inquiryId: number, status: string) => {
-    if (notes.trim()) {
-      updateStatusMutation.mutate({ id: inquiryId, status, notes })
-      setNotes('')
-      setIsNotesDialogOpen(false)
-    } else {
-      updateStatusMutation.mutate({ id: inquiryId, status })
-    }
-  }
-
-  const handleScheduleViewing = (inquiryId: number) => {
-    if (!viewingTime) {
-      toast.error('Please select a viewing time')
-      return
-    }
-
-    scheduleViewingMutation.mutate({
-      id: inquiryId,
-      viewing_time: viewingTime,
-      address: viewingAddress,
-      notes
-    })
-  }
-
-  const handleSelectAll = () => {
-    if (selectedInquiries.length === inquiries.length) {
-      setSelectedInquiries([])
-    } else {
-      setSelectedInquiries(inquiries.map(i => i.id))
-    }
-  }
-
-  const handleSelectInquiry = (inquiryId: number) => {
+  const toggleSelectInquiry = (id: string) => {
     setSelectedInquiries(prev =>
-      prev.includes(inquiryId)
-        ? prev.filter(id => id !== inquiryId)
-        : [...prev, inquiryId]
-    )
-  }
+      prev.includes(id)
+        ? prev.filter(inquiryId => inquiryId !== id)
+        : [...prev, id]
+    );
+  };
 
-  const handleClearFilters = () => {
-    setFilters({
-      status: [],
-      priority: [],
-      inquiry_type: '',
-      assigned_to: '',
-      search: '',
-      date_range: 'all',
-      sort_by: 'created_at',
-      sort_order: 'desc'
-    })
-  }
+  const selectAllInquiries = () => {
+    if (selectedInquiries.length === inquiries.length) {
+      setSelectedInquiries([]);
+    } else {
+      setSelectedInquiries(inquiries.map(inquiry => inquiry.id));
+    }
+  };
 
-  const handleFilterChange = (key: string, value: any) => {
-    setFilters(prev => ({ ...prev, [key]: value }))
-  }
+  const getTabCount = (tab: string) => {
+    if (!stats) return 0;
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
-      {/* Header */}
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container py-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Inquiry Management</h1>
-              <p className="text-muted-foreground mt-2">
-                Manage and track all property inquiries
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <CreateInquiryModal />
-              <Button
-                variant="outline"
-                onClick={() => exportMutation.mutate()}
-                className="gap-2"
-                disabled={exportMutation.isPending}
-              >
-                <Download className="h-4 w-4" />
-                Export
-              </Button>
-              <Button
-                onClick={() => refetch()}
-                variant="outline"
-                className="gap-2"
-                disabled={isLoading}
-              >
-                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
+    switch (tab) {
+      case 'pending':
+        return stats.status_distribution.pending || 0;
+      case 'urgent':
+        return stats.overview.urgent;
+      case 'unassigned':
+        return stats.overview.unassigned;
+      case 'assigned':
+        return stats.overview.total - stats.overview.unassigned;
+      case 'closed':
+        return stats.status_distribution.closed || 0;
+      default:
+        return stats.overview.total;
+    }
+  };
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <Header/>
+        <div className="container mx-auto px-3 md:px-4 py-8">
+          <div className="h-96 flex items-center justify-center">
+            <div className="text-center">
+              <RefreshCw className="w-12 h-12 animate-spin text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-gray-400">Loading...</p>
             </div>
           </div>
         </div>
       </div>
+    );
+  }
 
-      <div className="container py-8">
-        {/* Stats Cards */}
-        {dashboardStats && (
-          <div className="mb-8">
-            <InquiryStats 
-              stats={{
-                total: dashboardStats.overview.total,
-                new_today: dashboardStats.overview.new_today,
-                unassigned: dashboardStats.overview.unassigned,
-                urgent: dashboardStats.overview.urgent,
-                avg_response_time_hours: dashboardStats.performance.avg_response_time_hours,
-                response_rate: dashboardStats.performance.response_rate,
-                conversion_rate: dashboardStats.performance.conversion_rate,
-              }}
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <Header/>
+      <div className="container mx-auto px-3 md:px-4 py-6 md:py-8">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 md:mb-8">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+              {t('title')}
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1 md:mt-2">
+              {t('subtitle')}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {isAdmin && (
+              <Button 
+                onClick={handleExport}
+                className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                {t('exportCSV')}
+              </Button>
+            )}
+
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              className="border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <Filter className="w-4 h-4 mr-2" />
+              {showFilters ? t('hideFilters') : t('showFilters')}
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => fetchInquiries(filters)}
+              disabled={loading}
+              className="border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              {t('refresh')}
+            </Button>
+          </div>
+        </div>
+
+        {/* Stats */}
+        {isAdmin && stats && (
+          <div className="mb-6 md:mb-8">
+            <InquiryStats stats={stats} loading={statsLoading} />
+          </div>
+        )}
+
+        {/* Bulk Actions */}
+        {selectedInquiries.length > 0 && isAdmin && (
+          <Card className="mb-6 border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-900/20">
+            <CardContent className="pt-4 md:pt-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
+                <div>
+                  <p className="font-medium dark:text-gray-300">
+                    {t('selected', { count: selectedInquiries.length })}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Select
+                    value={bulkAction}
+                    onValueChange={(value) => {
+                      setBulkAction(value);
+                      if (value) {
+                        handleBulkAction(value);
+                        setBulkAction('');
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full md:w-[180px] bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 dark:text-gray-300">
+                      <SelectValue placeholder={t('bulkActions')} />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700">
+                      <SelectItem value="assign" className="dark:text-gray-300 dark:hover:bg-gray-700">
+                        {t('assignSelected')}
+                      </SelectItem>
+                      <SelectItem value="contact" className="dark:text-gray-300 dark:hover:bg-gray-700">
+                        {t('markContactedSelected')}
+                      </SelectItem>
+                      <SelectItem value="close" className="dark:text-gray-300 dark:hover:bg-gray-700">
+                        {t('closeSelected')}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    onClick={() => setSelectedInquiries([])}
+                    className="border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    {t('clearSelection')}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Filters */}
+        {showFilters && (
+          <div className="mb-6">
+            <InquiryFilters
+              filters={filters}
               onFilterChange={handleFilterChange}
+              onReset={handleResetFilters}
+              adminView={isAdmin}
             />
           </div>
         )}
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div>
-                    <CardTitle>Inquiries ({totalCount})</CardTitle>
-                    <CardDescription>
-                      {selectedInquiries.length > 0 && (
-                        <span className="text-primary">
-                          {selectedInquiries.length} selected
-                        </span>
-                      )}
-                    </CardDescription>
-                  </div>
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+          <TabsList className="grid grid-cols-2 md:grid-cols-6 bg-gray-100 dark:bg-gray-800 p-1">
+            <TabsTrigger 
+              value="all" 
+              className={cn(
+                "flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900",
+                "data-[state=active]:text-gray-900 dark:data-[state=active]:text-white"
+              )}
+            >
+              <Inbox className="w-4 h-4" />
+              <span className="hidden sm:inline">{t('all')}</span>
+              <Badge variant="secondary" className="ml-1 bg-gray-200 dark:bg-gray-700 dark:text-gray-300">
+                {getTabCount('all')}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="pending"
+              className={cn(
+                "flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900",
+                "data-[state=active]:text-gray-900 dark:data-[state=active]:text-white"
+              )}
+            >
+              <AlertCircle className="w-4 h-4" />
+              <span className="hidden sm:inline">{t('pending')}</span>
+              <Badge variant="secondary" className="ml-1 bg-gray-200 dark:bg-gray-700 dark:text-gray-300">
+                {getTabCount('pending')}
+              </Badge>
+            </TabsTrigger>
+            {isAdmin && (
+              <>
+                <TabsTrigger 
+                  value="urgent"
+                  className={cn(
+                    "flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900",
+                    "data-[state=active]:text-gray-900 dark:data-[state=active]:text-white"
+                  )}
+                >
+                  <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400" />
+                  <span className="hidden sm:inline">{t('urgent')}</span>
+                  <Badge variant="destructive" className="ml-1">
+                    {getTabCount('urgent')}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="unassigned"
+                  className={cn(
+                    "flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900",
+                    "data-[state=active]:text-gray-900 dark:data-[state=active]:text-white"
+                  )}
+                >
+                  <Users className="w-4 h-4" />
+                  <span className="hidden sm:inline">{t('unassigned')}</span>
+                  <Badge variant="secondary" className="ml-1 bg-gray-200 dark:bg-gray-700 dark:text-gray-300">
+                    {getTabCount('unassigned')}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="assigned"
+                  className={cn(
+                    "flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900",
+                    "data-[state=active]:text-gray-900 dark:data-[state=active]:text-white"
+                  )}
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  <span className="hidden sm:inline">{t('assigned')}</span>
+                  <Badge variant="secondary" className="ml-1 bg-gray-200 dark:bg-gray-700 dark:text-gray-300">
+                    {getTabCount('assigned')}
+                  </Badge>
+                </TabsTrigger>
+              </>
+            )}
+            <TabsTrigger 
+              value="closed"
+              className={cn(
+                "flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900",
+                "data-[state=active]:text-gray-900 dark:data-[state=active]:text-white"
+              )}
+            >
+              <CheckCircle className="w-4 h-4" />
+              <span className="hidden sm:inline">{t('closed')}</span>
+              <Badge variant="secondary" className="ml-1 bg-gray-200 dark:bg-gray-700 dark:text-gray-300">
+                {getTabCount('closed')}
+              </Badge>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-                  {/* Filters */}
-                  <div className="flex flex-wrap gap-3">
-                    <div className="relative flex-1 min-w-[200px]">
-                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        placeholder="Search inquiries..."
-                        className="pl-9"
-                        value={filters.search}
-                        onChange={(e) => handleFilterChange('search', e.target.value)}
-                      />
+        {/* Error Alert */}
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="w-4 h-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Inquiries List */}
+        <div className="space-y-4">
+          {loading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map(i => (
+                <Card key={i} className="border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                  <CardContent className="pt-6">
+                    <div className="animate-pulse space-y-3">
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
                     </div>
-
-                    <Select
-                      value={filters.status[0] || ''}
-                      onValueChange={(value) => handleFilterChange('status', value ? [value] : [])}
-                    >
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="contacted">Contacted</SelectItem>
-                        <SelectItem value="viewing_scheduled">Viewing Scheduled</SelectItem>
-                        <SelectItem value="follow_up">Follow Up</SelectItem>
-                        <SelectItem value="closed">Closed</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    <Select
-                      value={filters.date_range}
-                      onValueChange={(value) => handleFilterChange('date_range', value)}
-                    >
-                      
-                      <SelectContent>
-                        <SelectItem value="today">Today</SelectItem>
-                        <SelectItem value="week">This Week</SelectItem>
-                        <SelectItem value="month">This Month</SelectItem>
-                        <SelectItem value="all">All Time</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={handleClearFilters}
-                      disabled={!filters.search && filters.status.length === 0 && filters.date_range === 'all'}
-                    >
-                      <Filter className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent className="p-0">
-                {isLoading ? (
-                  <div className="space-y-3 p-6">
-                    {[...Array(5)].map((_, i) => (
-                      <div key={i} className="h-24 animate-pulse rounded-lg bg-muted" />
-                    ))}
-                  </div>
-                ) : inquiries.length === 0 ? (
-                  <div className="p-12 text-center">
-                    <Inbox className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <h4 className="mt-4 text-lg font-semibold">No inquiries found</h4>
-                    <p className="text-muted-foreground">
-                      {filters.search || filters.status.length > 0
-                        ? "No inquiries match your current filters."
-                        : "No inquiries have been submitted yet."}
-                    </p>
-                    {(filters.search || filters.status.length > 0) && (
-                      <Button
-                        variant="outline"
-                        className="mt-4"
-                        onClick={handleClearFilters}
-                      >
-                        Clear filters
-                      </Button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="divide-y">
-                    {inquiries.map((inquiry) => (
-                      <div
-                        key={inquiry.id}
-                        className={`p-6 hover:bg-muted/50 transition-colors cursor-pointer ${
-                          selectedInquiry?.id === inquiry.id ? 'bg-primary/5' : ''
-                        }`}
-                        onClick={() => setSelectedInquiry(inquiry)}
-                      >
-                        <div className="flex items-start gap-4">
-                          <Checkbox
-                            checked={selectedInquiries.includes(inquiry.id)}
-                            onCheckedChange={() => handleSelectInquiry(inquiry.id)}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-
-                          <div className="flex-1">
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <h4 className="font-bold text-lg hover:text-primary transition-colors">
-                                  {inquiry.property_rel?.title || 'No Property Title'}
-                                </h4>
-                                <div className="flex items-center gap-3 mt-2 flex-wrap">
-                                  {getStatusBadge(inquiry.status)}
-                                  {getPriorityBadge(inquiry.priority)}
-                                  {inquiry.is_urgent && (
-                                    <Badge className="bg-red-100 text-red-800 border-red-200 gap-1.5">
-                                      <Zap className="h-3 w-3" />
-                                      Urgent
-                                    </Badge>
-                                  )}
-                                  {getContactBadge(inquiry.contact_preference)}
-                                </div>
-                              </div>
-
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                  <Button variant="ghost" size="icon">
-                                    <MoreVertical className="h-5 w-5" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => assignToMeMutation.mutate(inquiry.id)}>
-                                    <User className="mr-2 h-4 w-4" />
-                                    Assign to me
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => {
-                                    setSelectedInquiry(inquiry)
-                                    setIsNotesDialogOpen(true)
-                                  }}>
-                                    <MessageSquare className="mr-2 h-4 w-4" />
-                                    Add notes
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => {
-                                    setSelectedInquiry(inquiry)
-                                    setIsScheduleDialogOpen(true)
-                                  }}>
-                                    <Calendar className="mr-2 h-4 w-4" />
-                                    Schedule viewing
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem onClick={() => window.open(`/listings/${inquiry.property_rel?.id}`, '_blank')}>
-                                    <ExternalLink className="mr-2 h-4 w-4" />
-                                    View property
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => navigator.clipboard.writeText(inquiry.id.toString())}>
-                                    <Copy className="mr-2 h-4 w-4" />
-                                    Copy ID
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-
-                            <div className="mt-4">
-                              <p className="text-muted-foreground line-clamp-2">
-                                {inquiry.message}
-                              </p>
-                            </div>
-
-                            <div className="flex flex-wrap items-center justify-between gap-4 mt-4 pt-4 border-t">
-                              <div className="flex items-center gap-4 text-sm">
-                                <div className="flex items-center gap-1.5">
-                                  <User className="h-4 w-4" />
-                                  <span>{inquiry.user_full_name || inquiry.full_name || 'Anonymous'}</span>
-                                </div>
-                                {inquiry.email && (
-                                  <div className="flex items-center gap-1.5">
-                                    <Mail className="h-4 w-4" />
-                                    <span>{inquiry.email}</span>
-                                  </div>
-                                )}
-                                {inquiry.phone && (
-                                  <div className="flex items-center gap-1.5">
-                                    <Phone className="h-4 w-4" />
-                                    <span>{inquiry.phone}</span>
-                                  </div>
-                                )}
-                                <div className="flex items-center gap-1.5">
-                                  <Clock className="h-4 w-4" />
-                                  <span>{formatTimeAgo(inquiry.created_at)}</span>
-                                </div>
-                              </div>
-
-                              <div className="flex gap-2">
-                                {inquiry.assigned_to ? (
-                                  <Badge variant="outline" className="gap-1.5">
-                                    <User className="h-3 w-3" />
-                                    {inquiry.assigned_to.first_name} {inquiry.assigned_to.last_name}
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="text-muted-foreground">
-                                    Unassigned
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : inquiries.length === 0 ? (
+            <Card className="border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+              <CardContent className="pt-12 pb-12 text-center">
+                <Inbox className="w-12 h-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                  {t('noInquiriesFound')}
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  {filters && Object.keys(filters).length > 0
+                    ? t('tryChangingFilters')
+                    : t('noInquiriesYet')}
+                </p>
+                {filters && Object.keys(filters).length > 0 && (
+                  <Button 
+                    variant="outline"
+                    onClick={handleResetFilters}
+                    className="border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    {t('clearFilters') || 'Clear Filters'}
+                  </Button>
                 )}
               </CardContent>
             </Card>
-          </div>
+          ) : (
+            <>
+              {/* Selection Checkbox for Admin */}
+              {isAdmin && (
+                <div className="flex items-center gap-2 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <input
+                    type="checkbox"
+                    checked={selectedInquiries.length === inquiries.length && inquiries.length > 0}
+                    onChange={selectAllInquiries}
+                    className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-800"
+                  />
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    {t('selectAll', { count: inquiries.length })}
+                  </span>
+                </div>
+              )}
 
-          {/* Sidebar */}
-          <div>
-            {selectedInquiry ? (
-              <Card className="sticky top-6">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle>Inquiry Details</CardTitle>
-                      <CardDescription>ID: {selectedInquiry.id}</CardDescription>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setSelectedInquiry(null)}
-                    >
-                      <XCircle className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="space-y-6">
-                  {/* Quick Actions */}
-                  <div>
-                    <h4 className="font-bold text-sm text-muted-foreground mb-2">Quick Actions</h4>
-                    <div className="grid grid-cols-2 gap-2">
-                      {['pending', 'contacted', 'viewing_scheduled', 'closed'].map((status) => (
-                        <Button
-                          key={status}
-                          size="sm"
-                          variant={selectedInquiry.status === status ? "default" : "outline"}
-                          onClick={() => handleStatusUpdate(selectedInquiry.id, status)}
-                          className="capitalize"
-                          disabled={updateStatusMutation.isPending}
-                        >
-                          {status.replace('_', ' ')}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Property Info */}
-                  {selectedInquiry.property_rel && (
-                    <div>
-                      <h4 className="font-bold text-sm text-muted-foreground mb-2">Property</h4>
-                      <div className="flex items-center gap-3 p-3 rounded-lg border bg-card">
-                        <div className="h-12 w-12 rounded-md overflow-hidden flex-shrink-0">
-                          {selectedInquiry.property_rel?.images?.[0]?.image ? (
-                            <img
-                              src={selectedInquiry.property_rel.images[0].image}
-                              alt={selectedInquiry.property_rel.title}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <div className="h-full w-full bg-muted flex items-center justify-center">
-                              <Building className="h-6 w-6 text-muted-foreground" />
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h5 className="font-bold truncate">{selectedInquiry.property_rel?.title}</h5>
-                          <p className="text-sm text-muted-foreground truncate">
-                            {selectedInquiry.property_rel?.city?.name}, {selectedInquiry.property_rel?.sub_city?.name}
-                          </p>
-                          <p className="text-sm font-bold mt-1">
-                            {selectedInquiry.property_rel?.listing_type === 'for_rent'
-                              ? `${formatCurrency(selectedInquiry.property_rel?.monthly_rent || 0)}/month`
-                              : formatCurrency(selectedInquiry.property_rel?.price_etb || 0)}
-                          </p>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => window.open(`/listings/${selectedInquiry.property_rel?.id}`, '_blank')}
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
+              {/* Inquiries List */}
+              {inquiries.map(inquiry => (
+                <div key={inquiry.id} className="flex items-start gap-3">
+                  {isAdmin && (
+                    <input
+                      type="checkbox"
+                      checked={selectedInquiries.includes(inquiry.id)}
+                      onChange={() => toggleSelectInquiry(inquiry.id)}
+                      className="mt-5 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-800"
+                    />
                   )}
-
-                  {/* User Info */}
-                  <div>
-                    <h4 className="font-bold text-sm text-muted-foreground mb-2">User Information</h4>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Name</span>
-                        <span className="font-medium">{selectedInquiry.user_full_name || selectedInquiry.full_name || 'Anonymous'}</span>
-                      </div>
-                      {selectedInquiry.email && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm">Email</span>
-                          <span className="font-medium">{selectedInquiry.email}</span>
-                        </div>
-                      )}
-                      {selectedInquiry.phone && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm">Phone</span>
-                          <span className="font-medium">{selectedInquiry.phone}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Contact Preference</span>
-                        {getContactBadge(selectedInquiry.contact_preference)}
-                      </div>
-                      {selectedInquiry.tags && selectedInquiry.tags.length > 0 && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm">Tags</span>
-                          <div className="flex gap-1">
-                            {selectedInquiry.tags.map((tag, index) => (
-                              <Badge key={index} variant="secondary" className="gap-1">
-                                <TagIcon className="h-3 w-3" />
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Message */}
-                  <div>
-                    <h4 className="font-bold text-sm text-muted-foreground mb-2">Message</h4>
-                    <div className="p-3 rounded-lg border bg-card">
-                      <p className="whitespace-pre-line text-sm">{selectedInquiry.message}</p>
-                    </div>
-                  </div>
-
-                  {/* Timeline */}
-                  <div>
-                    <h4 className="font-bold text-sm text-muted-foreground mb-2">Activity Timeline</h4>
-                    <InquiryTimeline
-                      events={activityData.length > 0 ? activityData : [
-                        {
-                          id: 1,
-                          type: 'status_change',
-                          title: `Status updated to ${selectedInquiry.status}`,
-                          description: selectedInquiry.response_notes,
-                          user: selectedInquiry.assigned_to ? {
-                            name: `${selectedInquiry.assigned_to.first_name} ${selectedInquiry.assigned_to.last_name}`,
-                            role: 'Agent'
-                          } : undefined,
-                          timestamp: selectedInquiry.updated_at,
-                          metadata: {
-                            status: selectedInquiry.status,
-                            priority: selectedInquiry.priority
-                          }
-                        },
-                        {
-                          id: 2,
-                          type: 'note_added',
-                          title: 'Inquiry submitted',
-                          description: selectedInquiry.message.substring(0, 100) + '...',
-                          user: selectedInquiry.user ? {
-                            name: selectedInquiry.user_full_name,
-                            role: 'User'
-                          } : {
-                            name: selectedInquiry.full_name || 'Anonymous',
-                            role: 'Visitor'
-                          },
-                          timestamp: selectedInquiry.created_at
-                        }
-                      ]}
-                      className="max-h-60 overflow-y-auto"
+                  <div className="flex-1">
+                    <InquiryListItem
+                      inquiry={inquiry}
+                      onAssign={handleAssign}
+                      onContact={handleContact}
+                      showActions={isAdmin}
+                      isAdmin={isAdmin}
                     />
                   </div>
-
-                  {/* Additional Actions */}
-                  <div className="space-y-2">
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start"
-                      onClick={() => assignToMeMutation.mutate(selectedInquiry.id)}
-                      disabled={assignToMeMutation.isPending}
-                    >
-                      <User className="mr-2 h-4 w-4" />
-                      {assignToMeMutation.isPending ? 'Assigning...' : 'Assign to me'}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start"
-                      onClick={() => {
-                        setSelectedInquiry(selectedInquiry)
-                        setIsNotesDialogOpen(true)
-                      }}
-                    >
-                      <MessageSquare className="mr-2 h-4 w-4" />
-                      Add notes
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start"
-                      onClick={() => {
-                        setSelectedInquiry(selectedInquiry)
-                        setIsScheduleDialogOpen(true)
-                      }}
-                    >
-                      <Calendar className="mr-2 h-4 w-4" />
-                      Schedule viewing
-                    </Button>
-                    {selectedInquiry.contact_preference === 'call' && selectedInquiry.phone && (
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start"
-                        onClick={() => window.location.href = `tel:${selectedInquiry.phone}`}
-                      >
-                        <Phone className="mr-2 h-4 w-4" />
-                        Call now
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <Inbox className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <h4 className="mt-4 text-lg font-semibold">Select an Inquiry</h4>
-                  <p className="text-muted-foreground">
-                    Click on an inquiry from the list to view details and take action.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                </div>
+              ))}
+            </>
+          )}
         </div>
-      </div>
 
-      {/* Notes Dialog */}
-      <Dialog open={isNotesDialogOpen} onOpenChange={setIsNotesDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Notes</DialogTitle>
-            <DialogDescription>
-              Add notes for inquiry #{selectedInquiry?.id}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Textarea
-              placeholder="Enter your notes here..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={4}
+        {/* Pagination */}
+        {pagination.total_pages > 1 && (
+          <div className="mt-8">
+            <Pagination
+              currentPage={pagination.current_page}
+              totalPages={pagination.total_pages}
+              onPageChange={(page) => {
+                fetchInquiries({ ...filters, page });
+              }}
             />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setIsNotesDialogOpen(false)
-              setNotes('')
-            }}>
-              Cancel
-            </Button>
-            <Button onClick={() => {
-              if (selectedInquiry) {
-                handleStatusUpdate(selectedInquiry.id, selectedInquiry.status)
-              }
-            }}
-            disabled={updateStatusMutation.isPending}
-            >
-              {updateStatusMutation.isPending ? 'Saving...' : 'Save Notes'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Schedule Viewing Dialog */}
-      <Dialog open={isScheduleDialogOpen} onOpenChange={setIsScheduleDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Schedule Viewing</DialogTitle>
-            <DialogDescription>
-              Schedule a property viewing for inquiry #{selectedInquiry?.id}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
-            <div>
-              <Label htmlFor="viewing-time">Viewing Time *</Label>
-              <Input
-                id="viewing-time"
-                type="datetime-local"
-                value={viewingTime}
-                onChange={(e) => setViewingTime(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="viewing-address">Address (Optional)</Label>
-              <Input
-                id="viewing-address"
-                placeholder="Enter viewing address"
-                value={viewingAddress}
-                onChange={(e) => setViewingAddress(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="viewing-notes">Notes (Optional)</Label>
-              <Textarea
-                id="viewing-notes"
-                placeholder="Add any notes about the viewing"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setIsScheduleDialogOpen(false)
-              setViewingTime('')
-              setViewingAddress('')
-              setNotes('')
-            }}>
-              Cancel
-            </Button>
-            <Button onClick={() => {
-              if (selectedInquiry) {
-                handleScheduleViewing(selectedInquiry.id)
-              }
-            }}
-            disabled={scheduleViewingMutation.isPending}
-            >
-              {scheduleViewingMutation.isPending ? 'Scheduling...' : 'Schedule Viewing'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        )}
+      </div>
     </div>
-  )
-}
+  );
+};
+
+export default InquiriesPage;

@@ -2,7 +2,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Header from '@/components/common/Header/Header'
+import Header from "@/components/common/Header/Header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -190,7 +190,6 @@ export default function ComparisonDashboardPage() {
   if (isLoading && !dashboardData) {
     return (
       <div className="min-h-screen">
-        <Header />
         <div className="container mx-auto py-8">
           <div className="flex flex-col items-center justify-center min-h-[60vh]">
             <RefreshCw className="h-12 w-12 text-primary animate-spin mb-4" />
@@ -207,9 +206,9 @@ export default function ComparisonDashboardPage() {
 
   return (
     <div className="min-h-screen">
-      <Header />
       <div className="container mx-auto py-8">
         {/* Dashboard Header */}
+        <Header/>
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold">Comparison Analytics</h1>

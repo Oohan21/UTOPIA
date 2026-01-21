@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import Header from "@/components/common/Header/Header";
 import { useNotificationStore } from '@/lib/store/notificationStore'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -130,6 +131,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      <Header/>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Notifications</h1>
