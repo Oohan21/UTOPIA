@@ -47,6 +47,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'api.middleware.AnalyticsDebugMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.locale.LocaleMiddleware',  # For multi-language support
@@ -142,30 +143,72 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Custom user model
 AUTH_USER_MODEL = 'users.CustomUser'
 
-# CORS settings
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
+USE_LOCAL_HTTPS = config('USE_LOCAL_HTTPS', default=False, cast=bool)
+
+# ============ CRITICAL SESSION SETTINGS ============
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+SESSION_COOKIE_NAME = 'sessionid'
+SESSION_COOKIE_AGE = 1209600  # 2 weeks
+SESSION_COOKIE_SECURE = True if not DEBUG else USE_LOCAL_HTTPS
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'None' if USE_LOCAL_HTTPS else 'Lax'
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Keep session alive
+SESSION_COOKIE_PATH = '/'
+SESSION_COOKIE_DOMAIN = None  # Don't restrict to subdomain
+
+# ============ CRITICAL CSRF SETTINGS ============
+CSRF_COOKIE_NAME = 'csrftoken'
+CSRF_COOKIE_SECURE = True if not DEBUG else USE_LOCAL_HTTPS
+CSRF_COOKIE_HTTPONLY = False  # MUST be False for JavaScript access
+CSRF_COOKIE_SAMESITE = 'None' if USE_LOCAL_HTTPS else 'Lax'
+CSRF_COOKIE_PATH = '/'
+CSRF_COOKIE_DOMAIN = 'None'
+CSRF_USE_SESSIONS = False  # Store in cookie, not session
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+]
+
+# ============ CORS SETTINGS ============
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "http://localhost:5000",
     "http://127.0.0.1:3000",
-    "http://127.0.0.1:5000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
 ]
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = DEBUG  # Allow all in development
-
-# CSRF settings
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:5000",
-    "http://127.0.0.1:5000",
-    "http://127.0.0.1:3000",
+CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
 ]
+
+# If running local HTTPS for frontend (e.g. https://localhost:3000), add https origins
+if USE_LOCAL_HTTPS:
+    https_origins = ['https://localhost:3000', 'https://127.0.0.1:3000']
+    for origin in https_origins:
+        if origin not in CORS_ALLOWED_ORIGINS:
+            CORS_ALLOWED_ORIGINS.append(origin)
+        if origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(origin)
 
 # REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
@@ -216,22 +259,23 @@ SIMPLE_JWT = {
     'JTI_CLAIM': 'jti',
 }
 
-# Email configuration
-if DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-else:
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# Email settings
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='your-email@gmail.com')
+DEFAULT_SUPPORT_EMAIL = config('DEFAULT_SUPPORT_EMAIL', default='support@utopia.com')
+SITE_NAME = config('SITE_NAME', default='UTOPIA Real Estate')
 
-# Email server configuration
-EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
-EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
-EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
-EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
+# Email configuration - SMTP with Gmail
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
 
-# Email credentials - USE ENVIRONMENT VARIABLES!
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@utopia-realestate.com')
+# Email credentials - USE ENVIRONMENT VARIABLES for security!
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='nahomkassa19@gmail.com')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='awkhlbjorbzcfumu')
+
+# Default email address for error messages, etc.
 SERVER_EMAIL = config('SERVER_EMAIL', default=DEFAULT_FROM_EMAIL)
 
 # Email timeout
@@ -242,7 +286,6 @@ CHAPA_SECRET_KEY = config('CHAPA_SECRET_KEY', default='CHASECK_TEST-HPz9D2rRUIu2
 CHAPA_PUBLIC_KEY = config('CHAPA_PUBLIC_KEY', default='CHAPUBK_TEST-NfB9uFOlWBd6gG5EW4ono9YgkU0Xlz6k')
 CHAPA_WEBHOOK_SECRET = config('CHAPA_WEBHOOK_SECRET', default='4gOAcA2QlrkhIcG-QPjYCF6uv9O-rpzw2EJzbg4wHQ0')
 CHAPA_API_URL = 'https://api.chapa.co/v1'
-FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
 
 # Google Maps
 GOOGLE_MAPS_API_KEY = config('GOOGLE_MAPS_API_KEY', default='')

@@ -4,34 +4,226 @@ from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.authtoken.models import Token
 from rest_framework.pagination import PageNumberPagination
-from django.contrib.auth import authenticate, login, logout
+from django.db.models.functions import TruncDate
+from collections import defaultdict
+from django.core.cache import cache
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.decorators import method_decorator
 from django.middleware.csrf import get_token
 from django.db import models 
 from django.db.models import Count, Sum, Q
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
 from .serializers import *
 from .models import CustomUser, UserActivity
 from .utils.email import send_password_reset_email
 from real_estate.models import Property
 from subscriptions.models import Payment
+from django.db import transaction
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
 from datetime import timedelta, datetime
 import uuid
+import json
 import logging
 
 logger = logging.getLogger(__name__)
 
-@method_decorator(ensure_csrf_cookie, name="dispatch")
+@method_decorator(ensure_csrf_cookie, name='dispatch')
 class GetCSRFToken(APIView):
     permission_classes = [permissions.AllowAny]
-
+    
     def get(self, request):
-        return Response({"success": "CSRF cookie set"})
+        """Set CSRF cookie and return success"""
+        # Get CSRF token
+        csrf_token = get_token(request)
+        
+        # Create session if it doesn't exist
+        if not request.session.session_key:
+            request.session.create()
+        
+        # Check if we're getting cookies from the request
+        print(f"\n🔍 REQUEST COOKIES: {request.COOKIES}")
+        print(f"🔍 REQUEST ORIGIN: {request.headers.get('Origin')}")
+        print(f"🔍 REQUEST REFERER: {request.headers.get('Referer')}")
+        
+        # Create response
+        response = Response({
+            "success": "CSRF cookie set",
+            "csrf_token": csrf_token,
+            "session_key": request.session.session_key,
+            "session_exists": True,
+            "user_authenticated": request.user.is_authenticated,
+            "cookie_test": "Check if cookie was actually set"
+        })
+        
+        # Try DIFFERENT cookie settings to see what works
+        # Most browsers accept these settings for localhost
+        
+        # OPTION 1: Simple cookie for localhost (no SameSite, no domain)
+        response.set_cookie(
+            key='csrftoken',
+            value=csrf_token,
+            max_age=60 * 60 * 24 * 7,  # 1 week
+            httponly=False,
+            # No samesite specified - let browser default
+            secure=False,
+            path='/',
+            # No domain specified - will use current
+        )
+        
+        # OPTION 2: Also set a test cookie
+        response.set_cookie(
+            key='test_cookie',
+            value='working',
+            max_age=3600,
+            httponly=False,
+            samesite='Lax',
+            secure=False,
+            path='/',
+        )
+        
+        print(f"\n🔐 ATTEMPTING TO SET COOKIES:")
+        print(f"   csrftoken: {csrf_token[:20]}...")
+        print(f"   Headers being sent:")
+        for key, value in response.items():
+            if 'set-cookie' in key.lower():
+                print(f"     {key}: {value}")
+        
+        return response
 
+# ============ SESSION VIEWS ============
+class CheckSessionView(APIView):
+    """Check if user has a valid session"""
+    permission_classes = [permissions.AllowAny]
+    
+    def get(self, request):
+        return Response({
+            "authenticated": request.user.is_authenticated,
+            "user_id": request.user.id if request.user.is_authenticated else None,
+            "username": request.user.email if request.user.is_authenticated else None,
+        })
+
+class VerifyEmailView(APIView):
+    """Verify email using token"""
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+    
+    def post(self, request):
+        token = request.data.get('token')
+        
+        if not token:
+            return Response(
+                {"error": "Verification token is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Find user with matching verification token
+            user = CustomUser.objects.filter(verification_token=token).first()
+            
+            # Verify token
+            if user and user.verify_email_token(token):
+                # Log activity
+                log_user_activity(user, 'email_verified', {}, request=request)
+                
+                return Response({
+                    "success": True,
+                    "message": "Email verified successfully!",
+                    "user": UserSerializer(user).data
+                })
+            else:
+                return Response({
+                    "error": "Invalid or expired verification token"
+                }, status=status.HTTP_400_BAD_REQUEST)
+                
+        except CustomUser.DoesNotExist:
+            return Response({
+                "error": "Invalid verification token"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        except Exception as e:
+            logger.error(f"Email verification error: {str(e)}", exc_info=True)
+            return Response(
+                {"error": "An unexpected error occurred"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class ResendVerificationEmailView(APIView):
+    """Resend verification email"""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        user = request.user
+        
+        # Check if already verified
+        if user.email_verified:
+            return Response({
+                "success": True,
+                "message": "Email is already verified",
+                "email_verified": True
+            })
+        
+        # Rate limiting: max 3 emails per hour
+        if user.verification_sent_at:
+            time_since_last = timezone.now() - user.verification_sent_at
+            if time_since_last < timedelta(minutes=1):  # Changed to 1 min for testing
+                return Response({
+                    "success": False,
+                    "error": "Please wait 1 minute before requesting another verification email"
+                }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        
+        try:
+            # Send verification email
+            success = user.send_verification_email(request)
+            
+            if success:
+                # Log activity
+                log_user_activity(user, 'verification_resent', {}, request=request)
+                
+                return Response({
+                    "success": True,
+                    "message": "Verification email sent successfully. Please check your inbox.",
+                    "email_sent": True,
+                    "next_resend_allowed": (timezone.now() + timedelta(minutes=1)).isoformat()
+                })
+            else:
+                return Response({
+                    "success": False,
+                    "error": "Failed to send verification email. Please try again later."
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
+        except Exception as e:
+            logger.error(f"Error resending verification email: {str(e)}", exc_info=True)
+            return Response({
+                "success": False,
+                "error": "An unexpected error occurred"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class CheckVerificationStatusView(APIView):
+    """Check email verification status"""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        user = request.user
+        
+        return Response({
+            "email_verified": user.email_verified,
+            "phone_verified": user.phone_verified,
+            "is_verified": user.is_verified,
+            "verification_sent_at": user.verification_sent_at,
+            "can_resend": self.can_resend_verification(user)
+        })
+    
+    def can_resend_verification(self, user):
+        if not user.verification_sent_at:
+            return True
+        
+        time_since_last = timezone.now() - user.verification_sent_at
+        return time_since_last >= timedelta(minutes=15)
 
 class RegisterView(generics.CreateAPIView):
     queryset = CustomUser.objects.all()
@@ -39,59 +231,145 @@ class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-
-        # Auto login after registration
-        login(request, user)
-
-        # Return user data
-        headers = self.get_success_headers(serializer.data)
-        return Response(
-            {"user": UserSerializer(user).data, "message": "Registration successful"},
-            status=status.HTTP_201_CREATED,
-            headers=headers,
-        )
-
+        try:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            
+            # Create the user
+            user = serializer.save()
+            
+            # Send verification email
+            try:
+                email_sent = user.send_verification_email(request)
+            except Exception as e:
+                email_sent = False
+                logger.warning(f"Verification email failed: {str(e)}")
+            
+            # Prepare response
+            response_data = {
+                "success": True,
+                "message": "Registration successful!",
+                "user": UserSerializer(user, context={'request': request}).data,
+                "requires_verification": not user.email_verified,
+                "email_verification_sent": email_sent,
+            }
+            
+            return Response(
+                response_data,
+                status=status.HTTP_201_CREATED,
+            )
+            
+        except Exception as e:
+            logger.error(f"Registration error: {str(e)}", exc_info=True)
+            return Response(
+                {
+                    "success": False,
+                    "error": str(e),
+                    "message": "Registration failed"
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
-
+    
     def post(self, request):
+        print(f"\n🔐 LOGIN ATTEMPT - DEBUG:")
+        print(f"   Request data: {request.data}")
+        print(f"   Email provided: {request.data.get('email')}")
+        print(f"   Password provided: {request.data.get('password')}")
+        print(f"   CSRF token: {request.headers.get('X-CSRFToken')}")
+        
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
             email = serializer.validated_data["email"]
             password = serializer.validated_data["password"]
-
+            
+            print(f"\n🔐 VALIDATED LOGIN:")
+            print(f"   Email: {email}")
+            
             try:
+                # First, try to get the user
                 user = CustomUser.objects.get(email=email)
-                if user.check_password(password):
-                    login(request, user)
-                    user_data = UserSerializer(user).data
-                    return Response(
-                        {"user": user_data, "message": "Login successful"},
-                        status=status.HTTP_200_OK,
-                    )
-                else:
-                    return Response(
-                        {"error": "Invalid credentials"},
-                        status=status.HTTP_401_UNAUTHORIZED,
-                    )
-            except CustomUser.DoesNotExist:
+                print(f"   User found in DB: {user.email}")
+                print(f"   User ID: {user.id}")
+                print(f"   Is active: {user.is_active}")
+                print(f"   Email verified: {user.email_verified}")
+                
+                # Check password
+                password_correct = user.check_password(password)
+                print(f"   Password check result: {password_correct}")
+                
+                if password_correct:
+                    if not user.is_active:
+                        print(f"   ❌ User is not active")
+                        return Response(
+                            {"error": "Account is deactivated."},
+                            status=status.HTTP_403_FORBIDDEN,
+                        )
+                    
+                    if not user.email_verified:
+                        print(f"   ⚠️  Email not verified")
+                        return Response(
+                            {
+                                "error": "Please verify your email before logging in.",
+                                "requires_verification": True,
+                                "user_id": user.id,
+                                "email": user.email,
+                            },
+                            status=status.HTTP_403_FORBIDDEN,
+                        )
+                    
+                    # Authenticate user
+                    user = authenticate(request, email=email, password=password)
+                    print(f"   Authenticate() result: {user}")
+                    
+                    if user is not None:
+                        # LOGIN USER
+                        login(request, user)
+                        request.session.save()
+                        
+                        print(f"   ✅ Login successful")
+                        print(f"   Session created: {request.session.session_key}")
+                        
+                        # Get user data
+                        user_data = UserSerializer(user, context={'request': request}).data
+                        
+                        return Response({
+                            "user": user_data,
+                            "message": "Login successful",
+                            "session_key": request.session.session_key,
+                        })
+                    
+                print(f"   ❌ Password incorrect or authentication failed")
                 return Response(
-                    {"error": "Invalid credentials"},
+                    {"error": "Invalid email or password"},
                     status=status.HTTP_401_UNAUTHORIZED,
                 )
-
+                    
+            except CustomUser.DoesNotExist:
+                print(f"   ❌ User not found in database")
+                return Response(
+                    {"error": "Invalid email or password"},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+        
+        print(f"   ❌ Serializer errors: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
+        
 class LogoutView(APIView):
     def post(self, request):
         logout(request)
         return Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
 
+class CurrentUserView(APIView):
+    """Get current authenticated user"""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        user = request.user
+        serializer = UserSerializer(user, context={'request': request})
+        return Response(serializer.data)
 
 class UserProfileView(generics.RetrieveAPIView):
     serializer_class = UserSerializer
@@ -101,7 +379,85 @@ class UserProfileView(generics.RetrieveAPIView):
         return self.request.user
 
 
+class UserProfileUpdateView(generics.UpdateAPIView):
+    """Update user profile details"""
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = UserProfileUpdateSerializer
+    
+    def get_object(self):
+        # Get or create profile for user
+        profile, created = UserProfile.objects.get_or_create(user=self.request.user)
+        return profile
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        
+        if serializer.is_valid():
+            try:
+                # Handle city and sub_city fields (they might be IDs or names)
+                data = serializer.validated_data.copy()
+                
+                # Handle city if provided as ID
+                if 'city' in request.data and request.data['city']:
+                    try:
+                        if isinstance(request.data['city'], int):
+                            from real_estate.models import City
+                            city = City.objects.get(id=request.data['city'])
+                            data['city'] = city
+                        elif isinstance(request.data['city'], str) and request.data['city'].isdigit():
+                            from real_estate.models import City
+                            city = City.objects.get(id=int(request.data['city']))
+                            data['city'] = city
+                    except (ValueError, City.DoesNotExist):
+                        pass
+                
+                # Handle sub_city if provided as ID
+                if 'sub_city' in request.data and request.data['sub_city']:
+                    try:
+                        if isinstance(request.data['sub_city'], int):
+                            from real_estate.models import SubCity
+                            sub_city = SubCity.objects.get(id=request.data['sub_city'])
+                            data['sub_city'] = sub_city
+                        elif isinstance(request.data['sub_city'], str) and request.data['sub_city'].isdigit():
+                            from real_estate.models import SubCity
+                            sub_city = SubCity.objects.get(id=int(request.data['sub_city']))
+                            data['sub_city'] = sub_city
+                    except (ValueError, SubCity.DoesNotExist):
+                        pass
+                
+                # Save the profile
+                serializer.save(**data)
+                
+                # Log activity
+                log_user_activity(
+                    request.user, 
+                    'profile_update', 
+                    {
+                        'fields_updated': list(request.data.keys()),
+                        'profile_id': instance.id
+                    },
+                    request=request
+                )
+                
+                return Response({
+                    "success": True,
+                    "message": "Profile updated successfully",
+                    "profile": serializer.data
+                })
+                
+            except Exception as e:
+                logger.error(f"Profile update error: {str(e)}", exc_info=True)
+                return Response(
+                    {"error": f"Failed to update profile: {str(e)}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class UpdateProfileView(generics.UpdateAPIView):
+    """Update user basic information"""
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -111,23 +467,13 @@ class UpdateProfileView(generics.UpdateAPIView):
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-
-        # Handle both multipart/form-data and application/json
         data = request.data.copy()
-
-        # Debug logging
-        print(f"=== UPDATE PROFILE REQUEST ===")
-        print(f"Data: {data}")
-        print(f"Files: {request.FILES}")
-        print(f"User: {instance.email}")
-
-        # If profile_picture is an empty string or 'null', set it to None
-        if "profile_picture" in data and (
-            data["profile_picture"] == "" or data["profile_picture"] == "null"
-        ):
+        
+        # Handle profile picture removal
+        if "profile_picture" in data and data["profile_picture"] in ["", "null", None]:
             data["profile_picture"] = None
-
-        # If there's a file in FILES, use it instead of the data value
+        
+        # If there's a file in FILES, use it
         if "profile_picture" in request.FILES:
             data["profile_picture"] = request.FILES["profile_picture"]
 
@@ -135,30 +481,28 @@ class UpdateProfileView(generics.UpdateAPIView):
 
         try:
             serializer.is_valid(raise_exception=True)
-            updated_instance = serializer.save()  # Save returns the instance
-
-            print(f"Update successful!")
-            print(f"Updated instance: {updated_instance}")
-            print(f"Profile picture: {updated_instance.profile_picture}")
-
-            return Response(serializer.data)
-
-        except Exception as e:
-            print(f"=== UPDATE ERROR ===")
-            print(f"Error: {str(e)}")
-            print(f"Data: {data}")
-            print(
-                f"Serializer errors: {serializer.errors if hasattr(serializer, 'errors') else 'No serializer'}"
+            updated_instance = serializer.save()
+            
+            # Log activity
+            log_user_activity(
+                request.user,
+                'profile_update',
+                {'fields_updated': list(data.keys())},
+                request=request
             )
 
-            # Return detailed error information
+            return Response({
+                "success": True,
+                "message": "Profile updated successfully",
+                "user": serializer.data
+            })
+
+        except Exception as e:
+            logger.error(f"User update error: {str(e)}", exc_info=True)
             return Response(
                 {
                     "error": str(e),
                     "detail": "Failed to update profile",
-                    "serializer_errors": (
-                        serializer.errors if hasattr(serializer, "errors") else None
-                    ),
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -237,6 +581,7 @@ class UserActivitiesView(generics.ListAPIView):
         
         return response
 
+# In views.py, update the CreateUserActivityView:
 class CreateUserActivityView(generics.CreateAPIView):
     """Create a new user activity record"""
     permission_classes = [permissions.IsAuthenticated]
@@ -255,15 +600,37 @@ class CreateUserActivityView(generics.CreateAPIView):
         # Get user agent
         user_agent = self.request.META.get('HTTP_USER_AGENT', '')
         
-        serializer.save(
+        activity = serializer.save(
             user=self.request.user,
             ip_address=ip_address,
             user_agent=user_agent
         )
         
-        # Update user's last activity timestamp
-        self.request.user.last_activity = timezone.now()
-        self.request.user.save(update_fields=['last_activity'])
+        # Update user's counters based on activity type
+        user = self.request.user
+        activity_type = activity.activity_type
+        
+        # Use F() expressions to update counters atomically
+        from django.db.models import F
+        
+        update_fields = {'last_activity': timezone.now()}
+        
+        if activity_type == 'property_view':
+            update_fields['total_properties_viewed'] = F('total_properties_viewed') + 1
+        elif activity_type == 'property_save':
+            update_fields['total_properties_saved'] = F('total_properties_saved') + 1
+        elif activity_type == 'inquiry':
+            update_fields['total_inquiries_sent'] = F('total_inquiries_sent') + 1
+        elif activity_type == 'search':
+            update_fields['total_searches'] = F('total_searches') + 1
+        elif activity_type == 'login':
+            update_fields['total_logins'] = F('total_logins') + 1
+        
+        # Update the user
+        CustomUser.objects.filter(id=user.id).update(**update_fields)
+        
+        # Refresh user instance
+        user.refresh_from_db()
 
 class UserActivitySummaryView(APIView):
     """Get summary of user activities"""
@@ -459,58 +826,6 @@ class UserDashboardView(APIView):
         
         return recommendations
 
-# Add a utility function to log user activities
-def log_user_activity(user, activity_type, metadata=None, request=None):
-    """Utility function to log user activities"""
-    if not user or not user.is_authenticated:
-        return None
-    
-    ip_address = None
-    user_agent = ''
-    
-    if request:
-        # Get IP address
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip_address = x_forwarded_for.split(',')[0]
-        else:
-            ip_address = request.META.get('REMOTE_ADDR')
-        
-        # Get user agent
-        user_agent = request.META.get('HTTP_USER_AGENT', '')
-    
-    try:
-        activity = UserActivity.objects.create(
-            user=user,
-            activity_type=activity_type,
-            ip_address=ip_address,
-            user_agent=user_agent,
-            metadata=metadata or {}
-        )
-        
-        # Update user's last activity
-        user.last_activity = timezone.now()
-        user.save(update_fields=['last_activity'])
-        
-        # Update specific counters based on activity type
-        if activity_type == 'property_view':
-            user.total_properties_viewed += 1
-        elif activity_type == 'property_save':
-            user.total_properties_saved += 1
-        elif activity_type == 'inquiry':
-            user.total_inquiries_sent += 1
-        elif activity_type == 'search':
-            user.total_searches += 1
-        elif activity_type == 'login':
-            user.total_logins += 1
-        
-        user.save()
-        
-        return activity
-    except Exception as e:
-        print(f"Error logging user activity: {str(e)}")
-        return None
-
 class ForgotPasswordView(APIView):
     permission_classes = [permissions.AllowAny]
     authentication_classes = []
@@ -677,7 +992,7 @@ class ChangePasswordView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
     def post(self, request):
-        serializer = ChangePasswordSerializer(data=request.data)
+        serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
         
         if serializer.is_valid():
             user = request.user
@@ -696,7 +1011,7 @@ class ChangePasswordView(APIView):
             # Update session to prevent logout
             update_session_auth_hash(request, user)
             
-            # Log password change
+            # Log activity
             log_user_activity(user, 'password_change', request=request)
             
             return Response({
@@ -704,7 +1019,10 @@ class ChangePasswordView(APIView):
                 "message": "Password has been changed successfully"
             })
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )
         
 class DeleteAccountView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -764,8 +1082,8 @@ class UserProfileCreateView(generics.CreateAPIView):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-
 class BulkProfileUpdateView(APIView):
+    """Update both user and profile data in one request"""
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     
@@ -775,35 +1093,39 @@ class BulkProfileUpdateView(APIView):
         try:
             with transaction.atomic():
                 # Update user data
-                user_serializer = UserSerializer(
-                    user, 
-                    data=request.data.get('user', {}), 
-                    partial=True
-                )
-                
-                if user_serializer.is_valid():
-                    user_serializer.save()
-                else:
-                    return Response(
-                        {"user_errors": user_serializer.errors},
-                        status=status.HTTP_400_BAD_REQUEST
+                user_data = request.data.get('user', {})
+                if user_data:
+                    user_serializer = UserSerializer(
+                        user, 
+                        data=user_data, 
+                        partial=True,
+                        context={'request': request}
                     )
+                    
+                    if user_serializer.is_valid():
+                        user_serializer.save()
+                    else:
+                        return Response(
+                            {"errors": {"user": user_serializer.errors}},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
                 
                 # Update profile data
                 profile_data = request.data.get('profile', {})
                 if profile_data:
                     profile, created = UserProfile.objects.get_or_create(user=user)
-                    profile_serializer = UserProfileSerializer(
+                    profile_serializer = UserProfileUpdateSerializer(
                         profile,
                         data=profile_data,
-                        partial=True
+                        partial=True,
+                        context={'request': request}
                     )
                     
                     if profile_serializer.is_valid():
                         profile_serializer.save()
                     else:
                         return Response(
-                            {"profile_errors": profile_serializer.errors},
+                            {"errors": {"profile": profile_serializer.errors}},
                             status=status.HTTP_400_BAD_REQUEST
                         )
                 
@@ -819,18 +1141,29 @@ class BulkProfileUpdateView(APIView):
                 updated_profile = UserProfileSerializer(profile).data if profile else None
                 
                 return Response({
+                    "success": True,
+                    "message": "Profile updated successfully",
                     "user": updated_user,
-                    "profile": updated_profile,
-                    "message": "Profile updated successfully"
+                    "profile": updated_profile
                 })
                 
         except Exception as e:
             logger.error(f"Bulk profile update error: {str(e)}", exc_info=True)
             return Response(
-                {"error": "Failed to update profile. Please try again."},
+                {"error": f"Failed to update profile: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+
+class UserProfileDetailView(generics.RetrieveAPIView):
+    """Get user profile details"""
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = UserProfileSerializer
+    
+    def get_object(self):
+        # Get or create profile for user
+        profile, created = UserProfile.objects.get_or_create(user=self.request.user)
+        return profile
 
 class ValidatePhoneNumberView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -1141,4 +1474,69 @@ class PrivacySettingsView(APIView):
         return Response({
             "success": True,
             "message": "Privacy settings updated"
+        })
+
+def log_user_activity(user, activity_type, metadata=None, request=None):
+    """Utility function to log user activities"""
+    if not user or not user.is_authenticated:
+        return None
+    
+    ip_address = None
+    user_agent = ''
+    
+    if request:
+        # Get IP address
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip_address = x_forwarded_for.split(',')[0]
+        else:
+            ip_address = request.META.get('REMOTE_ADDR')
+        
+        # Get user agent
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+    
+    try:
+        activity = UserActivity.objects.create(
+            user=user,
+            activity_type=activity_type,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            metadata=metadata or {}
+        )
+        
+        # Update user's last activity timestamp
+        user.last_activity = timezone.now()
+        user.save(update_fields=['last_activity'])
+        
+        return activity
+    except Exception as e:
+        logger.error(f"Error logging user activity: {str(e)}", exc_info=True)
+        return None
+
+# ============ DEBUG VIEW ============
+class DebugSessionView(APIView):
+    """Debug session information"""
+    permission_classes = [permissions.AllowAny]
+    
+    def get(self, request):
+        return Response({
+            'authentication': {
+                'is_authenticated': request.user.is_authenticated,
+                'user_id': request.user.id if request.user.is_authenticated else None,
+                'email': request.user.email if request.user.is_authenticated else None,
+            },
+            'session': {
+                'session_key': request.session.session_key,
+                'session_exists': request.session.exists(request.session.session_key) if request.session.session_key else False,
+                'session_age': request.session.get_expiry_age() if request.session.session_key else None,
+            },
+            'cookies': {
+                'sessionid_exists': 'sessionid' in request.COOKIES,
+                'csrftoken_exists': 'csrftoken' in request.COOKIES,
+            },
+            'request': {
+                'method': request.method,
+                'path': request.path,
+                'remote_addr': request.META.get('REMOTE_ADDR'),
+            },
         })

@@ -27,10 +27,7 @@ class UserAdmin(BaseUserAdmin):
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
         (_('Personal info'), {'fields': ('first_name', 'last_name', 'phone_number', 
-                                        'profile_picture', 'bio', 'occupation', 'company')}),
-        (_('Preferences'), {'fields': ('language_preference', 'currency_preference',
-                                      'notification_enabled', 'email_notifications',
-                                      'sms_notifications')}),
+                                        'profile_picture', 'bio')}),
         (_('User Type & Status'), {'fields': ('user_type', 'is_premium', 'premium_expiry')}),
         (_('Verification'), {'fields': ('email_verified', 'phone_verified', 
                                        'is_verified', 'verification_token',
@@ -72,8 +69,14 @@ class UserActivityAdmin(admin.ModelAdmin):
     list_filter = ('activity_type', 'created_at')
     search_fields = ('user__email', 'ip_address', 'activity_type')
     readonly_fields = ('created_at', 'metadata', 'user_agent')
-    date_hierarchy = 'created_at'
+    date_hierarchy = None
     list_per_page = 50
+
+    def created_at_display(self, obj):
+        if obj.created_at:
+            return obj.created_at.strftime('%Y-%m-%d %H:%M')
+        return '-'
+    created_at_display.short_description = 'Created At'
     
     fieldsets = (
         (None, {

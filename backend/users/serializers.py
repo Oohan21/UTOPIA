@@ -7,7 +7,6 @@ User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
-    # Make profile_picture optional and allow null
     profile_picture = serializers.ImageField(
         required=False,
         allow_null=True,
@@ -15,30 +14,35 @@ class UserSerializer(serializers.ModelSerializer):
         allow_empty_file=False,
         use_url=True,
     )
+    created_at = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S')
 
     class Meta:
         model = User
         fields = [
-            "id",
-            "email",
-            "username",
-            "first_name",
-            "last_name",
-            "phone_number",
-            "user_type",
-            "language_preference",
-            "is_verified", "is_active",
-            "is_premium",
-            "profile_picture",
-            "bio",
-            "occupation",
-            "company",
-            "currency_preference",
-            "email_notifications",
-            "sms_notifications",
-            "notification_enabled",
+            'id', 'email', 'first_name', 'last_name', 'user_type',
+            'phone_number', 'profile_picture', 'bio', 'is_verified', 'is_active', 'is_premium',
+            'created_at', 'updated_at', 'is_staff', 'is_superuser', 'is_admin_user',
+            'last_activity', 'total_logins', 'total_properties_viewed',
+            'total_properties_saved', 'total_inquiries_sent', 'total_searches'
         ]
-        read_only_fields = ["id", "email", "user_type"]
+        read_only_fields = ["id", "email", "user_type", 'created_at', 'updated_at']
+
+    def get_profile_picture(self, obj):
+        if obj.profile_picture:
+            # Get request from context
+            request = self.context.get('request')
+            if request:
+                # Return absolute URL
+                return request.build_absolute_uri(obj.profile_picture.url)
+            else:
+                # Fallback: build URL manually
+                from django.conf import settings
+                base_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+                # Replace /api with base URL for Django media
+                media_base = base_url.replace('/api', '')
+                return f"{media_base}{obj.profile_picture.url}"
+        return None
+
 
     def update(self, instance, validated_data):
         # Handle profile picture
@@ -162,37 +166,79 @@ class UserActivitiesResponseSerializer(serializers.Serializer):
 
 class ChangePasswordSerializer(serializers.Serializer):
     current_password = serializers.CharField(required=True, write_only=True)
-    new_password = serializers.CharField(
-        required=True, 
-        min_length=8,
-        write_only=True
-    )
-    confirm_password = serializers.CharField(
-        required=True, 
-        min_length=8,
-        write_only=True
-    )
+    new_password = serializers.CharField(required=True, write_only=True, min_length=8)
+    confirm_password = serializers.CharField(required=True, write_only=True)
     
-    def validate(self, attrs):
-        if attrs['new_password'] != attrs['confirm_password']:
+    def validate_current_password(self, value):
+        # Optional: You can add specific validation for current password here
+        return value
+    
+    def validate_new_password(self, value):
+        # Add password strength validation
+        if len(value) < 8:
+            raise serializers.ValidationError("Password must be at least 8 characters long")
+        
+        # Optional: Add more strength validation
+        if value.isdigit():
+            raise serializers.ValidationError("Password cannot be entirely numeric")
+        
+        return value
+    
+    def validate(self, data):
+        if data['new_password'] != data['confirm_password']:
             raise serializers.ValidationError({
                 "confirm_password": "Passwords do not match"
             })
-        return attrs
+        
+        # Check if new password is same as current password
+        user = self.context['request'].user
+        if user.check_password(data['new_password']):
+            raise serializers.ValidationError({
+                "new_password": "New password cannot be the same as current password"
+            })
+        
+        return data
 
 
 class DeleteAccountSerializer(serializers.Serializer):
     reason = serializers.CharField(required=True, max_length=1000)
     password = serializers.CharField(required=False, write_only=True)
 
-
-class UserProfileSerializer(serializers.ModelSerializer):
+class UserProfileUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for updating user profile (partial updates)"""
     class Meta:
         model = UserProfile
-        fields = '__all__'
-        read_only_fields = ['user', 'created_at', 'updated_at']
+        fields = [
+            'date_of_birth',
+            'gender',
+            'address',
+            'city',
+            'sub_city',
+            'postal_code',
+            'facebook_url',
+            'twitter_url',
+            'linkedin_url',
+            'instagram_url',
+            'preferred_property_types',
+            'budget_range_min',
+            'budget_range_max',
+            'preferred_locations',
+        ]
+        read_only_fields = ['user']
         extra_kwargs = {
             'date_of_birth': {'required': False, 'allow_null': True},
             'gender': {'required': False, 'allow_null': True},
             'address': {'required': False, 'allow_null': True},
+            'city': {'required': False, 'allow_null': True},
+            'sub_city': {'required': False, 'allow_null': True},
+            'postal_code': {'required': False, 'allow_null': True},
         }
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    city_name = serializers.CharField(source='city.name', read_only=True)
+    sub_city_name = serializers.CharField(source='sub_city.name', read_only=True)
+    
+    class Meta:
+        model = UserProfile
+        fields = '__all__'
+        read_only_fields = ['user', 'created_at', 'updated_at']

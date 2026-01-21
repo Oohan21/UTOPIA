@@ -68,23 +68,12 @@ class CustomUser(AbstractUser):
     )
     bio = models.TextField(blank=True)
     
-    # Preferences
-    language_preference = models.CharField(max_length=10, default='en', choices=[('en', 'English'), ('am', 'Amharic')])
-    currency_preference = models.CharField(max_length=10, default='ETB', choices=[('ETB', 'ETB'), ('USD', 'USD')])
-    notification_enabled = models.BooleanField(default=True)
-    email_notifications = models.BooleanField(default=True)
-    sms_notifications = models.BooleanField(default=False)
-    
     # Verification
     email_verified = models.BooleanField(default=False)
     phone_verified = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
-    verification_token = models.UUIDField(default=uuid.uuid4, editable=False)
+    verification_token = models.UUIDField(null=True, blank=True, editable=False)
     verification_sent_at = models.DateTimeField(null=True, blank=True)
-    
-    # User specific fields
-    occupation = models.CharField(max_length=100, blank=True)
-    company = models.CharField(max_length=200, blank=True)
     
     # Status
     is_approved = models.BooleanField(default=True)
@@ -145,6 +134,76 @@ class CustomUser(AbstractUser):
             self.email = self.email.lower()
         
         super().save(*args, **kwargs)
+
+    def send_verification_email(self, request=None):
+        """Send email verification - SMTP Version"""
+        try:
+        # Generate verification token
+            self.verification_token = uuid.uuid4()
+            self.verification_sent_at = timezone.now()
+        
+        # Save the user first
+            self.save(update_fields=['verification_token', 'verification_sent_at'])
+        
+        # Send email using SMTP
+            from .utils.email import send_verification_email
+            return send_verification_email(self, request)
+        
+        except Exception as e:
+            logger.error(f"Error in send_verification_email: {str(e)}")
+            return False
+
+    def verify_email_token(self, token):
+        """Validates token and activates user - FIXED VERSION"""
+        if str(self.verification_token) == str(token):
+            self.email_verified = True
+            self.is_verified = self.email_verified or self.phone_verified
+            self.verification_token = None  # This should work now
+            self.save(update_fields=['email_verified', 'is_verified', 'verification_token'])
+            return True
+        return False
+    
+    def send_welcome_email(self):
+        """Send welcome email after successful registration"""
+        try:
+            context = {
+                'user_name': self.get_full_name() or self.email.split('@')[0],
+                'site_name': getattr(settings, 'SITE_NAME', 'UTOPIA Real Estate'),
+                'login_url': f"{getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')}/auth/login",
+                'support_email': getattr(settings, 'DEFAULT_SUPPORT_EMAIL', 'support@example.com'),
+                'current_year': timezone.now().year,
+            }
+            
+            from .utils.email import send_email
+            success = send_email(
+                to_email=self.email,
+                subject=f"Welcome to {context['site_name']}!",
+                template_name='welcome_email.html',
+                context=context,
+                user=self
+            )
+            
+            if success:
+                logger.info(f"Welcome email sent to {self.email}")
+                return True
+            else:
+                logger.error(f"Failed to send welcome email to {self.email}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error sending welcome email: {str(e)}", exc_info=True)
+            return False
+    
+    def resend_verification_email(self):
+        """Resend verification email"""
+        return self.send_verification_email()
+
+    def mark_email_as_verified(self):
+        """Mark email as verified"""
+        self.email_verified = True
+        self.is_verified = self.email_verified or self.phone_verified
+        self.save(update_fields=['email_verified', 'is_verified'])
+        return True
     
     def get_full_name(self):
         if self.first_name and self.last_name:
@@ -192,9 +251,6 @@ class UserProfile(models.Model):
     # Personal details
     date_of_birth = models.DateField(null=True, blank=True)
     gender = models.CharField(max_length=10, choices=[('male', 'Male'), ('female', 'Female'), ('other', 'Other')], blank=True)
-    marital_status = models.CharField(max_length=20, choices=[
-        ('single', 'Single'), ('married', 'Married'), ('divorced', 'Divorced'), ('widowed', 'Widowed')
-    ], blank=True)
     
     # Address
     address = models.TextField(blank=True)
@@ -214,22 +270,16 @@ class UserProfile(models.Model):
     )
     postal_code = models.CharField(max_length=20, blank=True)
     
-    # Professional details
-    occupation = models.CharField(max_length=100, blank=True)
-    company = models.CharField(max_length=200, blank=True)
-    website = models.URLField(blank=True)
-    
     # Social links
     facebook_url = models.URLField(blank=True)
     twitter_url = models.URLField(blank=True)
     linkedin_url = models.URLField(blank=True)
     instagram_url = models.URLField(blank=True)
-    
-    # Preferences
-    preferred_property_types = models.JSONField(default=list)  # List of preferred property types
+
+    preferred_property_types = models.JSONField(default=list)  
     budget_range_min = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     budget_range_max = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
-    preferred_locations = models.JSONField(default=list)  # List of preferred locations
+    preferred_locations = models.JSONField(default=list) 
     
     # Timestamps
     created_at = models.DateTimeField(default=timezone.now)

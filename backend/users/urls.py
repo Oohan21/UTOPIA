@@ -8,6 +8,8 @@ urlpatterns = [
     path("me/", views.UserProfileView.as_view(), name="user-profile"),
     path("update/", views.UpdateProfileView.as_view(), name="update-profile"),
     path("create/", views.UserProfileCreateView.as_view(), name="create-profile"),
+    path("profile/", views.UserProfileDetailView.as_view(), name="user-profile-detail"),
+    path("profile/update/", views.UserProfileUpdateView.as_view(), name="update-profile-detail"),
     path("bulk-update/", views.BulkProfileUpdateView.as_view(), name="bulk-update-profile"),
     path("dashboard/", views.UserDashboardView.as_view(), name="user-dashboard"),
     path("csrf/", views.GetCSRFToken.as_view(), name="csrf-token"),
@@ -18,10 +20,15 @@ urlpatterns = [
         views.ValidateResetTokenView.as_view(),
         name="validate-reset-token",
     ),
+    path('current-user/', views.CurrentUserView.as_view(), name='current_user'),
+    path('check-session/', views.CheckSessionView.as_view(), name='check_session'),
     path("change-password/", views.ChangePasswordView.as_view(), name="change-password"),
     path("delete-account/", views.DeleteAccountView.as_view(), name="delete-account"),
     
     # Verification URLs
+    path('verify-email/', views.VerifyEmailView.as_view(), name='verify-email'),
+    path('resend-verification/', views.ResendVerificationEmailView.as_view(), name='resend-verification'),
+    path('verification-status/', views.CheckVerificationStatusView.as_view(), name='verification-status'),
     path("verification-status/", views.VerificationStatusView.as_view(), name="verification-status"),
     path("verify-email/status/", views.VerificationStatusView.as_view(), name="email-verification-status"),
     path("verify-phone/status/", views.VerificationStatusView.as_view(), name="phone-verification-status"),
@@ -39,4 +46,5 @@ urlpatterns = [
     path("activities/", views.UserActivitiesView.as_view(), name="user-activities"),
     path("activities/create/", views.CreateUserActivityView.as_view(), name="create-activity"),
     path("activities/summary/", views.UserActivitySummaryView.as_view(), name="activity-summary"),
+    path('debug-session/', views.DebugSessionView.as_view(), name='debug_session'),
 ]
