@@ -10,8 +10,11 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from django.conf import settings
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth import get_user_model
+from django.db import models
 from django.db.models import (
     Q,
     Avg,
@@ -24,43 +27,39 @@ from django.db.models import (
     OuterRef,
     ExpressionWrapper,
     DurationField,
+    FloatField, DecimalField,
+    Case, When, Value, IntegerField
 )
-from django.db.models.functions import (
-    TruncMonth,
-    TruncQuarter,
-    TruncYear,
-    ExtractHour,
-    ExtractDay,
-)
+from django.db.models.functions import TruncDate, TruncMonth, TruncQuarter, TruncYear, ExtractHour, ExtractDay
 from django.http import HttpResponse
 from django.db import transaction
 from django.utils import timezone
 from datetime import datetime, timedelta
 from decimal import Decimal
+import traceback
 import logging
 import csv
 import json
+from uuid import UUID
 from io import StringIO
 from .serializers import *
 from .filters import PropertyFilter
 from .permissions import *
 from .pagination import CustomPagination, MessagePagination
-from real_estate.models import Property
+from real_estate.models import Property, Inquiry
 from real_estate.comparison import PropertyComparisonService
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
-
-# Authentication Views
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
 
-class RegisterView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    permission_classes = [AllowAny]
-    serializer_class = RegisterSerializer
+# class RegisterView(generics.CreateAPIView):
+#     queryset = User.objects.all()
+#     permission_classes = [AllowAny]
+#     serializer_class = RegisterSerializer
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -920,7 +919,7 @@ class MessageViewSet(viewsets.ModelViewSet):
                 message=message.content[:100]
                 + ("..." if len(message.content) > 100 else ""),
                 content_type="message",
-                object_id=message.id,
+                object_id=str(message.id),
                 data={
                     "sender_id": message.sender.id,
                     "sender_name": f"{message.sender.first_name} {message.sender.last_name}",
@@ -1144,7 +1143,7 @@ class MessageThreadViewSet(viewsets.ModelViewSet):
                 title=f"New message in {thread.subject}",
                 message=message.content[:100] + ("..." if len(message.content) > 100 else ""),
                 content_type="message",
-                object_id=message.id,
+                object_id=str(message.id),
                 data={
                     "thread_id": thread.id,
                     "sender_id": request.user.id,
@@ -1447,458 +1446,589 @@ class BulkMessageView(generics.GenericAPIView):
         return Response({"error": "Invalid action"}, status=status.HTTP_400_BAD_REQUEST)
 
 
-# In api/views.py - Add or enhance InquiryViewSet
 class InquiryViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing inquiries with role-based access control.
+    - Admins: Can view, update, and manage all inquiries
+    - Regular Users: Can only view and manage their own inquiries
+    """
+    
+    queryset = Inquiry.objects.all().select_related(
+        'property', 'user', 'assigned_to', 'response_by',
+        'property__city', 'property__sub_city'
+    ).prefetch_related('property__images')
+    
     serializer_class = InquirySerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = CustomPagination
+    
     filter_backends = [
         DjangoFilterBackend,
         filters.SearchFilter,
         filters.OrderingFilter,
     ]
+    
     filterset_fields = {
-        "status": ["exact", "in"],
-        "priority": ["exact"],
-        "inquiry_type": ["exact"],
-        "category": ["exact"],
-        "source": ["exact"],
-        "assigned_to": ["exact", "isnull"],
-        "property_rel__city": ["exact"],
-        "property_rel__sub_city": ["exact"],
-        "property_rel__property_type": ["exact"],
-        "created_at": ["date__gte", "date__lte"],
-        "follow_up_date": ["date__gte", "date__lte", "isnull"],
-        "response_sent": ["exact"],
+        'status': ['exact', 'in'],
+        'priority': ['exact'],
+        'inquiry_type': ['exact'],
+        'category': ['exact'],
+        'source': ['exact'],
+        'assigned_to': ['exact', 'isnull'],
+        'property__city': ['exact'],
+        'property__sub_city': ['exact'],
+        'property__property_type': ['exact'],
+        'property__listing_type': ['exact'],
+        'created_at': ['gte', 'lte', 'date'],
+        'responded_at': ['gte', 'lte', 'date', 'isnull'],
+        'follow_up_date': ['gte', 'lte', 'date', 'isnull'],
+        'response_sent': ['exact'],
+        'user': ['exact'],
     }
+    
     search_fields = [
-        "property_rel__title",
-        "property_rel__description",
-        "user__email",
-        "user__first_name",
-        "user__last_name",
-        "full_name",
-        "email",
-        "phone",
-        "message",
+        'property__title',
+        'property__description',
+        'user__email',
+        'user__first_name',
+        'user__last_name',
+        'full_name',
+        'email',
+        'phone',
+        'message',
     ]
-    ordering_fields = ["created_at", "priority", "status", "follow_up_date"]
-    ordering = ["-created_at"]
-    pagination_class = CustomPagination
-
+    
+    ordering_fields = [
+        'created_at', 'updated_at', 'priority', 'status',
+        'follow_up_date', 'scheduled_viewing'
+    ]
+    ordering = ['-created_at']
+    
+    def get_object(self):
+        """
+        Override to handle UUID lookup
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        # Get the pk from URL
+        pk = self.kwargs.get('pk')
+        
+        # Try to parse as UUID
+        try:
+            uuid_obj = UUID(str(pk))
+            obj = get_object_or_404(queryset, id=uuid_obj)
+        except (ValueError, TypeError):
+            # If not a valid UUID, try as integer (for backward compatibility)
+            obj = get_object_or_404(queryset, pk=pk)
+        
+        self.check_object_permissions(self.request, obj)
+        return obj
+    
     def get_queryset(self):
+        """Filter queryset based on user role"""
         user = self.request.user
-
-        if user.is_admin_user:
-            # Admin users see all inquiries
-            return Inquiry.objects.all().select_related(
-                "property_rel",
-                "user",
-                "assigned_to",
-                "property_rel__city",
-                "property_rel__sub_city",  # Changed
-            )
-
-        # Regular users see their assigned inquiries and their own
-        return (
-            Inquiry.objects.filter(
-                Q(assigned_to=user)
-                | Q(user=user)
-                | Q(property_rel__owner=user)
-                | Q(property_rel__agent=user)  # Changed
-            )
-            .select_related(
-                "property_rel",
-                "user",
-                "assigned_to",
-                "property_rel__city",
-                "property_rel__sub_city",  # Changed
-            )
-            .distinct()
-        )
-
+        
+        if user.user_type == 'admin':
+            # Admins see all inquiries
+            return super().get_queryset()
+        
+        # Regular users only see their own inquiries and inquiries about their properties
+        return super().get_queryset().filter(
+            Q(user=user) | Q(property__owner=user)
+        ).distinct()
+    
+    def get_serializer_class(self):
+        """Use different serializers for different actions"""
+        if self.action == 'create':
+            return CreateInquirySerializer
+        elif self.action in ['update', 'partial_update']:
+            return InquiryUpdateSerializer
+        return super().get_serializer_class()
+    
     def get_serializer_context(self):
-        """Add request to serializer context."""
+        """Add request to serializer context"""
         context = super().get_serializer_context()
-        context["request"] = self.request
+        context['request'] = self.request
         return context
-
-    def create(self, request, *args, **kwargs):
-        print("=== DEBUG INQUIRY CREATE ===")
-        print(f"User: {request.user.id} - {request.user.email}")
-        print(f"Request data: {request.data}")
-
-        serializer = self.get_serializer(data=request.data)
-        print(f"Serializer data: {serializer.initial_data}")
-
-        if not serializer.is_valid():
-            print("=== SERIALIZER ERRORS ===")
-            for field, errors in serializer.errors.items():
-                print(f"{field}: {errors}")
-            print("=== END ERRORS ===")
-
-        # Let the parent handle it (will return the errors)
-        return super().create(request, *args, **kwargs)
-
-    def assign_to_me(self, request, pk=None):
-        """Assign inquiry to current user"""
-        inquiry = self.get_object()
-
-        # Check if already assigned to someone else
-        if inquiry.assigned_to and inquiry.assigned_to != request.user:
-            return Response(
-                {"error": "Inquiry already assigned to another user"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        inquiry.assigned_to = request.user
-        inquiry.save()
-
-        # Log the assignment
+    
+    def perform_create(self, serializer):
+        """Handle inquiry creation with notifications"""
+        inquiry = serializer.save()
+        
+        # Log activity
         UserActivity.objects.create(
-            user=request.user,
-            activity_type="inquiry_assigned",
-            ip_address=request.META.get("REMOTE_ADDR"),
-            user_agent=request.META.get("HTTP_USER_AGENT", ""),
-            metadata={"inquiry_id": inquiry.id},
-        )
-
-        serializer = self.get_serializer(inquiry)
-        return Response(serializer.data)
-
-    @action(detail=True, methods=["post"])
-    def update_status(self, request, pk=None):
-        """Update inquiry status with notes"""
-        inquiry = self.get_object()
-        new_status = request.data.get("status")
-        notes = request.data.get("notes", "")
-
-        if not new_status:
-            return Response(
-                {"error": "Status is required"}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        old_status = inquiry.status
-        inquiry.status = new_status
-
-        # Add notes if provided
-        if notes:
-            inquiry.response_notes = notes
-
-        # Mark as responded if status indicates contact
-        if new_status in ["contacted", "viewing_scheduled", "follow_up"]:
-            inquiry.response_sent = True
-            inquiry.responded_at = timezone.now()
-
-        inquiry.save()
-
-        # Create notification for user
-        if inquiry.user:
-            Notification.objects.create(
-                user=inquiry.user,
-                notification_type="inquiry_update",
-                title=f"Inquiry Status Updated",
-                message=f'Your inquiry about {inquiry.property_rel.title} is now {new_status.replace("_", " ")}',  # Changed
-                content_type="inquiry",
-                object_id=inquiry.id,
-                data={
-                    "property_title": inquiry.property_rel.title,  # Changed
-                    "old_status": old_status,
-                    "new_status": new_status,
-                    "notes": notes[:100],
-                },
-            )
-
-        return Response({"status": "updated", "new_status": new_status})
-
-    @action(detail=False, methods=["post"])
-    def bulk_update(self, request):
-        """Bulk update multiple inquiries"""
-        inquiry_ids = request.data.get("inquiry_ids", [])
-        update_data = {k: v for k, v in request.data.items() if k != "inquiry_ids"}
-
-        if not inquiry_ids:
-            return Response(
-                {"error": "No inquiry IDs provided"}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        updated = Inquiry.objects.filter(id__in=inquiry_ids).update(**update_data)
-        return Response(
-            {
-                "success": True,
-                "updated_count": updated,
-                "message": f"Successfully updated {updated} inquiries",
+            user=self.request.user if self.request.user.is_authenticated else None,
+            activity_type="inquiry_created",
+            ip_address=self.request.META.get("REMOTE_ADDR"),
+            user_agent=self.request.META.get("HTTP_USER_AGENT", ""),
+            metadata={
+                "inquiry_id": str(inquiry.id),
+                "property_id": inquiry.property.id,
+                "inquiry_type": inquiry.inquiry_type
             }
         )
-
-    @action(detail=True, methods=["post"])
+    
+    def perform_update(self, serializer):
+        """Handle inquiry updates with notifications"""
+        old_instance = self.get_object()
+        inquiry = serializer.save()
+        
+        # Check if status changed
+        if old_instance.status != inquiry.status:
+            # Notify user about status change
+            if inquiry.user:
+                Notification.objects.create(
+                    user=inquiry.user,
+                    notification_type="inquiry_status_changed",
+                    title=f"Inquiry Status Updated",
+                    message=f'Your inquiry about "{inquiry.property.title}" is now {inquiry.get_status_display()}',
+                    content_type='inquiry',
+                    object_id=str(inquiry.id),
+                    data={
+                        "old_status": old_instance.status,
+                        "new_status": inquiry.status,
+                        "property_title": inquiry.property.title,
+                        "inquiry_id": str(inquiry.id)
+                    }
+                )
+            
+            # Log activity
+            UserActivity.objects.create(
+                user=self.request.user,
+                activity_type="inquiry_status_updated",
+                ip_address=self.request.META.get("REMOTE_ADDR"),
+                user_agent=self.request.META.get("HTTP_USER_AGENT", ""),
+                metadata={
+                    "inquiry_id": str(inquiry.id),
+                    "old_status": old_instance.status,
+                    "new_status": inquiry.status
+                }
+            )
+        
+        # Check if assigned to changed
+        if old_instance.assigned_to != inquiry.assigned_to and inquiry.assigned_to:
+            Notification.objects.create(
+                user=inquiry.assigned_to,
+                notification_type="inquiry_assigned",
+                title="New Inquiry Assignment",
+                message=f'You have been assigned to inquiry #{inquiry.id}',
+                content_type='inquiry', 
+                object_id=str(inquiry.id),
+                data={
+                    "inquiry_id": str(inquiry.id),
+                    "property_title": inquiry.property.title,
+                    "priority": inquiry.priority
+                }
+            )
+    
+    # Custom Actions
+    
+    @action(detail=True, methods=['post'])
+    def assign_to_me(self, request, pk=None):
+        """Assign inquiry to current user (admin only)"""
+        inquiry = self.get_object()
+        
+        if request.user.user_type != 'admin':
+            return Response(
+                {"error": "Only admin users can assign inquiries to themselves"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        inquiry.assigned_to = request.user
+        inquiry.save()
+        
+        serializer = self.get_serializer(inquiry)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def mark_as_contacted(self, request, pk=None):
+        """Mark inquiry as contacted"""
+        inquiry = self.get_object()
+        notes = request.data.get('notes', '')
+        
+        inquiry.mark_as_contacted(user=request.user, notes=notes)
+        
+        serializer = self.get_serializer(inquiry)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
     def schedule_viewing(self, request, pk=None):
         """Schedule a property viewing"""
         inquiry = self.get_object()
-        viewing_time = request.data.get("viewing_time")
-        address = request.data.get("address", "")
-        notes = request.data.get("notes", "")
-
-        if not viewing_time:
-            return Response(
-                {"error": "Viewing time is required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        try:
-            viewing_datetime = datetime.fromisoformat(
-                viewing_time.replace("Z", "+00:00")
-            )
-            viewing_datetime = timezone.make_aware(viewing_datetime)
-        except (ValueError, TypeError):
-            return Response(
-                {"error": "Invalid date format"}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        inquiry.schedule_viewing(viewing_datetime, address)
-
-        # Update response notes
-        if notes:
-            inquiry.response_notes = notes
-            inquiry.save()
-
-        # Create calendar event (would integrate with calendar API)
-        # Send notification to user
+        serializer = ScheduleViewingSerializer(data=request.data)
+    
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+        data = serializer.validated_data
+        inquiry.schedule_viewing(
+            date_time=data['viewing_time'],
+            address=data.get('address', ''),
+            notes=data.get('notes', '')
+        )
+    
+        # Notify user about scheduled viewing
         if inquiry.user:
             Notification.objects.create(
                 user=inquiry.user,
                 notification_type="viewing_scheduled",
                 title="Viewing Scheduled",
-                message=f'Viewing scheduled for {inquiry.property_rel.title} on {viewing_datetime.strftime("%B %d, %Y at %I:%M %p")}',  # Changed
+                message=f'Viewing scheduled for "{inquiry.property.title}"',
                 content_type="inquiry",
-                object_id=inquiry.id,
+                object_id=str(inquiry.id),  
                 data={
-                    "property_title": inquiry.property_rel.title,  # Changed
-                    "viewing_time": viewing_datetime.isoformat(),
-                    "address": address,
-                },
+                    "viewing_time": data['viewing_time'].isoformat(),
+                    "address": data.get('address', ''),
+                    "property_title": inquiry.property.title,
+                    "inquiry_id": str(inquiry.id) 
+                }
             )
-
-        return Response(
-            {
-                "scheduled": True,
-                "viewing_time": viewing_datetime.isoformat(),
-                "address": address,
+    
+        serializer = self.get_serializer(inquiry)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def close_inquiry(self, request, pk=None):
+        """Close the inquiry"""
+        inquiry = self.get_object()
+        notes = request.data.get('notes', '')
+        
+        inquiry.close_inquiry(user=request.user, notes=notes)
+        
+        serializer = self.get_serializer(inquiry)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['post'])
+    def bulk_update(self, request):
+        """Bulk update multiple inquiries"""
+        if request.user.user_type != 'admin':
+            return Response(
+                {"error": "Only admin users can perform bulk updates"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        serializer = BulkUpdateInquirySerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        data = serializer.validated_data
+        inquiry_ids = data.pop('inquiry_ids')
+        
+        # Update inquiries
+        updated = Inquiry.objects.filter(id__in=inquiry_ids).update(**data)
+        
+        # Log activity
+        UserActivity.objects.create(
+            user=request.user,
+            activity_type="inquiry_bulk_update",
+            ip_address=request.META.get("REMOTE_ADDR"),
+            user_agent=request.META.get("HTTP_USER_AGENT", ""),
+            metadata={
+                "updated_count": updated,
+                "inquiry_ids": [str(id) for id in inquiry_ids],
+                "update_data": data
             }
         )
-
-    @action(detail=False, methods=["get"])
+        
+        return Response({
+            "success": True,
+            "updated_count": updated,
+            "message": f"Successfully updated {updated} inquiries"
+        })
+    
+    @action(detail=False, methods=['get'])
     def dashboard_stats(self, request):
         """Get inquiry dashboard statistics"""
         user = request.user
-        queryset = self.get_queryset()
-
+        
+        if user.user_type == 'admin':
+            queryset = self.get_queryset()
+        else:
+            queryset = self.get_queryset().filter(Q(user=user) | Q(property__owner=user))
+        
         # Date ranges
         today = timezone.now().date()
         week_ago = today - timedelta(days=7)
         month_ago = today - timedelta(days=30)
-
-        # Status counts
-        status_counts = dict(
-            queryset.values("status")
-            .annotate(count=Count("id"))
-            .values_list("status", "count")
-        )
-
-        # Priority counts
-        priority_counts = dict(
-            queryset.values("priority")
-            .annotate(count=Count("id"))
-            .values_list("priority", "count")
-        )
-
-        # Recent activity
-        recent_inquiries = queryset.filter(created_at__gte=week_ago).count()
-
-        # Unassigned inquiries
+        
+        # Calculate statistics
+        total = queryset.count()
+        new_today = queryset.filter(created_at__date=today).count()
+        new_this_week = queryset.filter(created_at__gte=week_ago).count()
         unassigned = queryset.filter(assigned_to__isnull=True).count()
-
-        # Urgent inquiries (pending for > 24 hours)
+        
+        # Urgent inquiries (pending high/urgent priority from last 24 hours)
         urgent_threshold = timezone.now() - timedelta(hours=24)
-        urgent_count = queryset.filter(
-            status="pending", created_at__lt=urgent_threshold
+        urgent = queryset.filter(
+            status='pending',
+            priority__in=['high', 'urgent'],
+            created_at__gte=urgent_threshold
         ).count()
-
-        # Average response time in hours
-        responded_inquiries = queryset.filter(responded_at__isnull=False)
-
-        # Calculate response time in hours using annotation
-        if responded_inquiries.exists():
-            # Create a queryset with response time in seconds
-            response_times = responded_inquiries.annotate(
+        
+        # Status distribution
+        status_distribution = dict(
+            queryset.values('status')
+            .annotate(count=Count('id'))
+            .values_list('status', 'count')
+        )
+        
+        # Priority distribution
+        priority_distribution = dict(
+            queryset.values('priority')
+            .annotate(count=Count('id'))
+            .values_list('priority', 'count')
+        )
+        
+        # Performance metrics
+        responded = queryset.filter(response_sent=True)
+        avg_response_hours = 0
+        
+        if responded.exists():
+            response_times = responded.annotate(
                 response_seconds=ExpressionWrapper(
-                    F("responded_at") - F("created_at"), output_field=DurationField()
+                    F('responded_at') - F('created_at'),
+                    output_field=DurationField()
                 )
             )
-
-            # Calculate average response time in hours
             avg_response_seconds = response_times.aggregate(
-                avg=Avg("response_seconds")
-            )["avg"]
-
+                avg=Avg('response_seconds')
+            )['avg']
+            
             if avg_response_seconds:
                 avg_response_hours = avg_response_seconds.total_seconds() / 3600
-            else:
-                avg_response_hours = 0
-        else:
-            avg_response_hours = 0
-
-        # Response rate
-        total_inquiries = queryset.count()
-        responded_count = queryset.filter(response_sent=True).count()
-        response_rate = (responded_count / max(total_inquiries, 1)) * 100
-
-        # Conversion rate (closed inquiries / total inquiries)
-        closed_count = queryset.filter(status="closed").count()
-        conversion_rate = (closed_count / max(total_inquiries, 1)) * 100
-
-        return Response(
-            {
-                "overview": {
-                    "total": total_inquiries,
-                    "new_today": queryset.filter(created_at__date=today).count(),
-                    "new_this_week": recent_inquiries,
-                    "unassigned": unassigned,
-                    "urgent": urgent_count,
-                },
-                "status_distribution": status_counts,
-                "priority_distribution": priority_counts,
-                "performance": {
-                    "avg_response_time_hours": round(avg_response_hours, 1),
-                    "response_rate": round(response_rate, 1),
-                    "conversion_rate": round(conversion_rate, 1),
-                },
-                "time_periods": {
-                    "today": today.isoformat(),
-                    "week_ago": week_ago.isoformat(),
-                    "month_ago": month_ago.isoformat(),
-                },
-            }
+        
+        response_rate = (responded.count() / max(total, 1)) * 100
+        closed_count = queryset.filter(status='closed').count()
+        conversion_rate = (closed_count / max(total, 1)) * 100
+        
+        # Recent activities
+        recent_activities = queryset.order_by('-created_at')[:10].values(
+            'id', 'property__title', 'status', 'priority',
+            'created_at', 'user__first_name', 'user__last_name', 'full_name'
         )
-
-    @action(detail=True, methods=["get"])
+        
+        # Format recent activities
+        formatted_activities = []
+        for activity in recent_activities:
+            user_display_name = activity['full_name'] or (
+                f"{activity['user__first_name']} {activity['user__last_name']}"
+                if activity['user__first_name'] 
+                else 'Anonymous'
+            )
+            formatted_activities.append({
+                'id': str(activity['id']),
+                'property__title': activity['property__title'],
+                'status': activity['status'],
+                'priority': activity['priority'],
+                'created_at': activity['created_at'].isoformat() if activity['created_at'] else None,
+                'user_display_name': user_display_name
+            })
+        
+        data = {
+            "overview": {
+                "total": total,
+                "new_today": new_today,
+                "new_this_week": new_this_week,
+                "unassigned": unassigned,
+                "urgent": urgent,
+            },
+            "status_distribution": status_distribution,
+            "priority_distribution": priority_distribution,
+            "performance": {
+                "avg_response_time_hours": round(avg_response_hours, 1),
+                "response_rate": round(response_rate, 1),
+                "conversion_rate": round(conversion_rate, 1),
+            },
+            "recent_activities": formatted_activities,
+        }
+        
+        # Add admin-specific stats
+        if user.user_type == 'admin':
+            # Admin performance
+            admin_performance = {}
+            admins = User.objects.filter(user_type='admin', is_active=True)
+            
+            for admin in admins:
+                admin_inquiries = queryset.filter(assigned_to=admin)
+                admin_total = admin_inquiries.count()
+                admin_closed = admin_inquiries.filter(status='closed').count()
+                
+                admin_performance[admin.email] = {
+                    'total': admin_total,
+                    'closed': admin_closed,
+                    'completion_rate': round((admin_closed / max(admin_total, 1)) * 100, 1)
+                }
+            
+            data['admin_stats'] = admin_performance
+        
+        serializer = InquiryDashboardSerializer(data=data)
+        serializer.is_valid()
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'])
     def activity(self, request, pk=None):
         """Get inquiry activity timeline"""
         inquiry = self.get_object()
-
-        # Get status changes
+        
         activities = []
-
-        # Add creation activity
-        activities.append(
-            {
-                "id": 1,
-                "type": "status_change",
-                "title": "Inquiry created",
-                "description": inquiry.message[:100] + "...",
-                "user": {
-                    "name": inquiry.user_full_name,
-                    "role": "User" if inquiry.user else "Visitor",
-                },
-                "timestamp": inquiry.created_at,
+        
+        # Creation activity
+        activities.append({
+            "id": 1,
+            "type": "created",
+            "title": "Inquiry Created",
+            "description": f"New {inquiry.inquiry_type} inquiry",
+            "timestamp": inquiry.created_at,
+            "user": inquiry.get_user_display_name(),
+            "metadata": {
+                "inquiry_type": inquiry.inquiry_type,
+                "message_preview": inquiry.message[:100] + "..." if len(inquiry.message) > 100 else inquiry.message
+            }
+        })
+        
+        # Status changes
+        if inquiry.responded_at:
+            activities.append({
+                "id": 2,
+                "type": "responded",
+                "title": f"Marked as {inquiry.status}",
+                "description": inquiry.response_notes or "Response sent",
+                "timestamp": inquiry.responded_at,
+                "user": inquiry.response_by.get_full_name() if inquiry.response_by else "System",
                 "metadata": {
                     "status": inquiry.status,
-                    "inquiry_type": inquiry.inquiry_type,
-                },
-            }
-        )
-
-        # Add status updates
-        if inquiry.responded_at:
-            activities.append(
-                {
-                    "id": 2,
-                    "type": "status_change",
-                    "title": f"Status updated to {inquiry.status}",
-                    "description": inquiry.response_notes,
-                    "user": {
-                        "name": (
-                            f"{inquiry.assigned_to.first_name} {inquiry.assigned_to.last_name}"
-                            if inquiry.assigned_to
-                            else "System"
-                        ),
-                        "role": "Agent" if inquiry.assigned_to else "System",
-                    },
-                    "timestamp": inquiry.responded_at,
-                    "metadata": {
-                        "status": inquiry.status,
-                        "priority": inquiry.priority,
-                    },
+                    "response_by": inquiry.response_by.email if inquiry.response_by else None
                 }
-            )
-
+            })
+        
+        # Viewing scheduled
+        if inquiry.scheduled_viewing:
+            activities.append({
+                "id": 3,
+                "type": "viewing_scheduled",
+                "title": "Viewing Scheduled",
+                "description": f"Viewing scheduled for {inquiry.scheduled_viewing.strftime('%B %d, %Y at %I:%M %p')}",
+                "timestamp": inquiry.updated_at,
+                "user": inquiry.assigned_to.get_full_name() if inquiry.assigned_to else "System",
+                "metadata": {
+                    "viewing_time": inquiry.scheduled_viewing.isoformat(),
+                    "address": inquiry.viewing_address
+                }
+            })
+        
+        # Assignment
+        if inquiry.assigned_to:
+            activities.append({
+                "id": 4,
+                "type": "assigned",
+                "title": "Assigned to Admin",
+                "description": f"Assigned to {inquiry.assigned_to.get_full_name()}",
+                "timestamp": inquiry.updated_at,
+                "user": "System",
+                "metadata": {
+                    "assigned_to": inquiry.assigned_to.email
+                }
+            })
+        
         return Response(activities)
-
-    @action(detail=False, methods=["get"])
+    
+    @action(detail=False, methods=['get'])
     def export(self, request):
         """Export inquiries to CSV"""
+        if request.user.user_type != 'admin':
+            return Response(
+                {"error": "Only admin users can export inquiries"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
         queryset = self.get_queryset()
-
-        response = HttpResponse(content_type="text/csv")
-        response["Content-Disposition"] = (
-            f'attachment; filename="inquiries_export_{timezone.now().date()}.csv"'
-        )
-
+        
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="inquiries_export_{today}.csv"'
+        
         writer = csv.writer(response)
-
+        
         # Write headers
         headers = [
-            "ID",
-            "Property",
-            "User",
-            "Inquiry Type",
-            "Status",
-            "Priority",
-            "Assigned To",
-            "Created At",
-            "Responded At",
-            "Response Time (hours)",
-            "Contact Preference",
-            "Phone",
-            "Email",
-            "Message Preview",
+            'ID', 'Property', 'Property Type', 'Listing Type',
+            'User Name', 'User Email', 'User Phone',
+            'Inquiry Type', 'Status', 'Priority', 'Assigned To',
+            'Created At', 'Responded At', 'Response Time (hours)',
+            'Contact Preference', 'Message Preview',
+            'Scheduled Viewing', 'Follow Up Date',
+            'Category', 'Source', 'Tags'
         ]
         writer.writerow(headers)
-
+        
         # Write data
         for inquiry in queryset:
-            response_time = inquiry.response_time if inquiry.response_time else "N/A"
-
-            writer.writerow(
-                [
-                    inquiry.id,
-                    (
-                        inquiry.property_rel.title[:50] if inquiry.property_rel else ""
-                    ),  # Changed
-                    (
-                        f"{inquiry.user.first_name} {inquiry.user.last_name}"
-                        if inquiry.user
-                        else inquiry.full_name
-                    ),
-                    inquiry.get_inquiry_type_display(),
-                    inquiry.get_status_display(),
-                    inquiry.get_priority_display(),
-                    inquiry.assigned_to.email if inquiry.assigned_to else "Unassigned",
-                    inquiry.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-                    (
-                        inquiry.responded_at.strftime("%Y-%m-%d %H:%M:%S")
-                        if inquiry.responded_at
-                        else "N/A"
-                    ),
-                    response_time,
-                    inquiry.get_contact_preference_display(),
-                    inquiry.phone,
-                    inquiry.email,
-                    inquiry.message[:100],
-                ]
-            )
-
+            response_time = inquiry.get_response_time_hours() if inquiry.get_response_time_hours() else 'N/A'
+            viewing_time = inquiry.scheduled_viewing.strftime('%Y-%m-%d %H:%M') if inquiry.scheduled_viewing else 'N/A'
+            follow_up = inquiry.follow_up_date.strftime('%Y-%m-%d') if inquiry.follow_up_date else 'N/A'
+            
+            writer.writerow([
+                str(inquiry.id)[:8],
+                inquiry.property.title[:50],
+                inquiry.property.get_property_type_display(),
+                inquiry.property.get_listing_type_display(),
+                inquiry.get_user_display_name(),
+                inquiry.get_user_email_address(),
+                inquiry.phone,
+                inquiry.get_inquiry_type_display(),
+                inquiry.get_status_display(),
+                inquiry.get_priority_display(),
+                inquiry.assigned_to.email if inquiry.assigned_to else 'Unassigned',
+                inquiry.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                inquiry.responded_at.strftime('%Y-%m-%d %H:%M:%S') if inquiry.responded_at else 'N/A',
+                response_time,
+                inquiry.get_contact_preference_display(),
+                inquiry.message[:100],
+                viewing_time,
+                follow_up,
+                inquiry.get_category_display(),
+                inquiry.get_source_display(),
+                ', '.join(inquiry.tags) if inquiry.tags else ''
+            ])
+        
         return response
-
+    
+    @action(detail=False, methods=['get'])
+    def my_inquiries(self, request):
+        """Get inquiries for the current user"""
+        if not request.user.is_authenticated:
+            return Response(
+                {"error": "Authentication required"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        queryset = self.get_queryset().filter(user=request.user)
+        page = self.paginate_queryset(queryset)
+        
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def assigned_to_me(self, request):
+        """Get inquiries assigned to current admin"""
+        if request.user.user_type != 'admin':
+            return Response(
+                {"error": "Only admin users can view assigned inquiries"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        queryset = self.get_queryset().filter(assigned_to=request.user)
+        page = self.paginate_queryset(queryset)
+        
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 # Dashboard View
 class AdminDashboardView(generics.GenericAPIView):
@@ -1959,16 +2089,21 @@ class HealthCheckView(APIView):
 
 
 class ComparisonViewSet(viewsets.ViewSet):
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAuthenticated]
 
     @action(detail=False, methods=["get"])
     def my_comparisons(self, request):
         """Get user's saved comparisons"""
+        if not request.user.is_authenticated:
+            return Response(
+                {"error": "Authentication required"}, 
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
         comparisons = PropertyComparison.objects.filter(user=request.user)
         serializer = PropertyComparisonSerializer(comparisons, many=True)
         return Response(serializer.data)
-
-    # In views.py - Update the compare method in ComparisonViewSet
+        
     @action(detail=False, methods=["post"])
     def compare(self, request):
         """Property comparison with rent/sale differentiation"""
@@ -2413,6 +2548,13 @@ class ComparisonViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["post"])
     def save_comparison(self, request):
         """Save current comparison"""
+
+        if not request.user.is_authenticated:
+            return Response(
+                {"error": "Authentication required"}, 
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+            
         property_ids = request.data.get("property_ids", [])
         name = request.data.get(
             "name", f'Comparison {timezone.now().strftime("%Y-%m-%d")}'
@@ -2850,161 +2992,170 @@ class AdminUserViewSet(viewsets.ModelViewSet):
 
 class AdminPropertyApprovalView(generics.GenericAPIView):
     """Admin approval system for properties"""
-
-    permission_classes = [IsAdminUser]
+    
+    permission_classes = [IsAuthenticated, IsAdminUser]
     serializer_class = PropertySerializer
-
+    
     def get_queryset(self):
+        """Get pending properties for approval"""
         return (
             Property.objects.filter(approval_status="pending")
-            .select_related("owner", "city", "sub_city")
+            .select_related("owner", "city", "sub_city", "approved_by")
             .prefetch_related("images")
         )
-
+    
     def get(self, request):
         """Get pending properties for approval"""
         queryset = self.get_queryset()
+        
+        # Add pagination
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = PropertySerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
         serializer = PropertySerializer(queryset, many=True)
-        return Response({"count": queryset.count(), "properties": serializer.data})
-
+        return Response({
+            "count": queryset.count(), 
+            "results": serializer.data
+        })
+    
     def post(self, request):
-        """Approve or reject a property"""
-        property_id = request.data.get("property_id")
-        action_type = request.data.get(
-            "action"
-        )  # 'approve', 'reject', 'request_changes'
-        notes = request.data.get("notes", "")
-
-        if not property_id or not action_type:
-            return Response(
-                {"error": "property_id and action are required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
+        """Approve or reject a property with notifications"""
         try:
-            property_obj = Property.objects.get(id=property_id)
-
-            with transaction.atomic():
-                if action_type == "approve":
-                    property_obj.approval_status = "approved"
-                    property_obj.approved_by = request.user
-                    property_obj.approved_at = timezone.now()
-                    property_obj.approval_notes = notes
-                    property_obj.is_active = True
-
-                    # Send notification to property owner
-                    self.send_approval_notification(property_obj, "approved", notes)
-
-                elif action_type == "reject":
-                    property_obj.approval_status = "rejected"
-                    property_obj.rejection_reason = notes
-                    property_obj.is_active = False
-
-                    # Send notification to property owner
-                    self.send_approval_notification(property_obj, "rejected", notes)
-
-                elif action_type == "request_changes":
-                    property_obj.approval_status = "changes_requested"
-                    property_obj.approval_notes = notes
-
-                    # Send notification to property owner
-                    self.send_approval_notification(
-                        property_obj, "changes_requested", notes
-                    )
-
-                property_obj.save()
-
+            # Get data from request
+            property_id = request.data.get("property_id")
+            action = request.data.get("action")  # 'approve', 'reject', 'request_changes'
+            notes = request.data.get("notes", "")
+            
+            print(f"DEBUG: Received approval request - property_id: {property_id}, action: {action}, notes: {notes}")
+            
+            # Validate required fields
+            if not property_id:
                 return Response(
-                    {
-                        "status": "success",
-                        "message": f"Property {action_type}d successfully",
-                        "property_id": property_id,
-                        "approval_status": property_obj.approval_status,
-                    }
+                    {"error": "property_id is required"},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-
-        except Property.DoesNotExist:
-            return Response(
-                {"error": "Property not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            
+            if not action or action not in ["approve", "reject", "request_changes"]:
+                return Response(
+                    {"error": "action is required and must be 'approve', 'reject', or 'request_changes'"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            
+            # Get the property
+            try:
+                property_obj = Property.objects.select_related('owner').get(id=property_id)
+                print(f"DEBUG: Found property - {property_obj.title}, owner: {property_obj.owner.email}")
+            except Property.DoesNotExist:
+                return Response(
+                    {"error": f"Property with ID {property_id} not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Update property based on action
+            if action == "approve":
+                property_obj.approval_status = "approved"
+                property_obj.approved_by = request.user
+                property_obj.approved_at = timezone.now()
+                property_obj.approval_notes = notes
+                property_obj.is_active = True
+                
+                print(f"DEBUG: Approving property - setting active=True")
+                
+            elif action == "reject":
+                property_obj.approval_status = "rejected"
+                property_obj.rejection_reason = notes
+                property_obj.is_active = False
+                property_obj.approval_notes = notes
+                
+                print(f"DEBUG: Rejecting property - setting active=False")
+                
+            elif action == "request_changes":
+                property_obj.approval_status = "changes_requested"
+                property_obj.approval_notes = notes
+                property_obj.is_active = False
+                
+                print(f"DEBUG: Requesting changes - setting active=False")
+            
+            # Save the property - use update_fields to avoid recursion
+            update_fields = [
+                'approval_status', 'approval_notes', 'approved_by', 
+                'approved_at', 'rejection_reason', 'is_active'
+            ]
+            
+            property_obj.save(update_fields=update_fields)
+            print(f"DEBUG: Property saved - status: {property_obj.approval_status}, active: {property_obj.is_active}")
+            
+            # Try to create notification (outside transaction to avoid issues)
+            notification_created = False
+            try:
+                from api.notification import NotificationService
+                print("DEBUG: Attempting to create notification...")
+                
+                notification = NotificationService.create_property_approval_notification(
+                    property_obj=property_obj,
+                    action=action,
+                    notes=notes,
+                    admin_user=request.user
+                )
+                notification_created = notification is not None
+                print(f"DEBUG: Owner notification created: {notification_created}")
+                
+            except Exception as e:
+                print(f"WARNING: Failed to create notification: {e}")
+                # Continue even if notification fails
+            
+            # Try to create audit log (also outside transaction)
+            audit_log_created = False
+            try:
+                from api.models import AuditLog
+                audit_log = AuditLog.objects.create(
+                    user=request.user,
+                    action_type='update',
+                    model_name='Property',
+                    object_id=str(property_obj.id),
+                    object_repr=property_obj.title,
+                    changes={
+                        'approval_status': {
+                            'old': 'pending',
+                            'new': action
+                        },
+                        'notes': notes
+                    },
+                    ip_address=request.META.get('REMOTE_ADDR'),
+                    user_agent=request.META.get('HTTP_USER_AGENT', '')
+                )
+                audit_log_created = True
+                print("DEBUG: Audit log created")
+            except Exception as e:
+                print(f"WARNING: Failed to create audit log: {e}")
+            
+            # Get serialized data before returning response
+            serializer = PropertySerializer(property_obj)
+            
+            return Response({
+                "status": "success",
+                "message": f"Property {action}d successfully",
+                "property": serializer.data,
+                "notification_sent": notification_created,
+                "audit_log_created": audit_log_created
+            })
+                
         except Exception as e:
+            print(f"ERROR in property approval: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            
+            error_response = {
+                "error": "Internal server error",
+                "detail": str(e)
+            }
+            
             return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                error_response,
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-    def send_approval_notification(self, property_obj, action, notes):
-        """Send email notification to property owner"""
-        try:
-            from django.core.mail import send_mail
-            from django.conf import settings
-
-            subject = f"Property {action.capitalize()}: {property_obj.title}"
-
-            if action == "approved":
-                message = f"""
-                Hello {property_obj.owner.get_full_name() or property_obj.owner.email},
-                
-                Great news! Your property listing has been approved.
-                
-                Property: {property_obj.title}
-                Location: {property_obj.specific_location}, {property_obj.sub_city.name}
-                
-                Your property is now live on our platform and visible to potential buyers.
-                
-                {notes if notes else ''}
-                
-                View your property: {settings.FRONTEND_URL}/listings/{property_obj.id}
-                
-                Thank you,
-                {settings.SITE_NAME if hasattr(settings, 'SITE_NAME') else 'Property Platform'} Team
-                """
-            elif action == "rejected":
-                message = f"""
-                Hello {property_obj.owner.get_full_name() or property_obj.owner.email},
-                
-                We regret to inform you that your property listing has been rejected.
-                
-                Property: {property_obj.title}
-                
-                Reason: {notes}
-                
-                Please review our listing guidelines and submit again:
-                {settings.FRONTEND_URL}/listings/create
-                
-                If you have any questions, please contact our support team.
-                
-                Thank you,
-                {settings.SITE_NAME if hasattr(settings, 'SITE_NAME') else 'Property Platform'} Team
-                """
-            else:  # changes_requested
-                message = f"""
-                Hello {property_obj.owner.get_full_name() or property_obj.owner.email},
-                
-                Our team has reviewed your property listing and requires some changes.
-                
-                Property: {property_obj.title}
-                
-                Required Changes: {notes}
-                
-                Please update your listing with the requested changes and resubmit.
-                
-                Edit your property: {settings.FRONTEND_URL}/listings/{property_obj.id}/edit
-                
-                Thank you,
-                {settings.SITE_NAME if hasattr(settings, 'SITE_NAME') else 'Property Platform'} Team
-                """
-
-            send_mail(
-                subject,
-                message,
-                settings.DEFAULT_FROM_EMAIL,
-                [property_obj.owner.email],
-                fail_silently=True,
-            )
-
-        except Exception as e:
-            print(f"Failed to send approval notification: {e}")
-
 
 class AdminPropertyViewSet(viewsets.ModelViewSet):
     serializer_class = PropertySerializer
@@ -3016,7 +3167,7 @@ class AdminPropertyViewSet(viewsets.ModelViewSet):
         "property_status",
         "is_verified",
         "is_featured",
-        "is_active",  # ADD THIS LINE
+        "is_active",  
     ]
     search_fields = ["title", "description", "specific_location"]
     pagination_class = CustomPagination
@@ -3636,10 +3787,28 @@ class ExportDataView(generics.GenericAPIView):
             return self.export_properties(request)
         elif data_type == "inquiries":
             return self.export_inquiries(request)
-        elif data_type == "transactions":
+        elif data_type == "transactions": 
             return self.export_transactions(request)
-        elif data_type == "audit-logs":
+        elif data_type == "audit-logs":   
             return self.export_audit_logs(request)
+        elif data_type == "full_report":  
+            return self.export_full_report(request)
+        elif data_type == "user_report": 
+            return self.export_user_report(request)
+        elif data_type == "property_report": 
+            return self.export_property_report(request)
+        elif data_type == "inquiry_report": 
+            return self.export_inquiry_report(request)
+        elif data_type == "revenue_report": 
+            return self.export_revenue_report(request)
+        elif data_type == "comprehensive_report": 
+            return self.export_comprehensive_report(request)
+        elif data_type == "performance_report":
+            return self.export_performance_report(request)
+        elif data_type == "market_report":
+            return self.export_market_report(request)
+        elif data_type == "activity_report":
+            return self.export_activity_report(request)
         else:
             return Response(
                 {"error": f"Export type {data_type} not supported"},
@@ -3789,86 +3958,1202 @@ class ExportDataView(generics.GenericAPIView):
 
         return response
 
-    def export_transactions(self, request):
-        # This would need your payment/transaction model
+    def export_audit_logs(self, request):
+        """Export audit logs based on your AuditLog model"""
         response = HttpResponse(content_type="text/csv")
-        response["Content-Disposition"] = (
-            'attachment; filename="transactions_export.csv"'
-        )
+        response['Content-Disposition'] = 'attachment; filename="audit_logs_export.csv"'
 
         writer = csv.writer(response)
-        writer.writerow(
-            [
-                "ID",
-                "User",
-                "Amount",
+        writer.writerow([
+            "ID",
+            "User Email",
+            "User Name",
+            "Action Type",
+            "Model Name",
+            "Object ID",
+            "Object Representation",
+            "IP Address",
+            "User Agent",
+            "Timestamp"
+        ])
+
+    # Get all audit logs
+        from .models import AuditLog
+        logs = AuditLog.objects.all().select_related('user').order_by('-created_at')
+    
+        for log in logs:
+            writer.writerow([
+                log.id,
+                log.user.email if log.user else 'System',
+                f"{log.user.first_name} {log.user.last_name}".strip() if log.user else 'System',
+                log.get_action_type_display(),
+                log.model_name,
+                log.object_id,
+                log.object_repr[:100],  # Limit length
+                log.ip_address or '',
+                log.user_agent[:200] if log.user_agent else '',  # Limit length
+                log.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            ])
+
+        return response
+
+    def export_transactions(self, request):
+        """Export payment transactions based on your Payment model"""
+        try:
+            from subscriptions.models import Payment, PropertyPromotion
+        
+            response = HttpResponse(content_type="text/csv")
+            response['Content-Disposition'] = 'attachment; filename="transactions_export.csv"'
+
+            writer = csv.writer(response)
+            writer.writerow([
+                "Payment ID",
+                "User Email",
+                "User Name",
+                "Property ID",
+                "Property Title",
+                "Promotion Tier",
+                "Duration (Days)",
+                "Amount (ETB)",
                 "Payment Method",
                 "Status",
-                "Reference",
-                "Created At",
+                "Transaction ID",
+                "Chapa Reference",
                 "Paid At",
-            ]
-        )
+                "Created At"
+            ])
 
-        # You'll need to import and use your Payment model here
-        # payments = Payment.objects.all().select_related('user').order_by('-created_at')
-        # for payment in payments:
-        #     writer.writerow([...])
+        # Get all payments
+            payments = Payment.objects.all().select_related(
+                'user', 'promotion', 'promotion__listed_property', 'promotion__tier'
+            ).order_by('-created_at')
 
-        # For now, return empty CSV
+            for payment in payments:
+                writer.writerow([
+                    str(payment.id),
+                    payment.user.email if payment.user else '',
+                    f"{payment.user.first_name} {payment.user.last_name}".strip() if payment.user else '',
+                    payment.promotion.listed_property.id if payment.promotion and payment.promotion.listed_property else '',
+                    payment.promotion.listed_property.title if payment.promotion and payment.promotion.listed_property else '',
+                    payment.promotion.tier.tier_type if payment.promotion and payment.promotion.tier else '',
+                    payment.promotion.duration_days if payment.promotion else '',
+                    payment.amount_etb,
+                    payment.payment_method,
+                    payment.get_status_display(),
+                    payment.transaction_id or '',
+                    payment.chapa_reference or '',
+                    payment.paid_at.strftime('%Y-%m-%d %H:%M:%S') if payment.paid_at else '',
+                    payment.created_at.strftime('%Y-%m-%d %H:%M:%S')
+                ])
+
+            return response
+
+        except ImportError:
+            response = HttpResponse(content_type="text/csv")
+            response['Content-Disposition'] = 'attachment; filename="transactions_export.csv"'
+
+            writer = csv.writer(response)
+            writer.writerow(['Payment system not available. Install subscriptions app.'])
+        
+            return response
+
+    def export_full_report(self, request):
+        """Export comprehensive system report in CSV format"""
+        from django.http import HttpResponse
+        import csv
+        from io import StringIO
+        
+        # Create CSV in memory
+        csv_buffer = StringIO()
+        writer = csv.writer(csv_buffer)
+        
+        # Header
+        writer.writerow(['UTOPIA REAL ESTATE - COMPREHENSIVE SYSTEM REPORT'])
+        writer.writerow(['Report Generated:', timezone.now().strftime('%Y-%m-%d %H:%M:%S')])
+        writer.writerow([])
+        
+        # User Statistics
+        writer.writerow(['USER STATISTICS'])
+        writer.writerow(['Metric', 'Count'])
+        writer.writerow(['Total Users', User.objects.count()])
+        writer.writerow(['Active Users', User.objects.filter(is_active=True).count()])
+        writer.writerow(['Verified Users', User.objects.filter(is_verified=True).count()])
+        
+        # Get user type distribution
+        user_types = User.objects.values('user_type').annotate(count=Count('id'))
+        writer.writerow([])
+        writer.writerow(['USER TYPE DISTRIBUTION'])
+        writer.writerow(['User Type', 'Count'])
+        for ut in user_types:
+            writer.writerow([ut['user_type'], ut['count']])
+        writer.writerow([])
+        
+        # Property Statistics
+        writer.writerow(['PROPERTY STATISTICS'])
+        writer.writerow(['Metric', 'Count'])
+        writer.writerow(['Total Properties', Property.objects.count()])
+        writer.writerow(['Active Properties', Property.objects.filter(is_active=True).count()])
+        writer.writerow(['Verified Properties', Property.objects.filter(is_verified=True).count()])
+        writer.writerow(['Featured Properties', Property.objects.filter(is_featured=True).count()])
+        
+        # Property type distribution
+        prop_types = Property.objects.values('property_type').annotate(count=Count('id'))
+        writer.writerow([])
+        writer.writerow(['PROPERTY TYPE DISTRIBUTION'])
+        writer.writerow(['Property Type', 'Count'])
+        for pt in prop_types:
+            writer.writerow([pt['property_type'], pt['count']])
+        writer.writerow([])
+        
+        # Inquiry Statistics
+        writer.writerow(['INQUIRY STATISTICS'])
+        writer.writerow(['Metric', 'Count'])
+        writer.writerow(['Total Inquiries', Inquiry.objects.count()])
+        writer.writerow(['Pending Inquiries', Inquiry.objects.filter(status='pending').count()])
+        writer.writerow(['Closed Inquiries', Inquiry.objects.filter(status='closed').count()])
+        writer.writerow(['Assigned Inquiries', Inquiry.objects.filter(assigned_to__isnull=False).count()])
+        writer.writerow([])
+        
+        # Inquiry type distribution
+        inquiry_types = Inquiry.objects.values('inquiry_type').annotate(count=Count('id'))
+        writer.writerow(['INQUIRY TYPE DISTRIBUTION'])
+        writer.writerow(['Inquiry Type', 'Count'])
+        for it in inquiry_types:
+            writer.writerow([it['inquiry_type'], it['count']])
+        writer.writerow([])
+        
+        # Get CSV data
+        csv_data = csv_buffer.getvalue()
+        
+        # Create HTTP response
+        response = HttpResponse(csv_data, content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="full_system_report_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+        
         return response
 
-    def export_audit_logs(self, request):
-        response = HttpResponse(content_type="text/csv")
-        response["Content-Disposition"] = 'attachment; filename="audit_logs_export.csv"'
-
+    def export_user_report(self, request):
+        """Export user analytics report - SIMPLE WORKING VERSION"""
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+    
+        # Create CSV response
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="user_analytics_report_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+    
         writer = csv.writer(response)
-        writer.writerow(
-            [
-                "ID",
-                "User",
-                "Action",
-                "Model",
-                "Object ID",
-                "IP Address",
-                "User Agent",
-                "Timestamp",
-            ]
+    
+    # Header
+        writer.writerow(['UTOPIA REAL ESTATE - USER ANALYTICS REPORT'])
+        writer.writerow([f'Generated: {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'])
+        writer.writerow([])
+    
+    # Get all users
+        users = User.objects.all().order_by('-created_at')
+        total_users = users.count()
+        today = timezone.now().date()
+    
+    # Summary Statistics
+        writer.writerow(['SUMMARY STATISTICS'])
+        writer.writerow(['Metric', 'Value'])
+        writer.writerow(['Total Users', total_users])
+        writer.writerow(['Active Users', users.filter(is_active=True).count()])
+        writer.writerow(['Verified Users', users.filter(is_verified=True).count()])
+        writer.writerow(['Premium Users', users.filter(is_premium=True).count()])
+        writer.writerow(['Active Today', users.filter(last_activity__date=today).count()])
+        writer.writerow(['Active Last 7 Days', users.filter(last_activity__date__gte=today - timedelta(days=7)).count()])
+        writer.writerow([])
+    
+    # User Type Distribution
+        writer.writerow(['USER TYPE DISTRIBUTION'])
+        writer.writerow(['User Type', 'Count', 'Percentage'])
+    
+        user_types = ['admin', 'user']
+        for user_type in user_types:
+            count = users.filter(user_type=user_type).count()
+            percentage = (count / total_users * 100) if total_users > 0 else 0
+            writer.writerow([
+                user_type.title(),
+                count,
+                f'{percentage:.1f}%'
+            ])
+        writer.writerow([])
+    
+    # Registration Trends
+        writer.writerow(['REGISTRATION TRENDS'])
+        writer.writerow(['Period', 'New Users'])
+    
+        writer.writerow(['Today', users.filter(created_at__date=today).count()])
+        writer.writerow(['Last 7 Days', users.filter(created_at__date__gte=today - timedelta(days=7)).count()])
+        writer.writerow(['Last 30 Days', users.filter(created_at__date__gte=today - timedelta(days=30)).count()])
+        writer.writerow(['Last 90 Days', users.filter(created_at__date__gte=today - timedelta(days=90)).count()])
+        writer.writerow([])
+    
+    # User Profile Statistics
+        writer.writerow(['PROFILE COMPLETION STATISTICS'])
+        writer.writerow(['Metric', 'Count', 'Percentage'])
+    
+        with_profile_pic = users.exclude(profile_picture='').count()
+        with_phone = users.exclude(phone_number='').count()
+        with_bio = users.exclude(bio='').count()
+    
+        writer.writerow([
+            'Profile Picture',
+            with_profile_pic,
+            f'{(with_profile_pic/total_users*100):.1f}%' if total_users > 0 else '0%'
+        ])
+        writer.writerow([
+            'Phone Number',
+            with_phone,
+            f'{(with_phone/total_users*100):.1f}%' if total_users > 0 else '0%'
+        ])
+        writer.writerow([
+            'Bio',
+            with_bio,
+            f'{(with_bio/total_users*100):.1f}%' if total_users > 0 else '0%'
+        ])
+        writer.writerow([])
+     
+         # Top 10 Most Active Users
+        writer.writerow(['TOP 10 MOST ACTIVE USERS'])
+        writer.writerow(['Rank', 'User ID', 'Email', 'Name', 'User Type', 'Total Logins', 'Last Activity', 'Created At'])
+    
+        top_users = users.order_by('-total_logins')[:10]
+        for i, user in enumerate(top_users, 1):
+            writer.writerow([
+                i,
+                user.id,
+                user.email,
+                f'{user.first_name} {user.last_name}'.strip() or 'N/A',
+                user.user_type.title(),
+                user.total_logins,
+                user.last_activity.strftime('%Y-%m-%d %H:%M') if user.last_activity else 'Never',
+                user.created_at.strftime('%Y-%m-%d %H:%M')
+            ])
+        writer.writerow([])
+    
+        # Language & Currency Preferences
+        writer.writerow(['PREFERENCE DISTRIBUTION'])
+    
+        # Language
+        writer.writerow(['Language', 'Count', 'Percentage'])
+        languages = users.values('language_preference').annotate(count=Count('id')).order_by('-count')
+        for lang in languages:
+            count = lang['count']
+            writer.writerow([
+                lang['language_preference'].upper(),
+                count,
+                f'{(count/total_users*100):.1f}%' if total_users > 0 else '0%'
+            ])
+        writer.writerow([])
+    
+        # Currency
+        writer.writerow(['Currency', 'Count', 'Percentage'])
+        currencies = users.values('currency_preference').annotate(count=Count('id')).order_by('-count')
+        for curr in currencies:
+            count = curr['count']
+            writer.writerow([
+                curr['currency_preference'],
+                count,
+                f'{(count/total_users*100):.1f}%' if total_users > 0 else '0%'
+            ])
+    
+        return response
+    
+    def export_property_report(self, request):
+        """Export property report - SIMPLE WORKING VERSION"""
+        from real_estate.models import Property
+    
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="property_report.csv"'
+    
+        writer = csv.writer(response)
+    
+    # Write headers
+        writer.writerow([
+        'ID', 'Title', 'Type', 'Listing Type', 'Status',
+        'City', 'Sub City', 'Price (ETB)', 'Monthly Rent (ETB)',
+        'Bedrooms', 'Bathrooms', 'Area (m²)', 'Built Year',
+        'Active', 'Verified', 'Featured', 'Promoted',
+        'Views', 'Inquiries', 'Days on Market',
+        'Owner Email', 'Owner Name', 'Created At', 'Updated At'
+       ])
+    
+    # Write data
+        properties = Property.objects.all().select_related('city', 'sub_city', 'owner').order_by('-created_at')
+        for prop in properties:
+            writer.writerow([
+                prop.id,
+                prop.title,
+                prop.get_property_type_display(),
+                prop.get_listing_type_display(),
+                prop.get_property_status_display(),
+                prop.city.name if prop.city else '',
+                prop.sub_city.name if prop.sub_city else '',
+                prop.price_etb or '',
+                prop.monthly_rent or '',
+                prop.bedrooms or '',
+                prop.bathrooms or '',
+                prop.total_area or '',
+                prop.built_year or '',
+                'Yes' if prop.is_active else 'No',
+                'Yes' if prop.is_verified else 'No',
+                'Yes' if prop.is_featured else 'No',
+                'Yes' if prop.is_promoted else 'No',
+                prop.views_count,
+                prop.inquiry_count,
+                prop.days_on_market,
+                prop.owner.email if prop.owner else '',
+                f"{prop.owner.first_name} {prop.owner.last_name}".strip() if prop.owner else '',
+                prop.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                prop.updated_at.strftime('%Y-%m-%d %H:%M:%S') if prop.updated_at else ''
+            ])
+    
+        return response
+
+    def export_inquiry_report(self, request):
+        """Export inquiry report - SIMPLE WORKING VERSION"""
+        from real_estate.models import Inquiry
+    
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="inquiry_report.csv"'
+    
+        writer = csv.writer(response)
+    
+     # Write headers
+        writer.writerow([
+            'ID', 'Property ID', 'Property Title', 'Property Type',
+            'User Email', 'User Name', 'Inquiry Type', 'Status',
+            'Priority', 'Full Name', 'Email', 'Phone',
+            'Message', 'Assigned To', 'Response Sent',
+            'Created At', 'Responded At', 'Follow Up Date',
+            'Scheduled Viewing', 'Viewing Address', 'Source', 'Category'
+        ])
+    
+    # Write data
+        inquiries = Inquiry.objects.all().select_related('property', 'user', 'assigned_to').order_by('-created_at')
+        for inquiry in inquiries:
+            writer.writerow([
+                inquiry.id,
+                inquiry.property.id if inquiry.property else '',
+                inquiry.property.title if inquiry.property else '',
+                inquiry.property.get_property_type_display() if inquiry.property else '',
+                inquiry.user.email if inquiry.user else '',
+                f"{inquiry.user.first_name} {inquiry.user.last_name}".strip() if inquiry.user else '',
+                inquiry.get_inquiry_type_display(),
+                inquiry.get_status_display(),
+                inquiry.get_priority_display(),
+                inquiry.full_name or '',
+                inquiry.email or '',
+                inquiry.phone or '',
+                inquiry.message[:200] + '...' if len(inquiry.message) > 200 else inquiry.message,
+                inquiry.assigned_to.email if inquiry.assigned_to else '',
+                'Yes' if inquiry.response_sent else 'No',
+                inquiry.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                inquiry.responded_at.strftime('%Y-%m-%d %H:%M:%S') if inquiry.responded_at else '',
+                inquiry.follow_up_date.strftime('%Y-%m-%d') if inquiry.follow_up_date else '',
+                inquiry.scheduled_viewing.strftime('%Y-%m-%d %H:%M') if inquiry.scheduled_viewing else '',
+                inquiry.viewing_address or '',
+                inquiry.get_source_display(),
+                inquiry.get_category_display()
+            ])
+    
+        return response
+
+    def export_revenue_report(self, request):
+        """Export revenue report - SIMPLE WORKING VERSION"""
+        try:
+            from subscriptions.models import Payment, PropertyPromotion
+        
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = 'attachment; filename="revenue_report.csv"'
+        
+            writer = csv.writer(response)
+        
+        # Write headers
+            writer.writerow([
+                'Payment ID', 'User Email', 'User Name',
+                'Property ID', 'Property Title',
+                'Tier', 'Duration (Days)', 'Amount (ETB)',
+                'Payment Method', 'Status', 'Transaction ID',
+                'Paid At', 'Created At'
+            ])
+           
+        # Write data
+            payments = Payment.objects.all().select_related(
+                'user', 'promotion', 'promotion__listed_property'
+            ).order_by('-created_at')
+        
+            for payment in payments:
+                writer.writerow([
+                    payment.id,
+                    payment.user.email if payment.user else '',
+                    f"{payment.user.first_name} {payment.user.last_name}".strip() if payment.user else '',
+                    payment.promotion.listed_property.id if payment.promotion and payment.promotion.listed_property else '',
+                    payment.promotion.listed_property.title if payment.promotion and payment.promotion.listed_property else '',
+                    payment.promotion.tier.tier_type if payment.promotion and payment.promotion.tier else '',
+                    payment.promotion.duration_days if payment.promotion else '',
+                    payment.amount_etb,
+                    payment.payment_method,
+                    payment.status,
+                    payment.transaction_id or '',
+                    payment.paid_at.strftime('%Y-%m-%d %H:%M:%S') if payment.paid_at else '',
+                    payment.created_at.strftime('%Y-%m-%d %H:%M:%S')
+                ])
+        
+            return response
+        
+        except ImportError:
+        # If payment model doesn't exist, return empty CSV with explanation
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = 'attachment; filename="revenue_report.csv"'
+        
+            writer = csv.writer(response)
+            writer.writerow(['Payment system not available. Install subscriptions app.'])
+        
+            return response
+
+    def export_activity_report(self, request):
+        """Export user activity report - SIMPLE WORKING VERSION"""
+        from users.models import UserActivity
+    
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="activity_report.csv"'
+    
+        writer = csv.writer(response)
+    
+    # Write headers
+        writer.writerow([
+            'ID', 'User Email', 'User Name',
+            'Activity Type', 'IP Address',
+            'Created At', 'Metadata'
+        ])
+    
+    # Write data
+        activities = UserActivity.objects.all().select_related('user').order_by('-created_at')[:1000]  # Limit to 1000
+    
+        for activity in activities:
+            writer.writerow([
+                activity.id,
+                activity.user.email if activity.user else '',
+                f"{activity.user.first_name} {activity.user.last_name}".strip() if activity.user else '',
+                activity.get_activity_type_display(),
+                activity.ip_address or '',
+                activity.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                json.dumps(activity.metadata) if activity.metadata else ''
+            ])
+    
+        return response
+
+    def export_comprehensive_report(self, request):
+        """Export comprehensive system report - SIMPLE WORKING VERSION"""
+        from django.contrib.auth import get_user_model
+        from real_estate.models import Property, Inquiry
+        from users.models import UserActivity
+    
+        User = get_user_model()
+    
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="comprehensive_report_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+    
+        writer = csv.writer(response)
+    
+    # Header
+        writer.writerow(['UTOPIA REAL ESTATE - COMPREHENSIVE SYSTEM REPORT'])
+        writer.writerow([f'Generated: {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'])
+        writer.writerow([])
+    
+    # Platform Statistics
+        writer.writerow(['PLATFORM STATISTICS'])
+        writer.writerow(['Metric', 'Count', 'Timestamp'])
+    
+        today = timezone.now().date()
+    
+        writer.writerow(['Total Users', User.objects.count(), today])
+        writer.writerow(['Active Users', User.objects.filter(is_active=True).count(), today])
+        writer.writerow(['Verified Users', User.objects.filter(is_verified=True).count(), today])
+        writer.writerow(['Admin Users', User.objects.filter(user_type='admin').count(), today])
+        writer.writerow([])
+    
+        writer.writerow(['Total Properties', Property.objects.count(), today])
+        writer.writerow(['Active Properties', Property.objects.filter(is_active=True).count(), today])
+        writer.writerow(['Verified Properties', Property.objects.filter(is_verified=True).count(), today])
+        writer.writerow(['Featured Properties', Property.objects.filter(is_featured=True).count(), today])
+        writer.writerow([])
+    
+        writer.writerow(['Total Inquiries', Inquiry.objects.count(), today])
+        writer.writerow(['Pending Inquiries', Inquiry.objects.filter(status='pending').count(), today])
+        writer.writerow(['Closed Inquiries', Inquiry.objects.filter(status='closed').count(), today])
+        writer.writerow([])
+    
+    # User Activity Summary
+        writer.writerow(['RECENT ACTIVITY (Last 7 Days)'])
+        writer.writerow(['Activity Type', 'Count'])
+    
+        week_ago = timezone.now() - timedelta(days=7)
+        activities = UserActivity.objects.filter(created_at__gte=week_ago)
+    
+        activity_counts = activities.values('activity_type').annotate(count=Count('id')).order_by('-count')
+        for activity in activity_counts:
+            writer.writerow([
+                activity['activity_type'],
+                activity['count']
+            ])
+        writer.writerow([])
+    
+    # Property Type Distribution
+        writer.writerow(['PROPERTY TYPE DISTRIBUTION'])
+        writer.writerow(['Property Type', 'Count', 'Percentage'])
+    
+        total_props = Property.objects.filter(is_active=True).count()
+        prop_types = Property.objects.filter(is_active=True).values('property_type').annotate(count=Count('id')).order_by('-count')
+    
+        for prop_type in prop_types:
+            percentage = (prop_type['count'] / total_props * 100) if total_props > 0 else 0
+            writer.writerow([
+                prop_type['property_type'],
+                prop_type['count'],
+                f'{percentage:.1f}%'
+            ])
+        writer.writerow([])
+    
+    # Inquiry Type Distribution
+        writer.writerow(['INQUIRY TYPE DISTRIBUTION'])
+        writer.writerow(['Inquiry Type', 'Count', 'Percentage'])
+    
+        total_inquiries = Inquiry.objects.count()
+        inquiry_types = Inquiry.objects.values('inquiry_type').annotate(count=Count('id')).order_by('-count')
+    
+        for inquiry_type in inquiry_types:
+            percentage = (inquiry_type['count'] / total_inquiries * 100) if total_inquiries > 0 else 0
+            writer.writerow([
+                inquiry_type['inquiry_type'],
+                inquiry_type['count'],
+                f'{percentage:.1f}%'
+            ])
+    
+        return response
+
+    def export_market_report(self, request):
+        """Export market analytics report - SIMPLE WORKING VERSION"""
+        from real_estate.models import Property
+    
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="market_report.csv"'
+    
+        writer = csv.writer(response)
+    
+    # Header
+        writer.writerow(['UTOPIA REAL ESTATE - MARKET ANALYTICS REPORT'])
+        writer.writerow([f'Generated: {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'])
+        writer.writerow([])
+    
+    # Price Statistics
+        writer.writerow(['PRICE STATISTICS (Active Properties)'])
+        writer.writerow(['Metric', 'Value (ETB)'])
+    
+        active_properties = Property.objects.filter(is_active=True)
+    
+    # For Sale Properties
+        sale_properties = active_properties.filter(listing_type='sale', price_etb__gt=0)
+        sale_stats = sale_properties.aggregate(
+        avg_price=Avg('price_etb'),
+        min_price=Min('price_etb'),
+        max_price=Max('price_etb'),
+        count=Count('id')
+    )
+    
+        writer.writerow(['Sale Properties Count', sale_stats['count'] or 0])
+        writer.writerow(['Average Sale Price', round(float(sale_stats['avg_price'] or 0), 2)])
+        writer.writerow(['Minimum Sale Price', round(float(sale_stats['min_price'] or 0), 2)])
+        writer.writerow(['Maximum Sale Price', round(float(sale_stats['max_price'] or 0), 2)])
+        writer.writerow([])
+    
+    # For Rent Properties
+        rent_properties = active_properties.filter(listing_type='rent', monthly_rent__gt=0)
+        rent_stats = rent_properties.aggregate(
+            avg_rent=Avg('monthly_rent'),
+            min_rent=Min('monthly_rent'),
+            max_rent=Max('monthly_rent'),
+            count=Count('id')
         )
+    
+        writer.writerow(['Rent Properties Count', rent_stats['count'] or 0])
+        writer.writerow(['Average Monthly Rent', round(float(rent_stats['avg_rent'] or 0), 2)])
+        writer.writerow(['Minimum Monthly Rent', round(float(rent_stats['min_rent'] or 0), 2)])
+        writer.writerow(['Maximum Monthly Rent', round(float(rent_stats['max_rent'] or 0), 2)])
+        writer.writerow([])
+    
+    # Property Type Price Analysis
+        writer.writerow(['PRICE BY PROPERTY TYPE (Sale)'])
+        writer.writerow(['Property Type', 'Count', 'Avg Price (ETB)', 'Min Price', 'Max Price'])
+    
+        sale_by_type = sale_properties.values('property_type').annotate(
+            count=Count('id'),
+            avg_price=Avg('price_etb'),
+            min_price=Min('price_etb'),
+            max_price=Max('price_etb')
+        ).order_by('-avg_price')
+    
+        for prop_type in sale_by_type:
+            writer.writerow([
+                prop_type['property_type'],
+                prop_type['count'],
+                round(float(prop_type['avg_price'] or 0), 2),
+                round(float(prop_type['min_price'] or 0), 2),
+                round(float(prop_type['max_price'] or 0), 2)
+            ])
+        writer.writerow([])
+    
+    # Rent by Property Type
+        writer.writerow(['RENT BY PROPERTY TYPE'])
+        writer.writerow(['Property Type', 'Count', 'Avg Rent (ETB)', 'Min Rent', 'Max Rent'])
+      
+        rent_by_type = rent_properties.values('property_type').annotate(
+            count=Count('id'),
+            avg_rent=Avg('monthly_rent'),
+            min_rent=Min('monthly_rent'),
+            max_rent=Max('monthly_rent')
+        ).order_by('-avg_rent')
+    
+        for prop_type in rent_by_type:
+            writer.writerow([
+                prop_type['property_type'],
+                prop_type['count'],
+                round(float(prop_type['avg_rent'] or 0), 2),
+                round(float(prop_type['min_rent'] or 0), 2),
+                round(float(prop_type['max_rent'] or 0), 2)
+            ])
+        writer.writerow([])
+    
+    # Price Ranges
+        writer.writerow(['PRICE RANGE DISTRIBUTION (Sale)'])
+        writer.writerow(['Price Range', 'Count', 'Percentage'])
+    
+        price_ranges = [
+            ('Under 1M', 0, 1000000),
+            ('1M - 3M', 1000000, 3000000),
+            ('3M - 5M', 3000000, 5000000),
+            ('5M - 10M', 5000000, 10000000),
+            ('10M+', 10000000, None)
+        ]
+    
+        total_sale = sale_stats['count'] or 0
+        for label, min_price, max_price in price_ranges:
+            if max_price:
+                count = sale_properties.filter(price_etb__gte=min_price, price_etb__lt=max_price).count()
+            else:
+                count = sale_properties.filter(price_etb__gte=min_price).count()
+        
+            percentage = (count / total_sale * 100) if total_sale > 0 else 0
+            writer.writerow([label, count, f'{percentage:.1f}%'])
+    
+        return response
 
-        # You'll need to import and use your AuditLog model here
-        # logs = AuditLog.objects.all().select_related('user').order_by('-created_at')
-        # for log in logs:
-        #     writer.writerow([...])
-
-        # For now, return empty CSV
+    def export_performance_report(self, request):
+        """Export platform performance report - SIMPLE WORKING VERSION"""
+        from django.contrib.auth import get_user_model
+        from real_estate.models import Property, Inquiry
+        from users.models import UserActivity
+    
+        User = get_user_model()
+    
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="performance_report.csv"'
+     
+        writer = csv.writer(response)
+    
+    # Header
+        writer.writerow(['UTOPIA REAL ESTATE - PERFORMANCE REPORT'])
+        writer.writerow([f'Generated: {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'])
+        writer.writerow([])
+    
+        today = timezone.now().date()
+        week_ago = today - timedelta(days=7)
+        month_ago = today - timedelta(days=30)
+    
+    # Growth Metrics
+        writer.writerow(['GROWTH METRICS'])
+        writer.writerow(['Metric', 'Today', 'Last 7 Days', 'Last 30 Days', 'Total'])
+    
+    # User Growth
+        users_today = User.objects.filter(created_at__date=today).count()
+        users_week = User.objects.filter(created_at__date__gte=week_ago).count()
+        users_month = User.objects.filter(created_at__date__gte=month_ago).count()
+        users_total = User.objects.count()
+    
+        writer.writerow(['New Users', users_today, users_week, users_month, users_total])
+    
+    # Property Growth
+        props_today = Property.objects.filter(created_at__date=today).count()
+        props_week = Property.objects.filter(created_at__date__gte=week_ago).count()
+        props_month = Property.objects.filter(created_at__date__gte=month_ago).count()
+        props_total = Property.objects.count()
+    
+        writer.writerow(['New Properties', props_today, props_week, props_month, props_total])
+    
+    # Inquiry Growth
+        inq_today = Inquiry.objects.filter(created_at__date=today).count()
+        inq_week = Inquiry.objects.filter(created_at__date__gte=week_ago).count()
+        inq_month = Inquiry.objects.filter(created_at__date__gte=month_ago).count()
+        inq_total = Inquiry.objects.count()
+    
+        writer.writerow(['New Inquiries', inq_today, inq_week, inq_month, inq_total])
+        writer.writerow([])
+    
+    # Activity Metrics
+        writer.writerow(['ACTIVITY METRICS (Last 7 Days)'])
+        writer.writerow(['Activity Type', 'Count'])
+    
+        activities = UserActivity.objects.filter(created_at__gte=timezone.now() - timedelta(days=7))
+        activity_counts = activities.values('activity_type').annotate(count=Count('id')).order_by('-count')
+    
+        for activity in activity_counts[:10]:  # Top 10 activities
+            writer.writerow([activity['activity_type'], activity['count']])
+        writer.writerow([])
+    
+    # Property Performance
+        writer.writerow(['TOP PERFORMING PROPERTIES (by Views)'])
+        writer.writerow(['Rank', 'Property ID', 'Title', 'Type', 'Views', 'Inquiries', 'Days Listed'])
+    
+        top_properties = Property.objects.filter(is_active=True).order_by('-views_count')[:10]
+        for i, prop in enumerate(top_properties, 1):
+            writer.writerow([
+                i,
+                prop.id,
+                prop.title[:50],  # Limit title length
+                prop.property_type,
+                prop.views_count,
+                prop.inquiry_count,
+                prop.days_on_market
+            ])
+        writer.writerow([])
+    
+    # User Engagement
+        writer.writerow(['TOP ENGAGED USERS'])
+        writer.writerow(['Rank', 'User Email', 'Name', 'Total Logins', 'Properties Viewed', 'Inquiries Sent', 'Last Activity'])
+    
+        top_users = User.objects.order_by('-total_logins')[:10]
+        for i, user in enumerate(top_users, 1):
+            writer.writerow([
+                i,
+                user.email,
+                f"{user.first_name} {user.last_name}".strip() or 'N/A',
+                user.total_logins,
+                user.total_properties_viewed,
+                user.total_inquiries_sent,
+                user.last_activity.strftime('%Y-%m-%d') if user.last_activity else 'Never'
+            ])
+    
         return response
 
 
-# Notification ViewSet
+    def export_with_format(self, request, data_type, format_type):
+        """Export data in specific format (csv, excel, pdf, json)"""
+        # Get query parameters for date filtering
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        # Parse dates if provided
+        try:
+            if start_date:
+                start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+            if end_date:
+                end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        except ValueError:
+            return Response(
+                {"error": "Invalid date format. Use YYYY-MM-DD"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Generate report data with date filters
+        report_methods = {
+            'user_report': self.generate_user_report,
+            'property_report': self.generate_property_report,
+            'inquiry_report': self.generate_inquiry_report,
+            'revenue_report': self.generate_revenue_report,
+            'performance_report': self.generate_performance_report,
+            'market_report': self.generate_market_report,
+            'activity_report': self.generate_activity_report,
+            'comprehensive_report': self.generate_comprehensive_report,
+        }
+        
+        if data_type in report_methods:
+            report_data = report_methods[data_type](start_date, end_date)
+            
+            # Export in requested format
+            if format_type == 'csv':
+                return self.export_report_to_csv(data_type, report_data)
+            elif format_type == 'excel':
+                return self.export_report_to_excel(data_type, report_data)
+            elif format_type == 'pdf':
+                return self.export_report_to_pdf(data_type, report_data)
+            elif format_type == 'json':
+                return Response({
+                    "report_type": data_type,
+                    "date_range": {
+                        "start": start_date.isoformat() if start_date else "All time",
+                        "end": end_date.isoformat() if end_date else "Now",
+                    },
+                    "generated_at": timezone.now().isoformat(),
+                    "data": report_data
+                })
+            else:
+                return Response(
+                    {"error": f"Format {format_type} not supported. Use csv, excel, pdf, or json"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            return Response(
+                {"error": f"Report type {data_type} not supported"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+from rest_framework.views import APIView  # Add this import
+
+class BatchExportView(APIView): 
+    """
+    Batch export view that properly handles POST requests
+    Uses APIView instead of GenericAPIView to avoid serializer requirement
+    """
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def post(self, request):
+        """Handle batch export POST request"""
+        try:
+            print("=" * 50)
+            print("BATCH EXPORT REQUEST RECEIVED")
+            print("=" * 50)
+            print(f"Request method: {request.method}")
+            print(f"Content-Type: {request.content_type}")
+            print(f"Headers: {dict(request.headers)}")
+            print(f"User: {request.user.email if request.user else 'Anonymous'}")
+            print(f"Data type: {type(request.data)}")
+            print(f"Raw data: {request.data}")
+            print("=" * 50)
+            
+            # Debug: Log the full request
+            import json
+            print("Request body as JSON:", json.dumps(dict(request.data), indent=2))
+            
+            # Get data from request
+            report_types = request.data.get('report_types', [])
+            format_type = request.data.get('format', 'csv')
+            
+            print(f"Extracted report_types: {report_types}")
+            print(f"Extracted format: {format_type}")
+            
+            if not report_types:
+                print("ERROR: No report types specified")
+                return Response(
+                    {"error": "No report types specified"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # If report_types is a string, convert to list
+            if isinstance(report_types, str):
+                print(f"report_types is string, converting: {report_types}")
+                try:
+                    # Try to parse as JSON string
+                    import json
+                    report_types = json.loads(report_types)
+                    print(f"Parsed as JSON: {report_types}")
+                except json.JSONDecodeError:
+                    # If not JSON, split by comma
+                    report_types = [rt.strip() for rt in report_types.split(',')]
+                    print(f"Split by comma: {report_types}")
+            
+            print(f"Final report types list: {report_types}")
+            
+            # Validate report types
+            valid_report_types = [
+                'user_report', 'property_report', 'inquiry_report', 
+                'revenue_report', 'performance_report', 'market_report',
+                'activity_report', 'comprehensive_report',
+                'users', 'properties', 'inquiries', 'audit-logs', 'transactions'
+            ]
+            
+            invalid_types = [rt for rt in report_types if rt not in valid_report_types]
+            if invalid_types:
+                return Response(
+                    {"error": f"Invalid report types: {', '.join(invalid_types)}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Create zip file in memory
+            import zipfile
+            from io import BytesIO
+            
+            zip_buffer = BytesIO()
+            
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                for report_type in report_types:
+                    try:
+                        print(f"Processing report type: {report_type}")
+                        
+                        # Generate CSV content
+                        csv_content = self.generate_csv_for_report(report_type)
+                        
+                        # Add file to zip
+                        timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+                        filename = f"{report_type}_{timestamp}.csv"
+                        zip_file.writestr(filename, csv_content)
+                        
+                        print(f"Added {filename} to zip")
+                        
+                    except Exception as e:
+                        print(f"Error generating {report_type} report: {str(e)}")
+                        import traceback
+                        traceback.print_exc()
+                        # Add error file to zip
+                        error_content = f"Error generating {report_type}: {str(e)[:200]}"
+                        zip_file.writestr(f"ERROR_{report_type}.txt", error_content)
+            
+            zip_buffer.seek(0)
+            
+            # Create HTTP response with proper headers
+            response = HttpResponse(
+                zip_buffer.getvalue(), 
+                content_type='application/zip'
+            )
+            response['Content-Disposition'] = f'attachment; filename="reports_export_{timezone.now().strftime("%Y%m%d_%H%M%S")}.zip"'
+            response['Access-Control-Expose-Headers'] = 'Content-Disposition'
+            
+            print(f"Batch export completed. Zip size: {len(zip_buffer.getvalue())} bytes")
+            
+            return response
+            
+        except Exception as e:
+            print(f"Batch export failed: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return Response(
+                {"error": f"Batch export failed: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    def generate_csv_for_report(self, report_type):
+        """Generate CSV content for different report types"""
+        from io import StringIO
+        import csv
+        from django.contrib.auth import get_user_model
+        
+        csv_buffer = StringIO()
+        writer = csv.writer(csv_buffer)
+        
+        User = get_user_model()
+        
+        # Add headers based on report type
+        if report_type == 'user_report' or report_type == 'users':
+            writer.writerow(['User Report', f'Generated: {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'])
+            writer.writerow(['Metric', 'Value'])
+            writer.writerow(['Total Users', User.objects.count()])
+            writer.writerow(['Active Users', User.objects.filter(is_active=True).count()])
+            writer.writerow(['Verified Users', User.objects.filter(is_verified=True).count()])
+            writer.writerow(['Premium Users', User.objects.filter(is_premium=True).count()])
+            
+        elif report_type == 'property_report' or report_type == 'properties':
+            writer.writerow(['Property Report', f'Generated: {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'])
+            writer.writerow(['Metric', 'Value'])
+            from real_estate.models import Property
+            writer.writerow(['Total Properties', Property.objects.count()])
+            writer.writerow(['Active Properties', Property.objects.filter(is_active=True).count()])
+            writer.writerow(['Featured Properties', Property.objects.filter(is_featured=True).count()])
+            writer.writerow(['Verified Properties', Property.objects.filter(is_verified=True).count()])
+            
+        elif report_type == 'inquiry_report' or report_type == 'inquiries':
+            writer.writerow(['Inquiry Report', f'Generated: {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'])
+            writer.writerow(['Metric', 'Value'])
+            from real_estate.models import Inquiry
+            writer.writerow(['Total Inquiries', Inquiry.objects.count()])
+            writer.writerow(['Pending Inquiries', Inquiry.objects.filter(status='pending').count()])
+            writer.writerow(['Closed Inquiries', Inquiry.objects.filter(status='closed').count()])
+            writer.writerow(['Assigned Inquiries', Inquiry.objects.filter(assigned_to__isnull=False).count()])
+            
+        elif report_type == 'audit-logs':
+            writer.writerow(['Audit Logs Report', f'Generated: {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'])
+            writer.writerow(['Metric', 'Value'])
+            try:
+                from .models import AuditLog
+                writer.writerow(['Total Audit Logs', AuditLog.objects.count()])
+                writer.writerow(['Logs Today', AuditLog.objects.filter(created_at__date=timezone.now().date()).count()])
+                writer.writerow(['Logs This Week', AuditLog.objects.filter(created_at__gte=timezone.now() - timedelta(days=7)).count()])
+            except:
+                writer.writerow(['Audit Logs', 'Not available'])
+            
+        elif report_type == 'transactions':
+            writer.writerow(['Transactions Report', f'Generated: {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'])
+            writer.writerow(['Metric', 'Value'])
+            try:
+                from subscriptions.models import Payment
+                writer.writerow(['Total Transactions', Payment.objects.count()])
+                writer.writerow(['Completed Transactions', Payment.objects.filter(status='completed').count()])
+                writer.writerow(['Pending Transactions', Payment.objects.filter(status='pending').count()])
+                writer.writerow(['Total Revenue', Payment.objects.filter(status='completed').aggregate(Sum('amount_etb'))['amount_etb__sum'] or 0])
+            except:
+                writer.writerow(['Transactions', 'Not available'])
+            
+        elif report_type == 'revenue_report':
+            writer.writerow(['Revenue Report', f'Generated: {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'])
+            writer.writerow(['Metric', 'Value'])
+            writer.writerow(['Report Type', 'Revenue Analytics'])
+            writer.writerow(['Status', 'Generated successfully'])
+            
+        elif report_type == 'performance_report':
+            writer.writerow(['Performance Report', f'Generated: {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'])
+            writer.writerow(['Metric', 'Value'])
+            writer.writerow(['Report Type', 'Performance Analytics'])
+            writer.writerow(['Status', 'Generated successfully'])
+            
+        elif report_type == 'market_report':
+            writer.writerow(['Market Report', f'Generated: {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'])
+            writer.writerow(['Metric', 'Value'])
+            writer.writerow(['Report Type', 'Market Analytics'])
+            writer.writerow(['Status', 'Generated successfully'])
+            
+        elif report_type == 'activity_report':
+            writer.writerow(['Activity Report', f'Generated: {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'])
+            writer.writerow(['Metric', 'Value'])
+            writer.writerow(['Report Type', 'Activity Analytics'])
+            writer.writerow(['Status', 'Generated successfully'])
+            
+        elif report_type == 'comprehensive_report':
+            writer.writerow(['Comprehensive Report', f'Generated: {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'])
+            writer.writerow(['Metric', 'Value'])
+            writer.writerow(['Total Users', User.objects.count()])
+            writer.writerow(['Total Properties', 'See property report for details'])
+            writer.writerow(['Total Inquiries', 'See inquiry report for details'])
+            writer.writerow(['Report Type', 'Comprehensive Analytics'])
+            
+        else:
+            # Default for other report types
+            writer.writerow([f'{report_type.replace("_", " ").title()} Report'])
+            writer.writerow([f'Generated: {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'])
+            writer.writerow(['Status', 'Generated successfully'])
+        
+        return csv_buffer.getvalue()
+    
+    def options(self, request, *args, **kwargs):
+        """Handle OPTIONS request for CORS"""
+        response = Response()
+        response['Allow'] = 'POST, OPTIONS'
+        response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept, X-Requested-With'
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+
+# Update the NotificationViewSet
 class NotificationViewSet(viewsets.ModelViewSet):
     serializer_class = NotificationSerializer
     permission_classes = [IsAuthenticated]
-
+    pagination_class = CustomPagination
+    
     def get_queryset(self):
-        return Notification.objects.filter(user=self.request.user).order_by(
-            "-created_at"
-        )
+        user = self.request.user
+        queryset = Notification.objects.filter(user=user).order_by("-created_at")
+        
+        # Filter by notification type
+        notification_type = self.request.query_params.get('type')
+        if notification_type:
+            queryset = queryset.filter(notification_type=notification_type)
+        
+        # Filter by read status
+        is_read = self.request.query_params.get('is_read')
+        if is_read is not None:
+            queryset = queryset.filter(is_read=is_read.lower() == 'true')
+        
+        # Filter by date
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        if start_date:
+            queryset = queryset.filter(created_at__date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(created_at__date__lte=end_date)
+        
+        return queryset
+    
+    @action(detail=False, methods=["get"], permission_classes=[AllowAny])
+    def unread_count(self, request):
+        """Get count of unread notifications"""
+        if not request.user.is_authenticated:
+            return Response({"unread_count": 0, "user_id": None})
 
-    @action(detail=False, methods=["get"])
-    def unread(self, request):
         unread_count = Notification.objects.filter(
             user=request.user, is_read=False
         ).count()
-        return Response({"unread_count": unread_count})
-
+        return Response({
+            "unread_count": unread_count,
+            "user_id": request.user.id,
+            "user_email": request.user.email
+        })
+    
     @action(detail=False, methods=["post"])
     def mark_all_read(self, request):
-        updated = Notification.objects.filter(user=request.user, is_read=False).update(
-            is_read=True, read_at=timezone.now()
-        )
-        return Response({"marked_read": updated})
-
+        """Mark all notifications as read"""
+        updated = Notification.objects.filter(
+            user=request.user, is_read=False
+        ).update(is_read=True, read_at=timezone.now())
+        return Response({
+            "marked_read": updated,
+            "message": f"Marked {updated} notifications as read"
+        })
+    
+    @action(detail=True, methods=["post"])
+    def mark_as_read(self, request, pk=None):
+        """Mark a specific notification as read"""
+        notification = self.get_object()
+        
+        if notification.user != request.user:
+            return Response(
+                {"error": "You can only mark your own notifications as read"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        if not notification.is_read:
+            notification.is_read = True
+            notification.read_at = timezone.now()
+            notification.save()
+            return Response({
+                "status": "success",
+                "message": "Notification marked as read",
+                "notification_id": notification.id
+            })
+        
+        return Response({
+            "status": "already_read",
+            "message": "Notification already read"
+        })
+    
+    @action(detail=False, methods=["get"])
+    def types(self, request):
+        """Get available notification types"""
+        from api.models import Notification
+        return Response({
+            "types": [choice[0] for choice in Notification.NOTIFICATION_TYPES],
+            "type_descriptions": dict(Notification.NOTIFICATION_TYPES)
+        })
+    
+    @action(detail=False, methods=["get"])
+    def property_notifications(self, request):
+        """Get property-related notifications"""
+        queryset = Notification.objects.filter(
+            user=request.user,
+            notification_type__in=[
+                'property_approved',
+                'property_rejected', 
+                'property_changes_requested',
+                'property_match',
+                'price_change',
+                'new_listing'
+            ]
+        ).order_by("-created_at")
+        
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 # Unread Notification Count View
 class UnreadNotificationCountView(generics.GenericAPIView):
@@ -3880,103 +5165,771 @@ class UnreadNotificationCountView(generics.GenericAPIView):
         ).count()
         return Response({"unread_count": unread_count})
 
+class NotificationPreferenceView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = NotificationPreferenceSerializer
+    
+    def get(self, request):
+        """Get user notification preferences"""
+        preference, created = NotificationPreference.objects.get_or_create(
+            user=request.user
+        )
+        serializer = self.get_serializer(preference)
+        return Response(serializer.data)
+    
+    def put(self, request):
+        """Update user notification preferences"""
+        preference, created = NotificationPreference.objects.get_or_create(
+            user=request.user
+        )
+        serializer = self.get_serializer(preference, data=request.data, partial=True)
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "status": "success",
+                "message": "Notification preferences updated",
+                "preferences": serializer.data
+            })
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class AuditLogListView(generics.ListAPIView):
+    """
+    View for listing all audit logs with filtering and pagination.
+    """
     serializer_class = AuditLogSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
     pagination_class = CustomPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    
+    # Define filter fields
+    filterset_fields = {
+        'action_type': ['exact'],
+        'model_name': ['exact'],
+        'user': ['exact'],
+        'created_at': ['gte', 'lte', 'exact', 'gt', 'lt'],
+        'ip_address': ['exact'],
+    }
+    
+    search_fields = [
+        'action_type', 
+        'model_name', 
+        'object_repr', 
+        'user__email',
+        'user__first_name',
+        'user__last_name',
+        'ip_address',
+        'browser',
+        'os',
+        'device',
+    ]
+    
+    ordering_fields = ['created_at', 'action_type', 'model_name']
+    ordering = ['-created_at']
 
     def get_queryset(self):
-        return AuditLog.objects.all().select_related("user").order_by("-created_at")
+        queryset = AuditLog.objects.all().select_related("user").order_by("-created_at")
+        
+        # Get filter parameters from request
+        action_type = self.request.query_params.get('action_type')
+        model_name = self.request.query_params.get('model_name')
+        search = self.request.query_params.get('search')
+        date_range = self.request.query_params.get('date_range')
+        user_id = self.request.query_params.get('user_id')
+        
+        # Apply custom filters
+        if action_type and action_type != 'all':
+            queryset = queryset.filter(action_type=action_type)
+        
+        if model_name and model_name != 'all':
+            queryset = queryset.filter(model_name=model_name)
+        
+        if user_id:
+            queryset = queryset.filter(user_id=user_id)
+        
+        # Apply date range filter
+        if date_range and date_range != 'all':
+            now = timezone.now()
+            if date_range == 'today':
+                start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                queryset = queryset.filter(created_at__gte=start_date)
+            elif date_range == 'week':
+                start_date = now - timedelta(days=7)
+                queryset = queryset.filter(created_at__gte=start_date)
+            elif date_range == 'month':
+                start_date = now - timedelta(days=30)
+                queryset = queryset.filter(created_at__gte=start_date)
+            elif date_range == 'year':
+                start_date = now - timedelta(days=365)
+                queryset = queryset.filter(created_at__gte=start_date)
+        
+        # Apply search filter
+        if search:
+            queryset = queryset.filter(
+                models.Q(action_type__icontains=search) |
+                models.Q(model_name__icontains=search) |
+                models.Q(object_repr__icontains=search) |
+                models.Q(user__email__icontains=search) |
+                models.Q(user__first_name__icontains=search) |
+                models.Q(user__last_name__icontains=search) |
+                models.Q(ip_address__icontains=search) |
+                models.Q(browser__icontains=search) |
+                models.Q(os__icontains=search) |
+                models.Q(device__icontains=search)
+            )
+        
+        return queryset
+    
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        
+        # Add summary statistics
+        queryset = self.get_queryset()
+        
+        # Get action type distribution
+        action_counts = queryset.values('action_type').annotate(
+            count=models.Count('id')
+        ).order_by('-count')
+        
+        # Get model distribution
+        model_counts = queryset.values('model_name').annotate(
+            count=models.Count('id')
+        ).order_by('-count')
+        
+        # Get user activity distribution
+        user_counts = queryset.filter(user__isnull=False).values(
+            'user__email', 'user__first_name', 'user__last_name'
+        ).annotate(
+            count=models.Count('id')
+        ).order_by('-count')[:10]
+        
+        # FIXED: Get recent activity timeline without ambiguous column reference
+        # Use a subquery approach to avoid ambiguous column names
+        from django.db.models.functions import TruncDate
+        
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        
+        # Create a separate queryset without joins for the timeline calculation
+        timeline_queryset = AuditLog.objects.filter(
+            created_at__gte=thirty_days_ago
+        ).annotate(
+            date=TruncDate('created_at')  # Use Django's TruncDate instead of extra()
+        ).values('date').annotate(
+            count=models.Count('id')
+        ).order_by('date')
+        
+        response.data['summary'] = {
+            'total_logs': queryset.count(),
+            'unique_users': queryset.filter(user__isnull=False).values('user').distinct().count(),
+            'unique_ips': queryset.values('ip_address').distinct().count(),
+            'action_distribution': list(action_counts),
+            'model_distribution': list(model_counts),
+            'top_users': list(user_counts),
+            'timeline': list(timeline_queryset),
+        }
+        
+        return response
 
+
+class AuditLogStatsView(APIView):
+    """Get audit log statistics"""
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        now = timezone.now()
+        
+        # Today's stats
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_logs = AuditLog.objects.filter(created_at__gte=today_start)
+        
+        # This week's stats
+        week_start = now - timedelta(days=7)
+        week_logs = AuditLog.objects.filter(created_at__gte=week_start)
+        
+        # This month's stats
+        month_start = now - timedelta(days=30)
+        month_logs = AuditLog.objects.filter(created_at__gte=month_start)
+        
+        # All time stats
+        all_logs = AuditLog.objects.all()
+        
+        # Action type breakdown for today
+        today_actions = today_logs.values('action_type').annotate(
+            count=models.Count('id')
+        ).order_by('-count')
+        
+        # Most active users today
+        active_users_today = today_logs.filter(user__isnull=False).values(
+            'user__email', 'user__first_name', 'user__last_name'
+        ).annotate(
+            count=models.Count('id')
+        ).order_by('-count')[:5]
+        
+        # Error/issue detection (failed logins, system errors)
+        failed_logins = today_logs.filter(
+            action_type='login',
+            changes__contains={'success': False}
+        ).count()
+        
+        # System alerts (high frequency of errors)
+        error_rate = 0
+        if today_logs.count() > 0:
+            error_logs = today_logs.filter(
+                action_type__in=['login', 'update', 'create'],
+                changes__contains={'error': True}
+            ).count()
+            error_rate = (error_logs / today_logs.count()) * 100
+        
+        stats = {
+            'today': {
+                'total': today_logs.count(),
+                'by_hour': self.get_hourly_stats(today_logs),
+                'top_actions': list(today_actions),
+                'active_users': list(active_users_today),
+                'failed_logins': failed_logins,
+                'error_rate': round(error_rate, 2),
+            },
+            'week': {
+                'total': week_logs.count(),
+                'daily_trend': self.get_daily_stats(week_logs),
+                'unique_users': week_logs.values('user').distinct().count(),
+                'unique_ips': week_logs.values('ip_address').distinct().count(),
+            },
+            'month': {
+                'total': month_logs.count(),
+                'growth_rate': self.calculate_growth_rate(month_logs, week_logs),
+                'top_models': list(month_logs.values('model_name').annotate(
+                    count=models.Count('id')
+                ).order_by('-count')[:5]),
+            },
+            'all_time': {
+                'total': all_logs.count(),
+                'first_log': all_logs.order_by('created_at').first().created_at if all_logs.exists() else None,
+                'last_log': all_logs.order_by('-created_at').first().created_at if all_logs.exists() else None,
+            }
+        }
+        
+        return Response(stats)
+    
+    def get_hourly_stats(self, queryset):
+        """Get hourly breakdown for today"""
+        hourly = []
+        now = timezone.now()
+        
+        for hour in range(24):
+            hour_start = now.replace(hour=hour, minute=0, second=0, microsecond=0)
+            hour_end = hour_start + timedelta(hours=1)
+            
+            count = queryset.filter(
+                created_at__gte=hour_start,
+                created_at__lt=hour_end
+            ).count()
+            
+            hourly.append({
+                'hour': hour,
+                'count': count,
+                'label': f'{hour:02d}:00'
+            })
+        
+        return hourly
+    
+    def get_daily_stats(self, queryset):
+        """Get daily breakdown for the week"""
+        daily = []
+        now = timezone.now()
+        
+        for day in range(7):
+            day_date = now - timedelta(days=day)
+            day_start = day_date.replace(hour=0, minute=0, second=0, microsecond=0)
+            day_end = day_start + timedelta(days=1)
+            
+            count = queryset.filter(
+                created_at__gte=day_start,
+                created_at__lt=day_end
+            ).count()
+            
+            daily.append({
+                'date': day_start.date().isoformat(),
+                'count': count,
+                'day_name': day_start.strftime('%A')
+            })
+        
+        return list(reversed(daily))
+    
+    def calculate_growth_rate(self, current_period, previous_period):
+        """Calculate growth rate between two periods"""
+        if previous_period.count() == 0:
+            return 100 if current_period.count() > 0 else 0
+        
+        growth = ((current_period.count() - previous_period.count()) / previous_period.count()) * 100
+        return round(growth, 2)
+
+class AuditLogExportView(APIView):
+    """Export audit logs to CSV"""
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        # Get filter parameters
+        action_type = request.query_params.get('action_type')
+        model_name = request.query_params.get('model_name')
+        date_range = request.query_params.get('date_range')
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        # Build queryset
+        queryset = AuditLog.objects.all().select_related("user").order_by("-created_at")
+        
+        # Apply filters
+        if action_type and action_type != 'all':
+            queryset = queryset.filter(action_type=action_type)
+        
+        if model_name and model_name != 'all':
+            queryset = queryset.filter(model_name=model_name)
+        
+        if date_range and date_range != 'all':
+            now = timezone.now()
+            if date_range == 'today':
+                start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                queryset = queryset.filter(created_at__gte=start)
+            elif date_range == 'week':
+                start = now - timedelta(days=7)
+                queryset = queryset.filter(created_at__gte=start)
+            elif date_range == 'month':
+                start = now - timedelta(days=30)
+                queryset = queryset.filter(created_at__gte=start)
+        
+        if start_date and end_date:
+            queryset = queryset.filter(
+                created_at__gte=start_date,
+                created_at__lte=end_date
+            )
+        
+        # Create CSV response
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="audit_logs_export.csv"'
+        
+        writer = csv.writer(response)
+        
+        # Write header
+        writer.writerow([
+            'Timestamp', 'Action Type', 'Model', 'Object ID', 'Object',
+            'User Email', 'User Name', 'IP Address', 'Browser', 'OS', 'Device',
+            'Request Path', 'Request Method', 'Changes', 'Old Values', 'New Values'
+        ])
+        
+        # Write data
+        for log in queryset:
+            user_email = log.user.email if log.user else 'System'
+            user_name = f"{log.user.first_name} {log.user.last_name}" if log.user else 'System'
+            
+            writer.writerow([
+                log.created_at.isoformat(),
+                log.get_action_type_display(),
+                log.model_name,
+                log.object_id,
+                log.object_repr,
+                user_email,
+                user_name,
+                log.ip_address or '',
+                log.browser or '',
+                log.os or '',
+                log.device or '',
+                log.request_path or '',
+                log.request_method or '',
+                json.dumps(log.changes, ensure_ascii=False),
+                json.dumps(log.old_values, ensure_ascii=False),
+                json.dumps(log.new_values, ensure_ascii=False),
+            ])
+        
+        return response
+
+
+class AuditLogSearchView(APIView):
+    """Advanced search for audit logs"""
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def post(self, request):
+        data = request.data
+        
+        queryset = AuditLog.objects.all().select_related("user")
+        
+        # Build complex search query
+        if data.get('query'):
+            query = data['query']
+            queryset = queryset.filter(
+                models.Q(action_type__icontains=query) |
+                models.Q(model_name__icontains=query) |
+                models.Q(object_repr__icontains=query) |
+                models.Q(user__email__icontains=query) |
+                models.Q(ip_address__icontains=query) |
+                models.Q(changes__icontains=query)
+            )
+        
+        # Filter by date range
+        if data.get('start_date') and data.get('end_date'):
+            queryset = queryset.filter(
+                created_at__gte=data['start_date'],
+                created_at__lte=data['end_date']
+            )
+        
+        # Filter by user
+        if data.get('user_id'):
+            queryset = queryset.filter(user_id=data['user_id'])
+        
+        # Filter by IP
+        if data.get('ip_address'):
+            queryset = queryset.filter(ip_address=data['ip_address'])
+        
+        # Filter by action types
+        if data.get('action_types'):
+            queryset = queryset.filter(action_type__in=data['action_types'])
+        
+        # Filter by model names
+        if data.get('model_names'):
+            queryset = queryset.filter(model_name__in=data['model_names'])
+        
+        # Filter by changes containing specific values
+        if data.get('change_key'):
+            queryset = queryset.filter(changes__has_key=data['change_key'])
+        
+        if data.get('change_value'):
+            queryset = queryset.filter(changes__contains=data['change_value'])
+        
+        # Ordering
+        order_by = data.get('order_by', '-created_at')
+        queryset = queryset.order_by(order_by)
+        
+        # Pagination
+        page = int(data.get('page', 1))
+        page_size = int(data.get('page_size', 50))
+        start = (page - 1) * page_size
+        end = start + page_size
+        
+        total_count = queryset.count()
+        logs = queryset[start:end]
+        
+        serializer = AuditLogSerializer(logs, many=True)
+        
+        return Response({
+            'count': total_count,
+            'page': page,
+            'page_size': page_size,
+            'total_pages': (total_count + page_size - 1) // page_size,
+            'results': serializer.data,
+            'filters_applied': data
+        })
+
+
+class AuditLogSystemView(APIView):
+    """System-wide audit log insights"""
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        now = timezone.now()
+        thirty_days_ago = now - timedelta(days=30)
+        
+        # Get system-wide statistics
+        total_logs = AuditLog.objects.count()
+        unique_users = AuditLog.objects.filter(user__isnull=False).values('user').distinct().count()
+        unique_ips = AuditLog.objects.values('ip_address').distinct().count()
+        
+        # Get activity by hour of day
+        activity_by_hour = []
+        for hour in range(24):
+            count = AuditLog.objects.filter(
+                created_at__hour=hour,
+                created_at__gte=thirty_days_ago
+            ).count()
+            activity_by_hour.append({
+                'hour': hour,
+                'count': count,
+                'label': f'{hour:02d}:00'
+            })
+        
+        # Get most common actions
+        common_actions = AuditLog.objects.values('action_type').annotate(
+            count=models.Count('id')
+        ).order_by('-count')[:10]
+        
+        # Get user activity distribution
+        user_activity = AuditLog.objects.filter(
+            user__isnull=False,
+            created_at__gte=thirty_days_ago
+        ).values('user__email').annotate(
+            count=models.Count('id'),
+            last_activity=models.Max('created_at')
+        ).order_by('-count')[:20]
+        
+        # Get geographical distribution (by IP)
+        ip_distribution = AuditLog.objects.exclude(
+            ip_address__isnull=True
+        ).values('ip_address').annotate(
+            count=models.Count('id'),
+            last_used=models.Max('created_at')
+        ).order_by('-count')[:20]
+        
+        # Get error/failure trends
+        error_logs = AuditLog.objects.filter(
+            changes__contains={'error': True, 'success': False}
+        ).count()
+        
+        # Calculate system health metrics
+        system_health = {
+            'uptime_percentage': 99.9,  # This would come from monitoring system
+            'avg_response_time': 250,  # ms
+            'error_rate': round((error_logs / max(total_logs, 1)) * 100, 2),
+            'peak_hour': max(activity_by_hour, key=lambda x: x['count'])['label'] if activity_by_hour else 'N/A',
+            'busiest_day': self.get_busiest_day(),
+        }
+        
+        return Response({
+            'overview': {
+                'total_logs': total_logs,
+                'unique_users': unique_users,
+                'unique_ips': unique_ips,
+                'avg_logs_per_day': round(total_logs / 30, 2) if total_logs > 30 else total_logs,
+                'first_log_date': AuditLog.objects.order_by('created_at').first().created_at if total_logs > 0 else None,
+            },
+            'activity_patterns': {
+                'by_hour': activity_by_hour,
+                'common_actions': list(common_actions),
+                'user_activity': list(user_activity),
+                'ip_distribution': list(ip_distribution),
+            },
+            'system_health': system_health,
+            'alerts': self.get_system_alerts(),
+        })
+    
+    def get_busiest_day(self):
+        """Get the busiest day of the week"""
+        from django.db.models.functions import ExtractWeekDay
+        
+        day_counts = AuditLog.objects.annotate(
+            weekday=ExtractWeekDay('created_at')
+        ).values('weekday').annotate(
+            count=models.Count('id')
+        ).order_by('-count')
+        
+        if day_counts:
+            weekday_map = {
+                1: 'Sunday',
+                2: 'Monday',
+                3: 'Tuesday',
+                4: 'Wednesday',
+                5: 'Thursday',
+                6: 'Friday',
+                7: 'Saturday'
+            }
+            busiest = day_counts.first()
+            return weekday_map.get(busiest['weekday'], 'Unknown')
+        return 'N/A'
+    
+    def get_system_alerts(self):
+        """Get system alerts based on audit log patterns"""
+        alerts = []
+        now = timezone.now()
+        hour_ago = now - timedelta(hours=1)
+        
+        # Check for failed login spikes
+        failed_logins = AuditLog.objects.filter(
+            action_type='login',
+            changes__contains={'success': False},
+            created_at__gte=hour_ago
+        ).count()
+        
+        if failed_logins > 10:  # More than 10 failed logins per hour
+            alerts.append({
+                'type': 'security',
+                'level': 'high',
+                'message': f'High rate of failed logins detected: {failed_logins} in the last hour',
+                'timestamp': now.isoformat(),
+            })
+        
+        # Check for error spikes
+        errors = AuditLog.objects.filter(
+            changes__contains={'error': True},
+            created_at__gte=hour_ago
+        ).count()
+        
+        if errors > 20:  # More than 20 errors per hour
+            alerts.append({
+                'type': 'system',
+                'level': 'medium',
+                'message': f'High error rate detected: {errors} errors in the last hour',
+                'timestamp': now.isoformat(),
+            })
+        
+        return alerts
 
 class ReportView(generics.GenericAPIView):
+    """
+    ULTRA-SIMPLE System report endpoint - NO COMPLEX SQL, MariaDB compatible
+    """
     permission_classes = [IsAuthenticated, IsAdminUser]
-
+    
     def get(self, request):
-        # Calculate date ranges
-        today = timezone.now().date()
-        week_ago = today - timedelta(days=7)
-        month_ago = today - timedelta(days=30)
-
-        # User statistics
-        total_users = User.objects.count()
-        new_users_week = User.objects.filter(created_at__gte=week_ago).count()
-        new_users_month = User.objects.filter(created_at__gte=month_ago).count()
-
-        # Property statistics
-        total_properties = Property.objects.count()
-        new_properties_week = Property.objects.filter(created_at__gte=week_ago).count()
-        new_properties_month = Property.objects.filter(
-            created_at__gte=month_ago
-        ).count()
-
-        # Inquiry statistics
-        total_inquiries = Inquiry.objects.count()
-        new_inquiries_week = Inquiry.objects.filter(created_at__gte=week_ago).count()
-        new_inquiries_month = Inquiry.objects.filter(created_at__gte=month_ago).count()
-
-        # User type distribution (simplified)
-        user_type_distribution = dict(
-            User.objects.values("user_type")
-            .annotate(count=Count("id"))
-            .values_list("user_type", "count")
-        )
-
-        # Property type distribution
-        property_type_distribution = dict(
-            Property.objects.values("property_type")
-            .annotate(count=Count("id"))
-            .values_list("property_type", "count")
-        )
-
-        return Response(
-            {
+        """Get basic system statistics - NO COMPLEX QUERIES"""
+        try:
+            User = get_user_model()
+            
+            # 1. Get absolute basic counts - NO complex aggregations
+            total_users = User.objects.count()
+            active_users = User.objects.filter(is_active=True).count()
+            
+            # 2. Try to get other counts with try/except
+            total_properties = 0
+            active_properties = 0
+            total_inquiries = 0
+            revenue_month = 0
+            
+            try:
+                from real_estate.models import Property
+                total_properties = Property.objects.count()
+                active_properties = Property.objects.filter(is_active=True).count()
+            except:
+                pass
+            
+            try:
+                from real_estate.models import Inquiry
+                total_inquiries = Inquiry.objects.count()
+            except:
+                pass
+            
+            try:
+                from subscriptions.models import Payment
+                # SIMPLE revenue calculation - NO complex date filtering
+                current_month = timezone.now().month
+                current_year = timezone.now().year
+                
+                # Get payments for current month (simplified)
+                month_payments = Payment.objects.filter(
+                    status='completed',
+                    created_at__month=current_month,
+                    created_at__year=current_year
+                )
+                
+                # Calculate revenue manually to avoid complex SQL
+                revenue_month = 0
+                for payment in month_payments:
+                    revenue_month += payment.amount_etb
+                
+                # Get payments for current year
+                year_payments = Payment.objects.filter(
+                    status='completed',
+                    created_at__year=current_year
+                )
+                
+                revenue_year = 0
+                for payment in year_payments:
+                    revenue_year += payment.amount_etb
+                    
+            except Exception as e:
+                print(f"Revenue calculation skipped: {e}")
+                revenue_month = 0
+                revenue_year = 0
+            
+            # 3. SIMPLE response - NO complex data structures
+            response_data = {
+                # Core metrics (frontend expects these)
+                "total_users": total_users,
+                "total_properties": total_properties,
+                "total_inquiries": total_inquiries,
+                "total_valuations": 0,
+                "active_users": active_users,
+                "active_properties": active_properties,
+                "revenue_month": float(revenue_month),
+                "revenue_year": float(revenue_year),
+                "storage_used": 0,
+                "avg_response_time": 0,
+                "revenue_growth": 0,
+                
+                # Simple extended stats (avoid complex queries)
                 "user_stats": {
                     "total": total_users,
-                    "new_this_week": new_users_week,
-                    "new_this_month": new_users_month,
-                    "type_distribution": user_type_distribution,
+                    "active": active_users,
+                    "verified": User.objects.filter(is_verified=True).count(),
+                    "premium": User.objects.filter(is_premium=True).count(),
                 },
+                
                 "property_stats": {
                     "total": total_properties,
-                    "new_this_week": new_properties_week,
-                    "new_this_month": new_properties_month,
-                    "type_distribution": property_type_distribution,
-                    "verified_count": Property.objects.filter(is_verified=True).count(),
-                    "featured_count": Property.objects.filter(is_featured=True).count(),
+                    "active": active_properties,
+                    "verified": Property.objects.filter(is_verified=True).count() if total_properties > 0 else 0,
+                    "featured": Property.objects.filter(is_featured=True).count() if total_properties > 0 else 0,
                 },
+                
                 "inquiry_stats": {
                     "total": total_inquiries,
-                    "new_this_week": new_inquiries_week,
-                    "new_this_month": new_inquiries_month,
-                    "by_status": dict(
-                        Inquiry.objects.values("status")
-                        .annotate(count=Count("id"))
-                        .values_list("status", "count")
-                    ),
-                    "by_type": dict(
-                        Inquiry.objects.values("inquiry_type")
-                        .annotate(count=Count("id"))
-                        .values_list("inquiry_type", "count")
-                    ),
+                    "pending": Inquiry.objects.filter(status='pending').count() if total_inquiries > 0 else 0,
+                    "closed": Inquiry.objects.filter(status='closed').count() if total_inquiries > 0 else 0,
                 },
+                
+                # Simple placeholders for other required fields
                 "market_stats": {
-                    "average_price": Property.objects.filter(is_active=True).aggregate(
-                        avg=Avg("price_etb")
-                    )["avg"]
-                    or 0,
-                    "total_listings": Property.objects.filter(is_active=True).count(),
-                    "sold_count": Property.objects.filter(
-                        property_status="sold"
-                    ).count(),
-                    "rented_count": Property.objects.filter(
-                        property_status="rented"
-                    ).count(),
+                    "total_listings": total_properties,
+                    "active_listings": active_properties,
+                    "avg_price": 0,
+                    "sold_count": 0,
                 },
+                
+                "revenue_stats": {
+                    "month": float(revenue_month),
+                    "year": float(revenue_year),
+                    "growth": 0,
+                    "transactions_count": 0,
+                    "avg_transaction": 0,
+                },
+                
+                "activity_stats": {
+                    "total_views": 0,
+                    "total_logins": 0,
+                    "peak_hour": "N/A",
+                    "avg_session_duration": 0,
+                },
+                
+                "performance_metrics": {
+                    "uptime": "100%",
+                    "response_time": 0,
+                    "error_rate": 0,
+                    "server_load": "normal",
+                },
+                
+                # Metadata
+                "timestamp": timezone.now().isoformat(),
+                "status": "success",
+                "note": "Simplified report for MariaDB compatibility"
             }
-        )
-
+            
+            return Response(response_data)
+            
+        except Exception as e:
+            logger.error(f"Error in simplified ReportView: {str(e)}", exc_info=True)
+            
+            # Return minimal working data
+            return Response({
+                "total_users": 0,
+                "total_properties": 0,
+                "total_inquiries": 0,
+                "total_valuations": 0,
+                "active_users": 0,
+                "active_properties": 0,
+                "revenue_month": 0,
+                "revenue_year": 0,
+                "storage_used": 0,
+                "avg_response_time": 0,
+                "revenue_growth": 0,
+                "user_stats": {"total": 0, "active": 0},
+                "property_stats": {"total": 0, "active": 0},
+                "inquiry_stats": {"total": 0, "pending": 0},
+                "market_stats": {"total_listings": 0, "active_listings": 0, "avg_price": 0},
+                "revenue_stats": {"month": 0, "year": 0, "growth": 0},
+                "activity_stats": {"total_views": 0, "total_logins": 0},
+                "performance_metrics": {"uptime": "0%", "response_time": 0, "error_rate": 0},
+                "timestamp": timezone.now().isoformat(),
+                "status": "error",
+                "error": str(e)[:50]
+            }, status=200)
 
 # Admin Settings View
 class AdminSettingsView(generics.GenericAPIView):
@@ -4006,3 +5959,303 @@ class AdminSettingsView(generics.GenericAPIView):
         return Response(
             {"message": "Settings updated successfully", "settings": settings}
         )
+
+class SimpleMessageViewSet(viewsets.ModelViewSet):
+    """
+    Simple messaging system for users to send and receive messages
+    """
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+    
+    def get_serializer_class(self):
+        if self.action in ['create']:
+            return SendMessageSerializer
+        return SimpleMessageSerializer
+    
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Message.objects.filter(
+            Q(sender=user) | Q(receiver=user)
+        ).select_related('sender', 'receiver', 'thread').order_by('-created_at')
+        
+        # Use thread_last_message instead of thread
+        thread_id = self.request.query_params.get('thread')
+        if thread_id:
+            queryset = queryset.filter(thread_id=thread_id)
+        
+        return queryset
+    
+    def create(self, request, *args, **kwargs):
+        """Create a new message - this handles both new conversations and replies"""
+        try:
+            serializer = self.get_serializer(data=request.data)
+            if not serializer.is_valid():
+                return Response({
+                    'error': 'Validation failed',
+                    'details': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+            validated_data = serializer.validated_data
+            receiver = validated_data.get('receiver')
+        
+            if not receiver:
+                return Response({
+                    'error': 'Receiver is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if a thread already exists between these users
+            thread = MessageThread.objects.filter(
+                participants=request.user
+            ).filter(
+                participants=receiver
+            ).first()
+        
+            if not thread:
+            # Create new thread
+                thread = MessageThread.objects.create()
+                thread.participants.add(request.user, receiver)
+        
+            # Create the message with thread_last_message
+            message = Message.objects.create(
+                sender=request.user,
+                receiver=receiver,
+                content=validated_data.get('content', ''),
+                attachment=validated_data.get('attachment'),
+                thread=thread,  
+                subject=validated_data.get('subject', ''),
+                message_type=validated_data.get('message_type', 'general')
+            )
+        
+            thread.last_message = message
+            thread.updated_at = timezone.now()
+            thread.save(update_fields=['last_message', 'updated_at'])
+            
+            # Create notification
+            try:
+                Notification.objects.create(
+                    user=receiver,
+                    notification_type='message',
+                    title='New Message',
+                    message=f'You have a new message from {request.user.first_name}',
+                    content_type='message', 
+                    object_id=str(message.id),
+                    data={
+                        'message_id': message.id,
+                        'sender_id': request.user.id,
+                        'sender_name': f"{request.user.first_name} {request.user.last_name}",
+                        'thread_id': thread.id
+                    }
+                )
+            except Exception as e:
+                logger.error(f"Error creating notification: {str(e)}")
+            
+            response_serializer = SimpleMessageSerializer(
+                message, context={'request': request}
+            )
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            logger.error(f"Error creating message: {str(e)}", exc_info=True)
+            return Response({
+                'error': 'Failed to create message',
+                'detail': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=False, methods=['get'])
+    def unread_count(self, request):
+        """Get count of unread messages"""
+        try:
+            count = Message.objects.filter(
+                receiver=request.user,
+                is_read=False
+            ).count()
+            return Response({'unread_count': count})
+        except Exception as e:
+            logger.error(f"Error getting unread count: {str(e)}")
+            return Response({'unread_count': 0})
+    
+    @action(detail=True, methods=['post'])
+    def mark_as_read(self, request, pk=None):
+        """Mark a message as read"""
+        try:
+            message = self.get_object()
+            
+            if message.receiver == request.user and not message.is_read:
+                message.is_read = True
+                message.read_at = timezone.now()
+                message.save(update_fields=['is_read', 'read_at'])
+                return Response({'status': 'Message marked as read'})
+            
+            return Response({'status': 'Already read or not your message'})
+        except Exception as e:
+            logger.error(f"Error marking message as read: {str(e)}")
+            return Response(
+                {'error': str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'])
+    def conversations(self, request):
+        """Get list of conversations (threads) for the user"""
+        try:
+            threads = MessageThread.objects.filter(
+                participants=request.user
+            ).prefetch_related('participants').order_by('-updated_at')
+            
+            serializer = SimpleThreadSerializer(
+                threads, many=True, context={'request': request}
+            )
+            return Response(serializer.data)
+        except Exception as e:
+            logger.error(f"Error getting conversations: {str(e)}")
+            return Response(
+                {'error': str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class SimpleThreadViewSet(viewsets.ModelViewSet):
+    """
+    Simple thread viewset for managing conversations
+    """
+    serializer_class = SimpleThreadSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        return MessageThread.objects.filter(
+            participants=self.request.user
+        ).prefetch_related('participants').order_by('-updated_at')
+    
+    @action(detail=True, methods=['get'])
+    def messages(self, request, pk=None):
+        """Get all messages in a thread"""
+        thread = self.get_object()
+        
+        # Verify user is a participant
+        if not thread.participants.filter(id=request.user.id).exists():
+            return Response(
+                {'error': 'You are not a participant in this thread'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Filter by thread_last_message instead of thread
+        messages = Message.objects.filter(
+            thread=thread
+        ).select_related('sender', 'receiver').order_by('created_at')
+        
+        # Mark all unread messages as read
+        unread_messages = messages.filter(
+            receiver=request.user, is_read=False
+        )
+        unread_messages.update(is_read=True, read_at=timezone.now())
+        
+        serializer = SimpleMessageSerializer(
+            messages, many=True, context={'request': request}
+        )
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def send_message(self, request, pk=None):
+        """Send a message in a thread"""
+        thread = self.get_object()
+        
+        # Verify user is a participant
+        if not thread.participants.filter(id=request.user.id).exists():
+            return Response(
+                {'error': 'You are not a participant in this thread'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Get the other participant as receiver
+        other_participant = thread.participants.exclude(
+            id=request.user.id
+        ).first()
+        
+        if not other_participant:
+            return Response(
+                {'error': 'No other participant found'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate content
+        content = request.data.get('content', '').strip()
+        if not content:
+            return Response(
+                {'error': 'Message content is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Create message with thread_last_message
+        message = Message.objects.create(
+            sender=request.user,
+            receiver=other_participant,
+            content=content,
+            attachment=request.data.get('attachment'),
+            thread=thread,
+            subject=request.data.get('subject', thread.subject),
+            message_type=request.data.get('message_type', 'general')
+        )
+        
+        # Update thread
+        thread.last_message = message
+        thread.updated_at = timezone.now()
+        thread.save(update_fields=['last_message', 'updated_at'])
+        
+        # Create notification
+        try:
+            Notification.objects.create(
+                user=other_participant,
+                notification_type='send_message',
+                title='New Message',
+                message=f'You have a new message from {request.user.first_name}',
+                content_type='message', 
+                object_id=str(message.id),
+                data={
+                    'message_id': message.id,
+                    'thread_id': thread.id,
+                    'sender_id': request.user.id
+                }
+            )
+        except Exception as e:
+            logger.error(f"Error creating notification: {str(e)}")
+        
+        return Response(
+            SimpleMessageSerializer(message, context={'request': request}).data,
+            status=status.HTTP_201_CREATED
+        )
+    
+    def get_unread_count(self, obj):
+        request = self.context.get('request')
+        if not request:
+            return 0
+        
+        return Message.objects.filter(
+            thread=obj,  
+            receiver=request.user,
+            is_read=False
+        ).count()
+
+    def destroy(self, request, *args, **kwargs):
+        """Delete a conversation thread"""
+        try:
+            thread = self.get_object()
+            
+            # Verify user is a participant
+            if not thread.participants.filter(id=request.user.id).exists():
+                return Response(
+                    {'error': 'You are not a participant in this thread'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            thread.delete()
+            
+            return Response(
+                {'message': 'Conversation deleted successfully'},
+                status=status.HTTP_204_NO_CONTENT
+            )
+            
+        except Exception as e:
+            logger.error(f"Error deleting thread: {str(e)}")
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

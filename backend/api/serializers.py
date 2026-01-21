@@ -1,6 +1,7 @@
 # api/serializers.py (FIXED VERSION)
 from rest_framework import serializers
 from django.utils import timezone
+from datetime import datetime, timedelta
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -20,7 +21,7 @@ from real_estate.models import (
     Message,
     MessageThread,
 )
-from api.models import MarketStats, PropertyValuation, Notification, AuditLog
+from api.models import MarketStats, PropertyValuation, Notification, NotificationPreference, AuditLog
 
 User = get_user_model()
 
@@ -99,13 +100,9 @@ class UserSerializer(DynamicFieldsModelSerializer):
             "phone_number",
             "profile_picture",
             "bio",
-            "language_preference",
-            "currency_preference",
             "is_verified",
             "is_active",
             "is_premium",
-            "occupation",
-            "company",
             "profile",
             "profile_completion",
             "created_at",
@@ -332,6 +329,26 @@ class PropertyCreateSerializer(DynamicFieldsModelSerializer):
                 property=property_obj, image=image, is_primary=(i == 0), order=i
             )
 
+         # Create notification for admins
+        if property_obj.approval_status == 'pending':
+            admins = User.objects.filter(user_type='admin', is_active=True)
+            for admin in admins:
+                Notification.objects.create(
+                    user=admin,
+                    notification_type='new_listing',
+                    title='New Property Submission',
+                    message=f'New property "{property_obj.title}" needs approval',
+                    content_type='property',
+                    object_id=property_obj.id,
+                    data={
+                        'property_id': property_obj.id,
+                        'property_title': property_obj.title,
+                        'owner_id': property_obj.owner.id,
+                        'owner_email': property_obj.owner.email,
+                        'approval_status': property_obj.approval_status
+                    }
+                )
+        
         return property_obj
 
     def update(self, instance, validated_data):
@@ -718,126 +735,322 @@ class InquiryMessageSerializer(serializers.Serializer):
     message = serializers.CharField(required=True, max_length=2000)
     attachment = serializers.FileField(required=False, allow_null=True)
 
-
-# api/serializers.py - Fix the InquirySerializer
-
+# Inquiry Serializers
 class InquirySerializer(serializers.ModelSerializer):
-    property = PropertySerializer(source='property_rel', read_only=True)
+    # Read-only fields
+    property_info = serializers.SerializerMethodField(read_only=True)
+    user_info = serializers.SerializerMethodField(read_only=True)
+    assigned_to_info = serializers.SerializerMethodField(read_only=True)
+    response_by_info = serializers.SerializerMethodField(read_only=True)
+    
+    # Computed fields
+    is_urgent = serializers.BooleanField(source='get_is_urgent', read_only=True)
+    response_time = serializers.FloatField(source='get_response_time_hours', read_only=True)
+    user_display_name = serializers.CharField(source='get_user_display_name', read_only=True)
+    status_display = serializers.CharField(source='get_status_display_name', read_only=True)
+    
+    # Write-only fields
     property_id = serializers.PrimaryKeyRelatedField(
         queryset=Property.objects.filter(is_active=True),
         write_only=True,
-        source='property_rel'
+        source='property'
     )
-    city_name = serializers.CharField(source='property_rel.city.name', read_only=True)
-    sub_city_name = serializers.CharField(source='property_rel.sub_city.name', read_only=True)
-    user = UserSerializer(read_only=True)
-    assigned_to = UserSerializer(read_only=True)
-    
-    # For writing assignment
     assigned_to_id = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.filter(is_active=True),
+        queryset=User.objects.filter(user_type='admin', is_active=True),
         write_only=True,
         source='assigned_to',
         required=False,
         allow_null=True
     )
-    
-    # Additional fields
-    is_urgent = serializers.BooleanField(read_only=True)
-    response_time = serializers.FloatField(read_only=True, allow_null=True)
-    property_title = serializers.CharField(source='property_rel.title', read_only=True)
-    user_full_name = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Inquiry
         fields = [
-            'id', 'property', 'property_id', 'user', 'user_full_name',
+            # Basic info
+            'id', 'property_id', 'property_info',
+            'user', 'user_info', 'user_display_name','status_display',
             'inquiry_type', 'message', 'contact_preference',
+            
+            # Contact info
             'full_name', 'email', 'phone',
-            'status', 'priority', 'assigned_to', 'assigned_to_id',
+            
+            # Status and management
+            'status', 'priority', 
+            'assigned_to', 'assigned_to_id', 'assigned_to_info',
+            
+            # Response tracking
             'response_sent', 'response_notes', 'responded_at',
+            'response_by', 'response_by_info',
+            
+            # Additional fields
             'scheduled_viewing', 'viewing_address',
             'tags', 'internal_notes', 'follow_up_date',
             'category', 'source',
-            'created_at', 'updated_at',
-            'is_urgent', 'response_time', 'property_title', 'city_name', 'sub_city_name'
+            
+            # Computed fields
+            'is_urgent', 'response_time',
+            
+            # Metadata
+            'ip_address', 'user_agent', 'session_id',
+            'created_at', 'updated_at'
         ]
         read_only_fields = [
-            'created_at', 'updated_at', 'response_sent', 'responded_at', 
-            'user', 'property', 'is_urgent', 'response_time'
+            'id', 'user', 'property_info', 'user_info', 
+            'assigned_to_info', 'response_by_info',
+            'response_sent', 'responded_at', 'response_by',
+            'is_urgent', 'response_time', 'user_display_name',
+            'ip_address', 'user_agent', 'session_id',
+            'created_at', 'updated_at'
         ]
-    
-    def get_user_full_name(self, obj):
+        extra_kwargs = {
+            'internal_notes': {'write_only': True}  # Only admins can see this
+        }
+
+    def get_property_info(self, obj):
+        return {
+            'id': obj.property.id,
+            'title': obj.property.title,
+            'price_etb': obj.property.price_etb,
+            'monthly_rent': obj.property.monthly_rent,
+            'listing_type': obj.property.listing_type,
+            'city': obj.property.city.name if obj.property.city else None,
+            'sub_city': obj.property.sub_city.name if obj.property.sub_city else None,
+            'images': [
+                {
+                    'image': request.build_absolute_uri(img.image.url) 
+                    if (request := self.context.get('request')) and img.image 
+                    else img.image.url
+                }
+                for img in obj.property.images.all()[:3]
+            ]
+        }
+
+    def get_user_info(self, obj):
         if obj.user:
-            return f"{obj.user.first_name} {obj.user.last_name}"
-        return obj.full_name or 'Anonymous'
-    
+            return {
+                'id': obj.user.id,
+                'first_name': obj.user.first_name,
+                'last_name': obj.user.last_name,
+                'email': obj.user.email,
+                'user_type': obj.user.user_type,
+                'is_verified': obj.user.is_verified
+            }
+        return None
+
+    def get_assigned_to_info(self, obj):
+        if obj.assigned_to:
+            return {
+                'id': obj.assigned_to.id,
+                'first_name': obj.assigned_to.first_name,
+                'last_name': obj.assigned_to.last_name,
+                'email': obj.assigned_to.email
+            }
+        return None
+
+    def get_response_by_info(self, obj):
+        if obj.response_by:
+            return {
+                'id': obj.response_by.id,
+                'first_name': obj.response_by.first_name,
+                'last_name': obj.response_by.last_name,
+                'email': obj.response_by.email
+            }
+        return None
+
     def validate(self, data):
-        # Ensure either logged in user or contact info is provided
         request = self.context.get('request')
-        if not request or not request.user.is_authenticated:
-            if not data.get('full_name') or not data.get('email'):
-                raise serializers.ValidationError(
-                    "Full name and email are required for anonymous inquiries"
-                )
-        return data
-    
-    def create(self, validated_data):
-        print("=== SERIALIZER CREATE METHOD ===")
-        print(f"Validated data keys: {list(validated_data.keys())}")
         
-        # Get user from request context
-        request = self.context.get('request')
+        # For authenticated users, use their info
         if request and request.user.is_authenticated:
-            validated_data['user'] = request.user
-            print(f"Set user: {request.user.id}")
+            data['user'] = request.user
+            # Clear anonymous fields
+            data['full_name'] = f"{request.user.first_name} {request.user.last_name}"
+            data['email'] = request.user.email
+            data['phone'] = request.user.phone_number or ''
         
-        # Create the inquiry
-        try:
-            inquiry = Inquiry.objects.create(**validated_data)
-            print(f"Inquiry created with ID: {inquiry.id}")
-            return inquiry
-        except Exception as e:
-            print(f"Error creating inquiry: {str(e)}")
-            raise
+        # For anonymous users, require contact info
+        elif not data.get('full_name') or not data.get('email'):
+            raise serializers.ValidationError({
+                'full_name': 'Full name is required for anonymous inquiries',
+                'email': 'Email is required for anonymous inquiries'
+            })
+        
+        # Validate property
+        property = data.get('property')
+        if property and not property.is_active:
+            raise serializers.ValidationError({
+                'property': 'This property is not available'
+            })
+        
+        # Set metadata if request is available
+        if request:
+            data['ip_address'] = self.get_client_ip(request)
+            data['user_agent'] = request.META.get('HTTP_USER_AGENT', '')[:500]
+            if hasattr(request, 'session') and request.session.session_key:
+                data['session_id'] = request.session.session_key
+        
+        return data
+
+    def get_client_ip(self, request):
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            return x_forwarded_for.split(',')[0].strip()
+        return request.META.get('REMOTE_ADDR')
+
+    def create(self, validated_data):
+        # Create inquiry instance
+        inquiry = Inquiry.objects.create(**validated_data)
+        
+        # Create notification for property owner (if different from user)
+        if inquiry.property.owner and inquiry.property.owner != inquiry.user:
+            Notification.objects.create(
+                user=inquiry.property.owner,
+                notification_type='new_inquiry',
+                title='New Inquiry Received',
+                message=f'You have a new inquiry about your property: {inquiry.property.title}',
+                content_object=inquiry,
+                data={
+                    'inquiry_id': str(inquiry.id),
+                    'property_title': inquiry.property.title,
+                    'inquiry_type': inquiry.inquiry_type
+                }
+            )
+        
+        # Create notification for admins
+        admins = User.objects.filter(user_type='admin', is_active=True)
+        for admin in admins:
+            Notification.objects.create(
+                user=admin,
+                notification_type='new_inquiry_admin',
+                title='New Inquiry Requires Attention',
+                message=f'New inquiry about {inquiry.property.title}',
+                content_object=inquiry,
+                data={
+                    'inquiry_id': str(inquiry.id),
+                    'property_title': inquiry.property.title,
+                    'inquiry_type': inquiry.inquiry_type,
+                    'priority': inquiry.priority
+                }
+            )
+        
+        return inquiry
+
 
 class InquiryUpdateSerializer(serializers.ModelSerializer):
-    """Serializer for updating inquiries (admin/agent use)"""
-
+    """Serializer for updating inquiries (admin use mostly)"""
+    
     class Meta:
         model = Inquiry
         fields = [
-            "status",
-            "priority",
-            "assigned_to",
-            "response_notes",
-            "scheduled_viewing",
-            "viewing_address",
-            "tags",
-            "internal_notes",
-            "follow_up_date",
-            "category",
+            'status', 'priority', 'assigned_to',
+            'response_notes', 'scheduled_viewing', 'viewing_address',
+            'tags', 'internal_notes', 'follow_up_date', 'category'
         ]
-
+    
+    def validate_assigned_to(self, value):
+        """Ensure only admins can be assigned"""
+        if value and value.user_type != 'admin':
+            raise serializers.ValidationError("Only admin users can be assigned to inquiries")
+        return value
+    
     def validate_status(self, value):
         """Validate status transitions"""
         instance = self.instance
-        if instance and instance.status == "closed" and value != "closed":
-            raise serializers.ValidationError(
-                "Cannot reopen a closed inquiry. Create a new inquiry instead."
-            )
+        
+        if value == 'closed' and instance.status != 'closed':
+            # Ensure all required fields are filled before closing
+            if not instance.response_sent:
+                raise serializers.ValidationError("Cannot close inquiry without sending a response")
+        
         return value
 
 
 class InquiryDashboardSerializer(serializers.Serializer):
     """Serializer for inquiry dashboard data"""
-
+    
     overview = serializers.DictField()
     status_distribution = serializers.DictField()
     priority_distribution = serializers.DictField()
     performance = serializers.DictField()
-    time_periods = serializers.DictField()
+    recent_activities = serializers.ListField()
+    admin_stats = serializers.DictField(required=False)
 
+
+class CreateInquirySerializer(serializers.ModelSerializer):
+    """Simplified serializer for creating inquiries"""
+    
+    class Meta:
+        model = Inquiry
+        fields = [
+            'property', 'inquiry_type', 'message', 'contact_preference',
+            'full_name', 'email', 'phone', 'priority', 'category', 'source'
+        ]
+        extra_kwargs = {
+            'full_name': {'required': False},
+            'email': {'required': False},
+            'phone': {'required': False},
+        }
+    
+    def validate(self, data):
+        request = self.context.get('request')
+        
+        # For authenticated users, auto-fill contact info
+        if request and request.user.is_authenticated:
+            user = request.user
+            data['full_name'] = f"{user.first_name} {user.last_name}"
+            data['email'] = user.email
+            data['phone'] = user.phone_number or ''
+            data['user'] = user
+        else:
+            # For anonymous users, require contact info
+            if not data.get('full_name') or not data.get('email'):
+                raise serializers.ValidationError({
+                    'full_name': 'Required for anonymous inquiries',
+                    'email': 'Required for anonymous inquiries'
+                })
+        
+        return data
+
+
+class BulkUpdateInquirySerializer(serializers.Serializer):
+    """Serializer for bulk updating inquiries"""
+    
+    inquiry_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        min_length=1,
+        max_length=100
+    )
+    status = serializers.CharField(required=False)
+    priority = serializers.CharField(required=False)
+    assigned_to = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.filter(user_type='admin'),
+        required=False,
+        allow_null=True
+    )
+    tags = serializers.ListField(
+        child=serializers.CharField(),
+        required=False
+    )
+    
+    def validate_assigned_to(self, value):
+        if value and value.user_type != 'admin':
+            raise serializers.ValidationError("Only admin users can be assigned")
+        return value
+
+
+class ScheduleViewingSerializer(serializers.Serializer):
+    """Serializer for scheduling viewings"""
+    
+    viewing_time = serializers.DateTimeField(required=True)
+    address = serializers.CharField(required=False, allow_blank=True)
+    notes = serializers.CharField(required=False, allow_blank=True)
+    
+    def validate_viewing_time(self, value):
+        if value < timezone.now():
+            raise serializers.ValidationError("Viewing time cannot be in the past")
+        if value > timezone.now() + timedelta(days=90):
+            raise serializers.ValidationError("Viewing time cannot be more than 90 days in the future")
+        return value
 
 # API models serializers
 class MarketStatsSerializer(DynamicFieldsModelSerializer):
@@ -847,7 +1060,6 @@ class MarketStatsSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = MarketStats
         fields = "__all__"
-
 
 class PropertyValuationSerializer(DynamicFieldsModelSerializer):
     city = CitySerializer(read_only=True)
@@ -865,7 +1077,12 @@ class NotificationSerializer(DynamicFieldsModelSerializer):
         fields = "__all__"
         read_only_fields = ["created_at", "read_at", "sent_at"]
 
-
+class NotificationPreferenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NotificationPreference
+        fields = '__all__'
+        read_only_fields = ['user', 'created_at', 'updated_at']
+        
 class AuditLogSerializer(DynamicFieldsModelSerializer):
     user = UserSerializer(read_only=True)
 
@@ -998,3 +1215,112 @@ class AddToComparisonSerializer(serializers.Serializer):
     property_ids = serializers.ListField(
         child=serializers.IntegerField(), min_length=1, max_length=10
     )
+
+class SimpleUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'first_name', 'last_name', 'email', 'profile_picture', 'user_type']
+
+class SimpleMessageSerializer(serializers.ModelSerializer):
+    sender = SimpleUserSerializer(read_only=True)
+    receiver = SimpleUserSerializer(read_only=True)
+    is_my_message = serializers.SerializerMethodField()
+    formatted_time = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Message
+        fields = [
+            'id', 'sender', 'receiver', 'content', 'attachment',
+            'is_read', 'created_at', 'is_my_message', 'formatted_time',
+            'thread', 'subject', 'message_type'
+        ]
+        read_only_fields = ['created_at', 'is_read', 'thread_last_message']
+    
+    def get_is_my_message(self, obj):
+        request = self.context.get('request')
+        return request and request.user == obj.sender
+    
+    def get_formatted_time(self, obj):
+        now = timezone.now()
+        diff = now - obj.created_at
+        
+        if diff.days > 0:
+            return obj.created_at.strftime("%b %d, %Y")
+        elif diff.seconds > 3600:
+            hours = diff.seconds // 3600
+            return f"{hours}h ago"
+        elif diff.seconds > 60:
+            minutes = diff.seconds // 60
+            return f"{minutes}m ago"
+        else:
+            return "Just now"
+
+class SendMessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Message
+        fields = ['receiver', 'content', 'attachment', 'subject']
+    
+    def validate(self, data):
+        # Ensure receiver exists and is not the sender
+        request = self.context.get('request')
+        receiver = data.get('receiver')
+        
+        if receiver == request.user:
+            raise serializers.ValidationError("You cannot send a message to yourself")
+        
+        return data
+
+class SimpleThreadSerializer(serializers.ModelSerializer):
+    participants = SimpleUserSerializer(many=True, read_only=True)
+    other_user = serializers.SerializerMethodField()
+    last_message_content = serializers.SerializerMethodField()
+    last_message_time = serializers.SerializerMethodField()
+    unread_count = serializers.SerializerMethodField()
+    subject = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = MessageThread
+        fields = [
+            'id', 'participants', 'other_user', 
+            'last_message_content', 'last_message_time',
+            'unread_count', 'updated_at', 'subject'
+        ]
+    
+    def get_other_user(self, obj):
+        request = self.context.get('request')
+        if not request:
+            return None
+        
+        other_participants = obj.participants.exclude(id=request.user.id)
+        if other_participants.exists():
+            other_user = other_participants.first()
+            return SimpleUserSerializer(other_user).data
+        return None
+    
+    def get_last_message_content(self, obj):
+        if obj.last_message:
+            return obj.last_message.content
+        return ''
+    
+    def get_last_message_time(self, obj):
+        if obj.last_message:
+            return obj.last_message.created_at
+        return obj.updated_at
+
+    def get_subject(self, obj):
+        """Get the subject from the first message in the thread"""
+        if obj.last_message and hasattr(obj.last_message, 'subject'):
+            return obj.last_message.subject
+        return ''
+    
+    def get_unread_count(self, obj):
+        request = self.context.get('request')
+        if not request:
+            return 0
+        
+        # Filter by thread_last_message
+        return Message.objects.filter(
+            thread_last_message=obj,
+            receiver=request.user,
+            is_read=False
+        ).count()

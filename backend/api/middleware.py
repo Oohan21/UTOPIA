@@ -1,8 +1,13 @@
 import time
+import logging
 from django.utils.deprecation import MiddlewareMixin
+from django.utils import timezone
 from analytics.models import PlatformAnalytics
 from users.models import CustomUser
 from real_estate.models import Message
+
+# Logger for API analytics/debug
+logger = logging.getLogger('api')
 
 class MessageReadMiddleware(MiddlewareMixin):
     """
@@ -75,4 +80,28 @@ class AnalyticsMiddleware(MiddlewareMixin):
     def process_exception(self, request, exception):
         # Log exceptions for analytics
         logger.error(f"Exception in {request.path}: {exception}")
+        return None
+
+
+class AnalyticsDebugMiddleware(MiddlewareMixin):
+    """
+    Middleware to log incoming cookies and authentication state for analytics/admin endpoints.
+    Use this to debug why session cookies or authentication may not be present.
+    """
+
+    def process_request(self, request):
+        try:
+            if request.path.startswith('/api/analytics/') or '/api/admin/' in request.path:
+                auth_header = request.META.get('HTTP_AUTHORIZATION')
+                logger.debug(
+                    "AnalyticsDebug request: path=%s cookies=%s auth=%s user_authenticated=%s user_id=%s",
+                    request.path,
+                    request.COOKIES,
+                    auth_header,
+                    getattr(request.user, 'is_authenticated', False),
+                    getattr(request.user, 'id', None),
+                )
+        except Exception as e:
+            logger.exception("Failed to log analytics debug info: %s", e)
+
         return None
