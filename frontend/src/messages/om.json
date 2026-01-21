@@ -17,17 +17,87 @@
     "searchProperties": "Qabeenyaalee barbaadi...",
     "home": "Mana",
     "save": "Qabsiisi",
+    "saved": "Qabsiifame",
     "cancel": "Furii",
     "loginRequired": "Maaloo seenaa",
     "close": "Cufi",
-    "active": "Hojiirra jira"
+    "currency": "Birr",
+    "active": "Hojiirra jira",
+    "gridView": "Giraadii",
+    "list": "Liistii",
+    "listView": "Liistii",
+    "inquiries": "Gaafannoo",
+    "admin": {
+      "panel": "Bulchinsa",
+      "viewSite": "Saayitii Ilali",
+      "navigation": {
+        "title": "Naavigeeshinii"
+      },
+      "quickActions": {
+        "title": "Dalagoota Aantaan",
+        "pendingApprovals": "Eegaa Mirkaneessuuf",
+        "recentInquiries": "Gaafannoo Dhiyoo",
+        "generateReport": "Ripoortii Uumi"
+      },
+      "help": {
+        "title": "Gargaarsa & Deeggarsa"
+      },
+      "systemStatus": {
+        "title": "Haala Siisteemii",
+        "online": "Onlaayinii",
+        "offline": "Ooflaayinii"
+      },
+      "accessDenied": {
+        "title": "Dhaammachuu Hin Dandeenye",
+        "description": "Paaneelii bulchinsaa dhaammachuuf hayyama hin qabdu. Bulchinsaan qofa iddoo kana dhaammachuu danda'a.",
+        "goHome": "Mana Geessi"
+      },
+      "dashboard": {
+        "title": "Daashboordii",
+        "subtitle": "Ilaalcha bulchinsaa fi ragaan"
+      },
+      "users": {
+        "title": "Fayyadamaalee",
+        "subtitle": "Fayyadamaa pirootokoollaa bulchi"
+      },
+      "properties": {
+        "all": "Qabeenyaalee Hundaa",
+        "allSubtitle": "Liistii qabeenyaalee hundaa bulchi",
+        "title": "Qabeenyaalee",
+        "subtitle": "Liistii qabeenyaalee bulchi"
+      },
+      "approval": {
+        "title": "Mirkaneessuu",
+        "subtitle": "Qabeenyaalee galmaa'aniif mirkaneessi"
+      },
+      "inquiries": {
+        "title": "Gaafannoo",
+        "subtitle": "Gaafannoo ilaali fi deebisi"
+      },
+      "reports": {
+        "title": "Ripoortii",
+        "subtitle": "Ripoortii uumi fi ilaali"
+      },
+      "analytics": {
+        "title": "Xiinxala",
+        "subtitle": "Xiinxala pirootokoollaa"
+      },
+      "audit": {
+        "title": "Auditii",
+        "subtitle": "Auditii hordofi fi ilaali"
+      },
+      "settings": {
+        "title": "Saayitii",
+        "subtitle": "Waliigaltee siisteemii"
+      }
+    }
   },
   "home": {
     "title": "Qabeenyi siif gaari Itoophiyaa keessatti argadhu",
-    "subtitle": "Utopia miiraalee qabeenyaalee gaariin si waliin walitti fidha. Qabeenyaalee mirgaawaan lakkaa'amanii dhiheessanii, gatii dhiheessanii, haala odeeffannoo qabuun murteessaa.",
+    "subtitle": "UTOPIA miiraalee qabeenyaalee gaariin si waliin walitti fidha. Qabeenyaalee mirgaawaan lakkaa'amanii dhiheessanii, gatii dhiheessanii, haala odeeffannoo qabuun murteessaa.",
     "browseProperties": "Qabeenyaalee ilaali",
-    "getValuation": "Gatii dhiheessi",
-    "whyChoose": "Maaliif Utopia filattu",
+    "compareProperties": "Qabeenyaalee Walitti Maki",
+    "whyChoose": "Maaliif UTOPIA filattu",
     "wideSelection": "Filannoo bal'aa",
     "wideSelectionDesc": "Qabeenyaalee kumaatama Itoophiyaa keessatti",
     "marketInsights": "Hubannoo soorataa",
@@ -46,9 +116,11 @@
     "marketDataUnavailable": "Odeeffannoo soorataa hin argamu",
     "marketDataUnavailableDesc": "Rakkoo soorataa yeroo dhiyaateen argama",
     "readyToFind": "Qabeenyi abjuu kee argachuuf qophaa'eeraa?",
-    "joinThousands": "Bitootaan jaalatamanii fi gurgurtoota jaalatamanii kumaatamaan Utopia irratti makamani",
+    "joinThousands": "Bitootaan jaalatamanii fi gurgurtoota jaalatamanii kumaatamaan UTOPIA irratti makamani",
     "signUpFree": "Bilisaan galmeessi",
-    "browseListings": "Liistii ilaali"
+    "browseListings": "Liistii ilaali",
+    "search": "Barbaadi",
+    "searchPlaceholder": "Qabeenyaalee, iddooolee, ykn jechoota gulmaa barbaadi..."
   },
   "property": {
     "forSale": "Gurguruf",
@@ -63,9 +135,11 @@
     "compare": "Walitti maki",
     "contact": "Qunnamii",
     "perMonth": "/ji'a",
+    "ETB": "Birr",
     "areaUnit": "m²",
     "priceNegotiable": "Gatii walii galtee dha",
     "verifiedSeller": "Bitataa Mirkaneeffamaa",
+    "verified": "Mirkaneeffamaa",
     "propertyOwner": "Kan Qabeenyi",
     "contactInformation": "Odeeffannoo Qunnamtii",
     "contactDetails": "Ibsa Qunnamtii",
@@ -143,7 +217,7 @@
       "petFriendly": "Pet Friendly",
       "swimmingPool": "Walisiiwwan uwwifannaa",
       "elevator": "Elevator",
-      "accessible": "Argama",
+      "accessible": "Argama Waliin Tuutaalee",
       "heating": "Ho'ina",
       "waterBackup": "Bishaan Backup",
       "conferenceRoom": "Kutaa Walgahii"
@@ -154,6 +228,7 @@
       "occupancyCertificate": "Warqaa Iddoo Irra Jiraachuu"
     },
     "perMonth": "/ji'a",
+    "ETB": "Birr",
     "priceNegotiable": "Gatii walii galtee dha",
     "verifiedSeller": "Bitataa Mirkaneeffamaa",
     "propertyOwner": "Kan Qabeenyi",
@@ -176,6 +251,7 @@
     "listed": "Liistii godhame",
     "views": "ilaalcha",
     "inquiries": "gaafannoo",
+    "active": "Hojiirra jira",
     "saved": "qabsiifame",
     "status": "Haala",
     "statuses": {
@@ -366,8 +442,8 @@
     }
   },
   "listings": {
-    "title": "Qabeenyaalee Ilali",
-    "subtitle": "Qabeenyi abjuu kee argadhu",
+    "title": "Qabeenyi Abjuu Kee Argadhu",
+    "subtitle": "Qabeenyaalee 20+ premium filtriiwwan irra geessoo waliin ilaali",
     "searchPlaceholder": "Qabeenyaalee, iddooolee, ykn jechoota gulmaa barbaadi...",
     "filter": "Filtariiwwan",
     "showFilters": "Filtariiwwan Agarsiisi",
@@ -412,7 +488,8 @@
       "any": "Kutaa Dhiqannaa Kamuu",
       "1": "Kutaa Dhiqannaa 1+",
       "2": "Kutaa Dhiqannaa 2+",
-      "3": "Kutaa Dhiqannaa 3+"
+      "3": "Kutaa Dhiqannaa 3+",
+      "4": "Kutaa Dhiqannaa 4+"
     },
     "sortOptions": {
       "recommended": "Gorsifame",
@@ -421,9 +498,14 @@
       "priceHighToLow": "Gatii: Ol'aanaa irraa Dhihootti",
       "largest": "Guddaa Jalqaba",
       "mostViewed": "Baay'ee Ilaalamu",
-      "featured": "Addaa Jalqaba"
+      "featured": "Addaa Jalqaba",
+      "promoted": "Fooyya'amee Jalqaba",
+      "areaLargeToSmall": "Iddoo: Guddaa irraa Xiqqaatti",
+      "pricePerSqmLow": "Gatii m² irraa: Dhihoo irraa Ol'aanaatti",
+      "pricePerSqmHigh": "Gatii m² irraa: Ol'aanaa irraa Dhihootti"
     },
     "filters": {
+      "all": "Hundaa",
       "advancedFilters": "Filtariiwwan Irra Geessoo",
       "location": "Iddoo",
       "priceRange": "Madaala Gatii (Birr)",
@@ -437,14 +519,22 @@
       "selectArea": "Iddoo Filadhu",
       "allAreas": "Iddoo Hundaa",
       "min": "Xiqqaa",
-      "max": "Guddaa"
+      "max": "Guddaa",
+      "propertyType": "Gosa Qabeenyaa",
+      "propertyStatus": "Haala Qabeenyaa",
+      "furnishingType": "Gosa Qopheeffamaa",
+      "condition": "Haala",
+      "yearBuilt": "Waggaa Ijaarame",
+      "essentials": "Bu'uuraa",
+      "comfort": "Qabsiisaa",
+      "lifestyle": "Haala Jireenyaa"
     },
     "actions": {
       "resetAll": "Hundaa Deebisi",
       "saveSearch": "Barbaachisa Qabsiisi",
       "listProperty": "Qabeenya Liistii Godhi",
       "viewAllFeatured": "Addaa Hundaa Ilali",
-      "compareNow": "Walitti Maki",
+      "compareNow": "Amma Walitti Maki",
       "hide": "Dhoksi",
       "fullscreen": "Shaashii Guutuu",
       "exitFullscreen": "Shaashii Guutuu Ba'i",
@@ -454,7 +544,10 @@
       "propertySaved": "Qabeenyi qabsiifame!",
       "removedFromSaved": "Qabsiifamaa irraa ka'e",
       "addedToComparison": "Wal maki irratti dabalamte",
-      "listed": "Liistii godhame"
+      "listed": "Liistii godhame",
+      "applyFilters": "Filtariiwwan Iyyi",
+      "applyClose": "Iyyi & Cufi",
+      "clearAll": "Hundaa Qulqulleessi"
     },
     "results": {
       "propertiesFound": "Qabeenyaalee {count} argamaniiru",
@@ -464,11 +557,16 @@
       "noProperties": "Qabeenyaalee hin argamne",
       "noMatch": "Qabeenyaaleen \"{search}\" hin makitamu. Qajeelfama barbaachisaa kee jijjiiri.",
       "adjustFilters": "Filtariiwwan ykn qajeelfama barbaachisaa kee jijjiiri",
-      "loading": "Qabeenyaalee buufatamu jira..."
+      "loading": "Qabeenyaalee buufatamu jira...",
+      "loadingMore": "Qabeenyaalee dabalataa buufatamu jira...",
+      "endOfResults": "Buccaa bu'aa bu'uuree keessa seenne"
     },
     "featured": {
       "title": "Qabeenyaalee Addaa",
-      "featuredCount": "{count} addaa"
+      "featuredCount": "{count} addaa",
+      "subtitle": "Liistii Premium ilaalcha guddaa qaban",
+      "viewDetails": "Ibsa Ilali",
+      "saveProperty": "Qabeenya Qabsiisi"
     },
     "promotion": {
       "basic": "Basic",
@@ -495,6 +593,7 @@
       "clearAll": "Hundaa Qulqulleessi",
       "popularSearches": "Barbaachisa Beekamaa",
       "searchTips": "Gorsa Barbaachisaa",
+      "currentSearchCriteria": "Qajeelfama Barbaachisaa Ammaa",
       "historyEmpty": "Seenaa barbaachisaa kee asitti mul'ata"
     },
     "tips": {
@@ -510,19 +609,2331 @@
       "propertiesOnMap": "Qabeenyaalee Kaartaa Irra Jiru",
       "legend": "Fakkeenya Kaartaa",
       "layers": "Saffisaalee",
+      "loadingMap": "Kaartaa buufatama jira...",
       "standard": "Sadarkaa",
       "promoted": "Fooyya'amaa",
       "featured": "Addaa"
     },
     "stats": {
       "views": "ilaalcha",
-      "inquiries": "gaafannoo"
+      "inquiries": "gaafannoo",
+      "averagePrice": "Gatii Giddugaleessaa",
+      "propertiesInArea": "Qabeenyaalee Iddoo Keessatti",
+      "avgDaysListed": "Giddugaleessaan Guyyaa Liistii Godhame",
+      "verifiedListings": "Liistii Mirkaneeffamaa",
+      "save": "Qabsiisi",
+      "saves": "Qabsiifamtoota"
     },
     "errors": {
       "unableToLoad": "Qabeenyaalee Bu'uufachuu Hin Dandeenye",
       "errorLoading": "Qabeenyaalee bu'uufachuun dogoggora ta'eera. Irra deebi'ii yaali.",
       "saveFailed": "Qabeenya qabsiifachuu hin dandeenye",
       "addToComparisonFailed": "Wal maki irratti dabalchuu hin dandeenye"
+    },
+    "saveSearch": {
+      "title": "Barbaachisa Ammaa Qabsiisi",
+      "description": "Qajeelfama barbaachisaa kee qabsiisi qabeenyaalee haaraan waliigaltee ta'an yeroo liistii godhaman beeksisa argachuuf.",
+      "searchName": "Maqaa Barbaachisaa",
+      "searchNamePlaceholder": "fkn, apaartimaantota kutaa 3 Bole keessatti",
+      "moreFilters": "+{count} filtariiwwan dabalataa",
+      "save": "Barbaachisa Qabsiisi",
+      "cancel": "Furii"
+    },
+    "comparison": {
+      "inComparison": "{count} wal maki keessatti",
+      "selectForComparison": "Wal maki gaarii 2-4 qabeenyaalee filadhu",
+      "compareNow": "Amma Walitti Maki",
+      "hide": "Dhoksi"
+    },
+    "amenityCategories": {
+      "essentials": {
+        "parking": "Parking",
+        "security": "Nagaa",
+        "waterBackup": "Bishaan Backup",
+        "generator": "Generator"
+      },
+      "comfort": {
+        "airConditioning": "A/C",
+        "heating": "Ho'ina",
+        "elevator": "Elevator",
+        "furnished": "Qopheeffamaa"
+      },
+      "lifestyle": {
+        "swimmingPool": "Walisiiwwan uwwifannaa",
+        "gym": "Jiimii",
+        "garden": "Ogeessa",
+        "conferenceRoom": "Kutaa Walgahii"
+      }
+    },
+    "furnishingTypes": {
+      "any": "Kamuu",
+      "furnished": "Qopheeffamaa",
+      "semi_furnished": "Giddu galeessaan Qopheeffamaa",
+      "unfurnished": "Kan Hin Qopheeffamne"
+    },
+    "propertyStatuses": {
+      "verified": "Qabeenyaalee Mirkaneeffamaa",
+      "featured": "Qabeenyaalee Addaa",
+      "promoted": "Qabeenyaalee Fooyya'amaa"
+    }
+  },
+  "createListing": {
+    "titles": {
+      "sellProperty": "Qabeenyi Kee Gurguri",
+      "rentProperty": "Qabeenyi Kee Kafali",
+      "sellYourProperty": "Qabeenyi Kee Gurguri",
+      "rentYourProperty": "Qabeenyi Kee Kafali",
+      "editProperty": "Qabeenya Sirreessi",
+      "editRentalProperty": "Qabeenya Kafaltii Sirreessi",
+      "editYourProperty": "Qabeenyi Kee Sirreessi",
+      "editYourRentalProperty": "Qabeenyi Kafaltii Kee Sirreessi"
+    },
+    "subtitles": {
+      "fillDetails": "Ibsa qabeenyaa kee guuti eegaluuf"
+    },
+    "editing": "Sirreessuu",
+    "progress": {
+      "completion": "{percentage}% Guutuu",
+      "sections": "{completed}/{total} gareen guutuu",
+      "basic": "Bu'uuraa",
+      "location": "Iddoo",
+      "details": "Ibsa",
+      "pricing": "Gatii Saassaa",
+      "features": "Faayidaalee",
+      "media": "Meediyaa",
+      "promotion": "Fooyya'aa"
+    },
+    "sections": {
+      "basic": {
+        "title": "Odeeffannoo Bu'uuraa",
+        "subtitle": "Qabeenyi kee irratti nu himi",
+        "listingType": "Gosa Liistii",
+        "sell": "Qabeenya Gurguri",
+        "rent": "Qabeenya Kafali",
+        "propertyTitle": "Maqaa Qabeenyaa",
+        "titlePlaceholder": "fkn, Viilaa Kutaa 3 Gaarii Bole keessatti",
+        "titleTip": "Ilaalchaa baay'ee akka argatu taasisi",
+        "propertyType": "Gosa Qabeenyaa",
+        "propertyTypePlaceholder": "Gosa qabeenyaa filadhu",
+        "description": "Ibsa",
+        "descriptionPlaceholder": "Qabeenyi kee sirriitti ibsi...",
+        "beDescriptive": "Ibsaa ta'i",
+        "propertyStatus": "Haala Qabeenyaa",
+        "statusPlaceholder": "Haala qabeenyaa filadhu",
+        "sellDescription": "Qabeenyi kee gurguruf liistii godhi",
+        "rentDescription": "Qabeenyi kee kafaltiif liistii godhi"
+      },
+      "progress": {
+        "basic": "Bu'uuraa",
+        "location": "Iddoo",
+        "details": "Ibsa",
+        "pricing": "Gatii Saassaa",
+        "features": "Faayidaalee",
+        "media": "Meediyaa"
+      },
+      "details": {
+        "title": "Ibsa Qabeenyaa",
+        "subtitle": "Odeeffannoo ibsaa qabeenyaa kee irratti kenni",
+        "bedrooms": "Kutaa manaa",
+        "selectBedrooms": "Kutaa manaa filadhu",
+        "bathrooms": "Kutaa dhiqannaa",
+        "selectBathrooms": "Kutaa dhiqannaa filadhu",
+        "totalArea": "Iddoo Waliigalaa (m²)",
+        "plotSize": "Saayizii Piilootii (m²)",
+        "plotSizePlaceholder": "Manaafi lafaaf",
+        "builtYear": "Waggaa Ijaarame",
+        "numberOfFloors": "Lakkoofsa Saffisaalee",
+        "furnishingType": "Gosa Qopheeffamaa",
+        "selectFurnishingType": "Gosa qopheeffamaa filadhu"
+      },
+      "location": {
+        "title": "Ibsa Iddoo",
+        "subtitle": "Qabeenyi kee eessa jira?",
+        "city": "Magaalaa",
+        "selectCity": "Magaalaa filadhu",
+        "loadingCities": "Magaalota buufatama jira...",
+        "failedToLoad": "Magaalota bu'uufachuu hin dandeenye",
+        "noCities": "Magaalota hin jiru",
+        "subCity": "Magaalaa giddu galeessa",
+        "selectSubCity": "Magaalaa giddu galeessa filadhu",
+        "loading": "Buufatama jira...",
+        "selectCityFirst": "Jalqabumatti magaalaa filadhu",
+        "failedToLoadSubCities": "Magaalota giddu galeessa bu'uufachuu hin dandeenye",
+        "noSubCities": "Magaalota giddu galeessa hin jiru",
+        "specificLocation": "Iddoo Sirriitti",
+        "specificLocationPlaceholder": "fkn, Dhihoo Kaarichii Bole Medhanealem",
+        "addressLine1": "Lakkoofsa 1",
+        "addressLine1Placeholder": "Lakkoofsa karaa",
+        "addressLine2": "Lakkoofsa 2",
+        "addressLine2Placeholder": "Apaartimaanti, suuti, yuuniti (filannoo)",
+        "exactCoordinates": "Koordineetii Sirriitti",
+        "detectingLocation": "Iddoo kee saaqaa jira...",
+        "locationDetected": "Iddoo saaqame",
+        "unableToDetect": "Iddoo saaqachuu hin dandeenye",
+        "geolocationNotSupported": "Geolocation hin deeggaramu",
+        "detecting": "Saaqaa jira...",
+        "autoDetect": "Ofii saaqi",
+        "latitude": "Laatiityuudii",
+        "longitude": "Loongitiyuudii",
+        "enterCoordinatesFirst": "Jalqabumatti koordineetii galchi",
+        "couldNotFetch": "Iddoo argachuu hin dandeenye",
+        "lookUp": "Ilali",
+        "lookingUp": "Ilaalama jira...",
+        "area": "Naannoo",
+        "privacyTitle": "Iccitii Dhoksaa",
+        "privacyDescription": "Koordineetii sirriitti agarsiisa kaartaa qofaaf fayyadama. Lakkoofsi kee kan qabeenyi dhiyaan isaaniif qoodame hin taane hanga fayyadamaa mirkaneeffamaa waliin qooddu."
+      },
+      "pricing": {
+        "saleTitle": "Gatii Saassaa",
+        "rentTitle": "Gatii Kafaltii",
+        "subtitle": "Gatii kee sirreessi",
+        "calculationMode": "Gatii Saassaa",
+        "etb": "Birr",
+        "usd": "USD",
+        "priceETB": "Gatii Birr keessatti",
+        "pricePlaceholder": "Gatii Birr keessatti galchi",
+        "monthlyRent": "Kafaltii Ji'a",
+        "rentPlaceholder": "Kafaltii ji'a galchi",
+        "negotiable": "Gatii walii galtee dha",
+        "negotiableDescription": "Bitootaan/gurgurtoonni gatii walii galtee danda'u",
+        "tipsTitle": "Gorsa Gatii Saassaa",
+        "saleTips": "Gatii makitamaa taasistuuf naannoo kee keessatti qabeenyaalee wal fakkaatan qoradhu.",
+        "rentTips": "Iddoo, qabeenyaalee, fi fedhii soorataa yaali yeroo kafaltii sirreessitu.",
+        "title": "Odeeffannoo Gatii Saassaa",
+        "salePrice": "Gatii Gurgurtaa",
+        "rentalInformation": "Odeeffannoo Kafaltii",
+        "priceCalculation": "Gatii Saassaa",
+        "priceEtb": "Gatii (Birr)",
+        "priceUsd": "Gatii (USD)",
+        "securityDeposit": "Depozitii Nagaa",
+        "monthlyMaintenance": "Qabiyyee Ji'a",
+        "annualPropertyTax": "Saa'ii Qabeenyaa Waggaa",
+        "propertyTax": "Saa'ii Qabeenyaa",
+        "priceNegotiable": "Gatii walii galtee dha",
+        "priceNegotiableDescription": "Bitootaan/gurgurtoonni gatii walii galtee danda'u haa jiraatan",
+        "priceCheckRequired": "Gatii Saassuu Barbaachisa",
+        "pricingTips": "Gorsa Gatii Saassaa",
+        "saleTip": "Qabeenyaalee gurgurtaaf: Gatii makitamaa sirreessuuf naannoo kee keessatti gurgurta dhiyoo qoradhu.",
+        "rentTip": "Qabeenyaalee kafaltiif: Qabeenyaalee wal fakkaatan mana keessatti waliin wal maki.",
+        "marketTrends": "Gatii kee sirreessuu kee dura giddugaleessa soorataa ammaa ilaali.",
+        "competitivePricing": "Gatii makitamaa gurgurta/kafaltii aantaan geessa.",
+        "includeUtilities": "Yoo ta'u baattee, gatii kafaltii keessatti kaffaltii fayyadamaa dabaladhu."
+      },
+      "promotion": {
+        "title": "Fooyya'aa",
+        "subtitle": "Liistii kee ilaalcha dabalataa argadhu",
+        "loading": "Filannoo fooyya'aa buufatama jira...",
+        "selectTier": "Sadaffaa Fooyya'aa Filadhu"
+      },
+      "features": {
+        "title": "Faayidaalee & Qabeenyaalee",
+        "subtitle": "Faayidaalee fi qabeenyaalee hundaa qabeenyi kee kennu filadhu",
+        "essentials": "Bu'uuraa",
+        "essentialsDescription": "Fayyadama bu'uuraa fi faayidaalee nageenyaa",
+        "comfort": "Qabsiisaa",
+        "comfortDescription": "To'annoo qilleensaa fi faayidaalee mirkaneessuu",
+        "appliances": "Meeshaalee",
+        "appliancesDescription": "Meeshaalee mana nyaataa fi dhiqannaa",
+        "lifestyle": "Haala Jireenyaa",
+        "lifestyleDescription": "Faayidaalee boqonnaa fi alaa",
+        "technology": "Teknooloojii",
+        "technologyDescription": "Faayidaalee mana samartii fi teknooloojii",
+        "services": "Tajaajiloota",
+        "servicesDescription": "Tajaajiloota tarkaanfii fi konjiyeerjii",
+        "community": "Hawaasa",
+        "communityDescription": "Qabeenyaalee waliigalaa fi iddoo hawaasaa",
+        "selectByCategory": "Gareen waliin faayidaalee filadhu",
+        "propertyDocuments": "Dookumantoota Qabeenyaa",
+        "propertyDocumentsDescription": "Dookumantoota qabeenyaa argama filadhu",
+        "additionalAmenities": "Qabeenyaalee Dabalataa",
+        "additionalAmenitiesDescription": "Qabeenyaalee dabalataa daataa keenya irraa",
+        "loadingAmenities": "Qabeenyaalee buufatama jira...",
+        "noAdditionalAmenities": "Qabeenyaalee dabalataa hin jiru"
+      },
+      "media": {
+        "title": "Suuraawwan & Meediyaa",
+        "subtitle": "Suuraawwan fi vidiyeewwan qabeenyaa kee agarsiisuuf ol kaayi",
+        "propertyPhotos": "Suuraawwan Qabeenyaa",
+        "propertyPhotosDescription": "Suuraawwan ifaa, qulqullina ol'aanaa qabeenyaa kee irraa ol kaayi",
+        "photos": "suuraawwan",
+        "required": "Barbaachisa",
+        "existingPhotos": "Suuraawwan Jiran",
+        "clickToRemove": "Faarsuuf calaqqisi",
+        "newPhotosToUpload": "Suuraawwan Haaraan Ol Kaayuuf",
+        "dragToReorder": "Haala haaraa taasisuuf dhiibsi",
+        "dragDropImages": "Suuraawwan Dhiibi & Dhiixi",
+        "clickToBrowse": "ykn daawwachuuf calaqqisi",
+        "selectImages": "Suuraawwan Filadhu",
+        "useGoodLighting": "Ifaa gaarii fayyadami",
+        "showAllRooms": "Kutaalee hundaa agarsiisi",
+        "cleanAndTidy": "Iddoowwan qulqulluu fi hojii malee",
+        "imagesRequired": "Suuraawwan Barbaachisa",
+        "cover": "Cover",
+        "videoTour": "Vidiyeewwan Daawwannaa",
+        "videoTourDescription": "Vidiyeewwan daawwannaa qabeenyaa kee irraa ol kaayi",
+        "videoFile": "Faayilii vidiyeewwan",
+        "preview": "Dursee Ilaali",
+        "currentVideo": "Vidiyeewwan Ammaa",
+        "uploadToReplace": "Vidiyeewwan haaraan ammaa jiru bakka buusuuf ol kaayi",
+        "uploadVideoTour": "Vidiyeewwan Daawwannaa Ol Kaayi",
+        "videoFormats": "MP4, AVI, MOV hanga 100MB",
+        "selectVideo": "Vidiyeewwan Filadhu",
+        "virtualTourLink": "Linkii Daawwannaa Dhugaa Hin Taane",
+        "virtualTourDescription": "Linkii daawwannaa 360° ykn Matterport",
+        "virtualTourPlaceholder": "https://matterport.com/...",
+        "additionalDocuments": "Dookumantoota Dabalataa",
+        "additionalDocumentsDescription": "Dookumantoota qabeenyaa ol kaayi (PDF, Word, Excel)",
+        "document": "Dookumantii",
+        "uploadAdditionalDocuments": "Dookumantoota Dabalataa Ol Kaayi",
+        "documentFormats": "PDF, DOC, XLS hanga 20MB",
+        "selectDocuments": "Dookumantoota Filadhu"
+      }
+    },
+    "propertyTypes": {
+      "house": "Mana",
+      "apartment": "Apaartimaanti",
+      "villa": "Viilaa",
+      "commercial": "Daldala",
+      "land": "Lafa",
+      "office": "Iddoo Biroo",
+      "warehouse": "Goolii",
+      "farm": "Oorma",
+      "hotel": "Hoteela",
+      "other": "Kan biraa"
+    },
+    "promotion": {
+      "tiers": {
+        "basic": {
+          "name": "Basic",
+          "description": "Liistii sadarkaa ilaalcha bu'uuraa waliin"
+        },
+        "standard": {
+          "name": "Standard",
+          "description": "Ilaalcha guddaa bu'aa barbaacha keessatti"
+        },
+        "premium": {
+          "name": "Premium",
+          "description": "Ilaalcha guddaa fi iddoo gubbaa"
+        }
+      },
+      "duration": {
+        "week": "guyyaa 7",
+        "month": "guyyaa 30",
+        "twoMonths": "guyyaa 60",
+        "threeMonths": "guyyaa 90",
+        "custom": "guyyoota {days}"
+      },
+      "benefitsTitle": "Faayidaalee Fooyya'aa",
+      "basicBenefits": "Liistii bu'uuraan mirkaneessuu bulchinsaa barbaadu. Liistii fooyya'aman mirkaneessuu ofii fi ilaalcha gaarii argatu.",
+      "paidBenefits": "Liistii fooyya'aman ilaalcha 3-5 irra jiru argatu fi bu'aa barbaacha keessatti gubbaatti mul'atu.",
+      "free": "BILISAA",
+      "selected": "Filatame",
+      "loadError": "Filannoo fooyya'aa bu'uufachuu hin dandeenye. Yeroo biraa yaali."
+    },
+    "buttons": {
+      "loadDraft": "Daraaftii Buufadhu",
+      "saveDraft": "Daraaftii Qabsiisi",
+      "previous": "Duraan",
+      "next": "Itti Aanu",
+      "saveChanges": "Jijjiirama Qabsiisi",
+      "saving": "Qabsiifama jira...",
+      "listProperty": "Qabeenya Liistii Godhi",
+      "createAndPay": "Uumi & Kaffalti",
+      "processing": "Tarkaanfii jira..."
+    },
+    "messages": {
+      "creating": "Liistii uumama jira...",
+      "promotedSuccess": "Liistii uumame! Kaffaltiif deebi'ama...",
+      "adminSuccess": "Liistii sirriitti uumame!",
+      "pendingSuccess": "Liistii mirkaneessuuf galmaa'e!"
+    },
+    "errors": {
+      "general": "Dogoggora",
+      "titleRequired": "Maqaa qabeenyaa barbaachisa",
+      "descriptionRequired": "Ibsa barbaachisa",
+      "cityRequired": "Magaalaa barbaachisa",
+      "subCityRequired": "Magaalaa giddu galeessa barbaachisa",
+      "locationRequired": "Iddoo sirriitti barbaachisa",
+      "areaRequired": "Naannoo barbaachisa",
+      "priceRequired": "Gatii barbaachisa",
+      "rentRequired": "Kafaltii ji'a barbaachisa",
+      "imagesRequired": "Suuraa tokko yoo ta'u barbaachisa",
+      "priceTooLow": "Gatii dhihoo jira jedhameera",
+      "rentTooLow": "Kafaltii dhihoo jira jedhameera",
+      "submissionFailed": "Liistii galmaa'uu hin dandeenye",
+      "propertyNotFound": "Qabeenya Hin Argamne",
+      "propertyNotFoundDescription": "Qabeenyi barbaaddan hin jiru ykn ka'eera.",
+      "accessDenied": "Dhaammachuu Hin Dandeenye",
+      "noEditPermission": "Qabeenyi kana sirreessuuf hayyama hin qabdu."
+    },
+    "badges": {
+      "unsavedChanges": "Jijjiirama Hin Qabsiifamne"
+    },
+    "characters": "qabeenyaalee",
+    "preview": {
+      "title": "Dursee Ilaali Liistii",
+      "description": "Kana akka liistii kee mul'atu",
+      "addPrice": "Gatii dabalchi",
+      "addRent": "Kafaltii dabalchi",
+      "perMonth": "ji'a",
+      "autoApproval": "Mirkaneessuu Ofii",
+      "autoApprovalDescription": "Liistii fooyya'aman ofii mirkaneeffamu",
+      "adminListing": "Liistii Bulchinsaa",
+      "adminListingDescription": "Liistii bulchinsaan ofii mirkaneeffama",
+      "pendingApproval": "Eegaa Mirkaneessuuf",
+      "pendingApprovalDescription": "Liistii bu'uuraan mirkaneessuu bulchinsaa barbaadu (sa'aatii 24-48)",
+      "noImages": "Amma suuraawwan hin daballetin",
+      "photos": "suuraawwan",
+      "yourPropertyTitle": "Maqaa Qabeenyaa Keessan",
+      "locationPlaceholder": "Iddoo asitti mul'ata",
+      "bedrooms": "Kutaa manaa",
+      "bathrooms": "Kutaa dhiqannaa",
+      "house": "Mana",
+      "forSale": "Gurguruf",
+      "forRent": "Kafaltiif",
+      "negotiable": "Walii Galtee",
+      "premium": "Premium",
+      "progress": "Progress",
+      "complete": "Guutuu",
+      "sections": "Gareen"
+    },
+    "tips": {
+      "title": "Gorsa Liistii",
+      "highQualityPhotos": {
+        "title": "Suuraawwan Qulqullina Ol'aanaa",
+        "description": "Suuraawwan ifaa, ifaa gaarii waliin kaasii adda addaa irraa fayyadami"
+      },
+      "detailedDescription": {
+        "title": "Ibsa Ibsaa",
+        "description": "Saayizii kutaalee, jijjiirama dhiyoo, fi faayidaalee addaa dabaladhu"
+      },
+      "competitivePricing": {
+        "title": "Gatii Makitamaa",
+        "description": "Naannoo kee keessatti qabeenyaalee wal fakkaatan qoradhu"
+      },
+      "accurateInformation": {
+        "title": "Odeeffannoo Sirriitti",
+        "description": "Ibsa sirriitti haala qabeenyaa irratti kenni"
+      },
+      "quickResponses": {
+        "title": "Deebii Aantaan",
+        "description": "Gaafannoo sa'aatii 24 keessatti deebisi"
+      },
+      "viewCompleteGuide": "Gorsa Guutuu Ilali",
+      "list": [
+        "Suuraawwan ifaa, qulqullina ol'aanaa fayyadami",
+        "Lakkoofsa sirriitti kenni",
+        "Faayidaalee hundaa dabaladhu",
+        "Haala qabeenyaa irratti dhugaa ta'i",
+        "Gaafannoo aantaan deebisi"
+      ]
+    },
+    "stats": {
+      "title": "Ra'iyii Liistii",
+      "totalViews": "Ilaalcha Waliigalaa",
+      "inquiries": "Gaafannoo",
+      "saves": "Qabsiifamtoota",
+      "daysListed": "Guyyaa Liistii Godhame"
+    },
+    "status": {
+      "available": "Argama",
+      "pending": "Eegaa jira",
+      "sold": "Gurgurame",
+      "rented": "Kafalle",
+      "offMarket": "Soorataa Ala"
+    }
+  },
+  "comparison": {
+    "title": "Wal Maki Qabeenyaa",
+    "subtitle": "Qabeenyaalee hanga 10 walitti tuqaa maki",
+    "loading": "Wal maki buufatama jira...",
+    "savePrompt": "Maqaa wal maki kanaaf galchi:",
+    "currentSession": {
+      "title": "Qabeenyaalee Wal Maki Keessatti",
+      "emptyTitle": "Qabeenyaalee hin daballetin",
+      "emptyDescription": "Wal maki jalqabuuf liistii irraa qabeenyaalee dabalchi",
+      "browseProperties": "Qabeenyaalee Ilali",
+      "price": "Gatii",
+      "area": "Naannoo",
+      "bedrooms": "Kutaa manaa",
+      "type": "Gosa"
+    },
+    "savedComparisons": {
+      "title": "Wal Maki Qabsiifame",
+      "empty": "Amma wal maki qabsiifame hin jiru",
+      "properties": "qabeenyaalee",
+      "saved": "Qabsiifame"
+    },
+    "actions": {
+      "clearAll": "Hundaa Qulqulleessi",
+      "compareNow": "Amma Walitti Maki",
+      "compare": "Walitti Maki",
+      "exportCSV": "CSV Baafadhu",
+      "share": "Qoodi",
+      "compareProperties": "Qabeenyaalee Walitti Maki",
+      "save": "Wal Maki Qabsiisi",
+      "saveShort": "Qabsiisi",
+      "savePrompt": "Maqaa wal maki kanaaf galchi:",
+      "savedSuccess": "Wal maki sirriitti qabsiifame!",
+      "saveError": "Wal maki qabsiifachuu hin dandeenye"
+    }
+  },
+  "comparisonModal": {
+    "title": "Wal Maki Qabeenyaa",
+    "properties": "qabeenyaalee",
+    "mixedTypes": "Gosa Waliigalaa",
+    "smartInsights": "Hubannoo Samartii",
+    "filters": {
+      "title": "Filtariiwwan",
+      "sortBy": "Waliin Daa'imessu",
+      "options": {
+        "listingType": "Gosa Liistii",
+        "priceLowHigh": "Gatii (Dhihoo irraa Ol'aanaatti)",
+        "pricePerSqm": "Gatii m² irraa",
+        "rentPerSqm": "Kafaltii m² irraa",
+        "areaSmallLarge": "Naannoo (Xiqqaa irraa Guddaatti)",
+        "bedrooms": "Kutaa manaa"
+      },
+      "showDifferences": "Adduma qofa agarsiisi"
+    },
+    "actions": {
+      "clearAll": "Hundaa Qulqulleessi",
+      "share": "Wal Maki Qoodi",
+      "print": "Wal Maki Maxxansi",
+      "email": "Wal Maki Iimeelii",
+      "saveDefaultName": "Wal Maki",
+      "save": "Qabsiisi",
+      "saveAs": "Akka ... Qabsiisi",
+      "savePlaceholder": "Maqaa wal maki",
+      "comparing": "Wal maki jira...",
+      "compareProperties": "Qabeenyaalee Walitti Maki"
+    },
+    "fields": {
+      "listingType": "Gosa Liistii",
+      "description": "Ibsa",
+      "propertyType": "Gosa Qabeenyaa",
+      "salePrice": "Gatii Gurgurtaa",
+      "pricePerSqm": "Gatii m² irraa",
+      "monthlyRent": "Kafaltii Ji'a",
+      "rentPerSqm": "Kafaltii m² irraa",
+      "totalArea": "Iddoo Waliigalaa",
+      "bedrooms": "Kutaa manaa",
+      "bathrooms": "Kutaa dhiqannaa",
+      "builtYear": "Waggaa Ijaarame",
+      "city": "Magaalaa",
+      "subCity": "Magaalaa Giddu Galeessa",
+      "parking": "Parking",
+      "garden": "Ogeessa",
+      "security": "Nagaa",
+      "furnished": "Qopheeffamaa",
+      "airConditioning": "A/C",
+      "elevator": "Elevator",
+      "petFriendly": "Pet Friendly",
+      "virtualTour": "Daawwannaa Dhugaa Hin Taane",
+      "verified": "Mirkaneeffamaa",
+      "featured": "Addaa",
+      "daysOnMarket": "Guyyaa Soorataa Irra Jiru",
+      "views": "Ilaalcha",
+      "saves": "Qabsiifamtoota",
+      "customizeTitle": "Garee Wal Maki Sirreessi",
+      "customizeDescription": "Garee meeshaa wal maki keessatti dabalachuu filadhu",
+      "selectAllVisible": "Hundaa Mul'ata Filadhu",
+      "clearAll": "Hundaa Qulqulleessi",
+      "selected": "gareen filatame",
+      "deselectAll": "Hundaa Hin Filadhu",
+      "selectAll": "Hundaa Filadhu"
+    },
+    "categories": {
+      "basic": "Odeeffannoo Bu'uuraa",
+      "saleFinancial": "Gurgurtaa Qabeenyaa",
+      "rentFinancial": "Kafaltii Qabeenyaa",
+      "specifications": "Ibsa",
+      "location": "Iddoo",
+      "amenities": "Qabeenyaalee",
+      "media": "Meediyaa",
+      "verification": "Mirkaneessuu",
+      "market": "Soorataa"
+    },
+    "empty": {
+      "title": "Wal maki qabeenyaalee hin jiru",
+      "description": "Walitti tuqaa faayidaalee, gatii, fi qabeenyaalee wal maki jalqabuuf liistii qabeenyaalee irraa qabeenyaalee wal maki irratti dabalchi.",
+      "browseProperties": "Qabeenyaalee Ilali"
+    },
+    "warnings": {
+      "mixedTypes": {
+        "title": "Gosa Liistii Waliigalaa",
+        "description": "{saleCount} qabeenyaalee gurgurtaafi {rentCount} kafaltiif wal maki jirta. Raadiyoo qabeenyaalee tokko tokko walitti maki sirriitti hin taane. Wal maki sirriitti akka ta'uuf gosa liistii waliin filtrii godhi."
+      }
+    },
+    "property": "Qabeenya",
+    "badges": {
+      "forSale": "Gurguruf",
+      "forRent": "Kafaltiif"
+    },
+    "propertyCards": {
+      "price": "Gatii",
+      "pricePerSqm": "Gatii/m²",
+      "monthlyRent": "Kafaltii Ji'a",
+      "rentPerSqm": "Kafaltii/m²",
+      "area": "Naannoo",
+      "bedrooms": "Kutaa manaa",
+      "bestSaleValue": "Gatiin Gurgurtaa Gaarii",
+      "bestRentValue": "Gatiin Kafaltii Gaarii"
+    },
+    "tabs": {
+      "table": "Meeshaa Wal Maki",
+      "stats": "Ra'iyii",
+      "insights": "Hubannoo Samartii",
+      "recommendations": "Gorsa",
+      "fields": "Garee Sirreessi"
+    },
+    "table": {
+      "noFields": "Wal maki garee hin filatamne",
+      "selectAllVisible": "Garee hundaa mul'ata filadhu",
+      "feature": "Faayidaa",
+      "differencesOnly": "Adduma Qofa",
+      "property": "Qabeenya",
+      "diff": "Addi"
+    },
+    "stats": {
+      "sale": {
+        "title": "Qorannoo Qabeenyaalee Gurgurtaa",
+        "properties": "Qabeenyaalee Gurgurtaa",
+        "bestValue": "Gatiin Gaarii"
+      },
+      "rent": {
+        "title": "Qorannoo Qabeenyaalee Kafaltii",
+        "properties": "Qabeenyaalee Kafaltii",
+        "bestValue": "Gatiin Gaarii"
+      },
+      "common": {
+        "title": "Faayidaalee Waliigalaa",
+        "avgArea": "Giddugaleessaan Naannoo",
+        "avgBedrooms": "Giddugaleessaan Kutaa Manaa",
+        "topAmenities": "Qabeenyaalee Gubbaa"
+      }
+    },
+    "insights": {
+      "keyInsights": "Hubannoo Bu'uuraa",
+      "mixedTypes": {
+        "title": "Gosa Liistii Waliigalaa",
+        "description": "{saleCount} qabeenyaalee gurgurtaafi {rentCount} kafaltiif wal maki jirta. Hubannoo sirriitti akka ta'uuf gosa wal fakkaatan wal maki yaali."
+      },
+      "sale": {
+        "title": "Qabeenyaalee Gurgurtaa",
+        "bestValue": "\"{title}...\" gatiin meetera muraawaa gurgurtaa qabeenyaaleef gatiin gaarii kennita.",
+        "default": "Qabeenyaalee gurgurtaa qorannoo meeshaalee irratti ilaali."
+      },
+      "rent": {
+        "title": "Qabeenyaalee Kafaltii",
+        "bestValue": "\"{title}...\" gatiin kafaltii meetera muraawaa gatiin gaarii kennita.",
+        "default": "Qabeenyaalee kafaltii irratti qarshii kafaltii fi iddoo yaali."
+      },
+      "features": {
+        "title": "Wal Maki Faayidaalee",
+        "topAmenities": "Qabeenyaalee gubbaan: {amenities}.",
+        "default": "Qabeenyaaleen qabeenyaalee wal fakkaatan qabu."
+      },
+      "recommendations": "Gorsa Samartii",
+      "requireMoreProperties": "Hubannoo samartii argachuuf qabeenyaalee 3 yoo ta'u dabalchi"
+    },
+    "recommendations": {
+      "title": "Gorsa",
+      "none": "Gorsa hin jiru",
+      "default": "Gorsa"
+    },
+    "toasts": {
+      "savedSuccess": "Wal maki sirriitti qabsiifame",
+      "clearedSuccess": "Wal maki qulqulleeffame",
+      "exported": {
+        "csv": "CSV sirriitti baafame",
+        "json": "JSON sirriitti baafame",
+        "pdf": "PDF sirriitti baafame"
+      },
+      "linkCopied": "Linkii kaardaa irratti nuqulessifame!",
+      "shareFailed": "Linkii qooduu uumuu hin dandeenye"
+    },
+    "email": {
+      "subject": "Wal Maki Qabeenyaa",
+      "properties": "Qabeenyaalee",
+      "body": "Wal maki qabeenyaa kana ilaali"
+    }
+  },
+  "comparisonButton": {
+    "inComparison": "Wal Maki Keessatti",
+    "addToCompare": "Wal Maki Irratti Dabalchi",
+    "maxReached": "Qabeenyaalee 10 wal maki keessatti guddaa",
+    "added": "Wal maki irratti dabalamte!",
+    "removed": "Wal maki irraa ka'e",
+    "saveComparison": "Wal Maki Qabsiisi",
+    "savePrompt": "Maqaa wal maki galchi:",
+    "saved": "Wal maki qabsiifame!",
+    "saveError": "Qabsiifachuu hin dandeenye",
+    "needAtLeastTwo": "Qabsiifachuuf qabeenyaalee 2 yoo ta'u barbaacha"
+  },
+  "comparisonFloatingButton": {
+    "title": "Qabeenyaalee Walitti Maki",
+    "ready": "Qabeenyaalee {count} walitti maki qophaa'eera",
+    "needMore": "Qabeenya {needed} dabalataa wal maki irratti dabalchi",
+    "openComparison": "Wal Maki Bani",
+    "saveComparison": "Wal Maki Qabsiisi",
+    "savePrompt": "Wal maki akka ... Qabsiisi"
+  },
+  "messages": {
+    "title": "Ergaalee",
+    "searchConversations": "Waligahii barbaadi...",
+    "noConversations": "Amma waligahii hin jiru",
+    "property": "Qabeenya",
+    "noMessagesYet": "Amma ergaa hin jiru",
+    "attachment": "Dabalataa",
+    "fileSizeError": "Saayizii faayilii 10MB caalaa hin taane",
+    "unreadMessages": "{count, plural, one {# ergaa hin dubbifne} other {# ergaa hin dubbifne}}",
+    "allCaughtUp": "Hunda dhaqqabaa!",
+    "newMessage": "Ergaa Haaraa",
+    "refreshSuccess": "Ergaalee haaraa godhame",
+    "refreshFailed": "Ergaalee haaraa godhuu hin dandeenye",
+    "subject": "Maqaa",
+    "deleteConfirmation": "Mirkaniitti waligahii kana faarsuu barbaadda? Ergaalee hundi duuba baafatama. Dalagaan kanaa duuba hin deebifamu.",
+    "deleteSuccess": "Waligahii sirriitti faarrame",
+    "deleteConversation": "Waligahii Faarri",
+    "startConversation": "Waligahii jalqabi!",
+    "noConversationSelectedTitle": "Waligahii hin filatamne",
+    "noConversationSelectedDesc": "Waligahii jalqabuuf liistii irraa waligahii filadhu ykn kan haaraa jalqabi",
+    "emptyStateTitle": "Amma waligahii hin jiru",
+    "emptyStateDesc": "Ergaalee qabeenyaalee fi gaafannoo irratti mari'achuuf kan qabeenyi, ajeenoota, ykn fayyadamaa biraa waliin jalqabi",
+    "browseProperties": "Qabeenyaalee Ilali",
+    "backToMessages": "Ergaalee Irraa Duubatti Deebi'i",
+    "newMessageDesc": "Fayyadamaa biraa waliin waligahii haaraa jalqabi",
+    "findRecipient": "Qeebalee Argadhu",
+    "searchPlaceholder": "Fayyadamaa maqaa ykn iimeelii waliin barbaadi...",
+    "searching": "Barbaadama jira...",
+    "searchFailed": "Fayyadamaa barbaaduu hin dandeenye",
+    "selectRecipient": "Maaloo qeebalee filadhu",
+    "enterMessage": "Maaloo ergaa galchi",
+    "defaultSubject": "Ergaa {name} irraa",
+    "sendSuccess": "Ergaa sirriitti ergame!",
+    "sendFailed": "Ergaa erguu hin dandeenye",
+    "recipient": "Qeebalee",
+    "change": "Jijjiirama",
+    "verified": "Mirkaneeffamaa",
+    "composeMessage": "Ergaa Uumi",
+    "general": "Waliigalaa",
+    "question": "Gaaffii",
+    "offer": "Kenneessa",
+    "viewing": "Ilaaluu",
+    "messageType": "Gosa Ergaa",
+    "subjectOptional": "Maqaa (Filannoo)",
+    "subjectPlaceholder": "Maqaa ergaa galchi",
+    "yourMessage": "Ergaa Keessan",
+    "messagePlaceholder": "Ergaa keessan asitti galchi... Ergachuuf Ctrl+Enter ykn Cmd+Enter fayyadamuu dandeessa.",
+    "attachmentOptional": "Dabalataa (Filannoo)",
+    "replaceFile": "Faayilii Bakka Buusi",
+    "attachFile": "Faayilii Dabalchi",
+    "remove": "Faarri",
+    "supportedFormats": "Foormaata deeggaraman: PDF, DOC, DOCX, JPG, JPEG, PNG (guddaa 10MB)",
+    "cancel": "Furii",
+    "sending": "Ergama jira...",
+    "sendMessage": "Ergaa Ergi",
+    "startNewConversation": "Waligahii Haaraa Jalqabi",
+    "searchUsers": "Fayyadamaa maqaa ykn iimeelii waliin barbaadi...",
+    "searchFailedDesc": "Fayyadamaa barbaaduu hin dandeenye",
+    "sendSuccessDesc": "Ergaa keessan sirriitti ergameera.",
+    "tryAgain": "Irra deebi'ii yaali.",
+    "typeMessage": "Ergaa keessan galchi..."
+  },
+  "inquiries": {
+    "title": "Gaafannoo",
+    "subtitle": "Gaafannoo qabeenyaa bulchi fi deebisi",
+    "myInquiries": "Gaafannoo Koo",
+    "trackAndManage": "Gaafannoo qabeenyaa kee hordofi fi bulchi",
+    "sendInquiry": "Gaafannoo Ergi",
+    "contactOwnerAgent": "Kan qabeenyi/ajeentaa waliin qunnami: {propertyTitle}",
+    "inquiryAbout": "Gaafannoo irratti: {propertyTitle}",
+    "inquiryNumber": "Gaafannoo #{id}",
+    "about": "Waa'ee",
+    "backToInquiries": "Gaafannoo Irraa Duubatti Deebi'i",
+    "edit": "Sirreessi",
+    "delete": "Faarri",
+    "assignToMe": "Na Irratti Qoodi",
+    "markAsContacted": "Waliin Qunnamuu Taasisii",
+    "scheduleViewing": "Ilaaluu Sirreessi",
+    "closeInquiry": "Gaafannoo Cufi",
+    "filters": "Filtariiwwan",
+    "clear": "Qulqulleessi",
+    "applyFilters": "Filtariiwwan Iyyi",
+    "clearFilters": "Filtariiwwan Qulqulleessi",
+    "reset": "Deebisi",
+    "status": "Haala",
+    "allStatuses": "Haala Hundaa",
+    "pending": "Eegaa jira",
+    "contacted": "Waliin Qunnamame",
+    "viewing_scheduled": "Ilaaluu Sirreessame",
+    "follow_up": "Hordofii",
+    "closed": "Cufame",
+    "spam": "Spam",
+    "priority": "Dursee",
+    "allPriorities": "Dursee Hundaa",
+    "low": "Gadi aanaa",
+    "medium": "Giddu galeessa",
+    "high": "Ol'aanaa",
+    "urgent": "Gabaabaa",
+    "inquiryType": "Gosa Gaafannoo",
+    "allTypes": "Gosa Hundaa",
+    "general": "Waliigalaa",
+    "viewing": "Ilaaluu",
+    "price": "Gatii",
+    "details": "Ibsa",
+    "category": "Garee",
+    "allCategories": "Garee Hundaa",
+    "buyer": "Bitataa",
+    "seller": "Bitataa",
+    "assignedTo": "Irra Qoodame",
+    "allAssignments": "Qooda Hundaa",
+    "unassigned": "Kan Hin Qoodamne",
+    "search": "Barbaadi",
+    "searchPlaceholder": "Qabeenyaa, ergaa, ykn fayyadamaa waliin barbaadi...",
+    "fromDate": "Guyyaa Eegaluu",
+    "toDate": "Guyyaa Ga'uu",
+    "showFilters": "Filtariiwwan Agarsiisi",
+    "hideFilters": "Filtariiwwan Dhoksi",
+    "exportCSV": "CSV Baafadhu",
+    "refresh": "Haaraa Godhi",
+    "bulkActions": "Dalagaa Baay'ee",
+    "selected": "{count} filatame",
+    "selectAll": "Gaafannoo {count} Hundaa Filadhu",
+    "clearSelection": "Filannoo Qulqulleessi",
+    "assignSelected": "Filatamtoota Irratti Qoodi",
+    "markContactedSelected": "Waliin Qunnamuu Taasisii Filatamtoota",
+    "closeSelected": "Filatamtoota Cufi",
+    "totalInquiries": "Gaafannoo Waliigalaa",
+    "newToday": "Haaraa Har'a",
+    "unassignedInquiries": "Kan Hin Qoodamne",
+    "urgentInquiries": "Gabaabaa",
+    "avgResponseTime": "Giddugaleessaan Yeroo Deebii",
+    "responseRate": "Saffisa Deebii",
+    "conversionRate": "Saffisa Jijjiiramaa",
+    "statusDistribution": "Qooda Haalaa",
+    "recentActivities": "Dalagaa Dhiyoo",
+    "requiresAttention": "Iyyachuu Barbaacha",
+    "noInquiriesFound": "Gaafannoo hin argamne",
+    "tryChangingFilters": "Filtariiwwan kee jijjiiri yaali",
+    "noInquiriesYet": "Amma gaafannoo hin galmaa'in",
+    "all": "Hundaa",
+    "responded": "Deebifame",
+    "inquiryMessage": "Ergaa Gaafannoo",
+    "responseNotes": "Qabxii Deebii",
+    "addResponseNotes": "Qabxii Deebii Dabalchi",
+    "saveNotesMarkContacted": "Qabxii Qabsiisi & Waliin Qunnamuu Taasisii",
+    "contactInformation": "Odeeffannoo Qunnamtii",
+    "registeredUser": "Fayyadamaa Galmeeffamaa",
+    "propertyDetails": "Ibsa Qabeenyaa",
+    "timestamps": "Yeroo Agarsiisuu",
+    "created": "Uumame",
+    "updated": "Haaraa Godhame",
+    "respondedAt": "Deebifame",
+    "responseTime": "Yeroo Deebii",
+    "assignment": "Qooda",
+    "internalNotes": "Qabxii Keessa",
+    "viewingDate": "Guyyaa & Yeroo Ilaaluu",
+    "viewingAddress": "Lakkoofsa",
+    "additionalNotes": "Qabxii Dabalataa",
+    "scheduleViewingButton": "Ilaaluu Sirreessi",
+    "cancelSchedule": "Furii",
+    "activityTimeline": "Tarminaalii Dalagaa",
+    "comingSoon": "Dhiyoo kanatti...",
+    "noPermission": "Gaafannoo kana ilaaluuf hayyama hin qabdu",
+    "deleteConfirmation": "Mirkaniitti gaafannoo kana faarsuu barbaadda?",
+    "needHelp": "Gargaarsa Barbaadda?",
+    "helpTip1": "Gaafannoo giddu galeessaan sa'aatii 24-48 keessatti deebii argatu",
+    "helpTip2": "Deebii kan qabeenyi/ajeentaa irraa iimeelii kee fi bilbila kee ilaali",
+    "helpTip3": "Guyyoota 3 booda deebii hin argatin yoo ta'e deeggarsaaf qunnamaa",
+    "helpTip4": "Odeeffannoo qunnamtii kee piroofaayilii kee keessatti ammaa ta'uu mirkanessi",
+    "whatHappensNext": "Wanti itti aanu maali?",
+    "nextTip1": "Kan qabeenyi/ajeentaa gaafannoo kee argata",
+    "nextTip2": "Filannoo tajaajila qunnamtii kee fayyadamuun si qunnama",
+    "nextTip3": "Gaafannoo kee daashboordii kee keessatti hordofuu dandeessa",
+    "nextTip4": "Yeroo deebii giddu galeessaan sa'aatii 24-48",
+    "propertyDetailsTitle": "Ibsa Qabeenyaa",
+    "beds": "saree {count}",
+    "baths": "dhiqannaa {count}",
+    "area": "{area} m²",
+    "assigned": "Irra Qoodame",
+    "viewDetails": "Ibsa Ilali"
+  },
+  "notifications": {
+    "pageTitle": "Beeksisaalee",
+    "pageDescription": "Beeksisaalee kee ilaali fi bulchi",
+    "title": "Beeksisaalee",
+    "subtitle": "Beeksisaalee kee fi filannoo bulchi",
+    "markAllRead": "Hundaa Akka Dubbifame Taasisii",
+    "markRead": "Akka Dubbifame Taasisii",
+    "delete": "Faarri",
+    "deleteConfirm": "Mirkaniitti beeksisa kana faarsuu barbaadda?",
+    "clearAll": "Hundaa Qulqulleessi",
+    "noNotifications": "Beeksisaalee hin jiru",
+    "noUnread": "Beeksisaalee hin dubbifne hin jiru",
+    "allCaughtUp": "Hunda dhaqqabaa!",
+    "unreadCount": "Beeksisaalee {count} hin dubbifne{count, plural, one {} other {n}}",
+    "common": {
+      "filter": "Filtarii",
+      "loading": "Buufatama jira"
+    },
+    "filters": {
+      "all": "Hundaa",
+      "unread": "Kan Hin Dubbifne",
+      "property": "Qabeenya"
+    },
+    "types": {
+      "property_approved": "Qabeenya Mirkaneeffame",
+      "property_rejected": "Qabeenya Dhiifame",
+      "property_changes_requested": "Jijjiirama Gaafatame",
+      "inquiry_response": "Deebii Gaafannoo",
+      "property_match": "Qabeenya Wal Maki",
+      "price_change": "Jijjiirama Gatii",
+      "new_listing": "Liistii Haaraa",
+      "send_message": "Ergaa Ergi",
+      "system": "Siisteemii"
+    },
+    "bell": {
+      "ariaLabel": "Beeksisaalee",
+      "title": "Beeksisaalee"
+    },
+    "dropdown": {
+      "title": "Beeksisaalee",
+      "viewAll": "Beeksisaalee hundaa ilaali",
+      "loading": "Beeksisaalee buufatama jira...",
+      "empty": "Beeksisaalee hin jiru"
+    },
+    "preferences": {
+      "title": "Filannoo Beksisaa",
+      "description": "Beeksisaalee argachuu kee akkamitti sirreessi",
+      "email": {
+        "title": "Beeksisaalee Iimeelii",
+        "enabled": "Beeksisaalee iimeelii dandeessisi",
+        "enabledDesc": "Beeksisaalee iimeelii waliin argadhu",
+        "propertyApproved": "Mirkaneessuu qabeenyaa",
+        "propertyApprovedDesc": "Yeroo qabeenyi kee mirkaneeffamu",
+        "propertyRejected": "Dhiisuu qabeenyaa",
+        "propertyRejectedDesc": "Yeroo qabeenyi kee dhiifamu",
+        "propertyChanges": "Jijjiirama qabeenyaa gaafatame",
+        "propertyChangesDesc": "Yeroo jijjiirama qabeenyi keef gaafatamu",
+        "inquiryResponse": "Deebii gaafannoo",
+        "inquiryResponseDesc": "Yeroo namni gaafannoo kee deebisu",
+        "messages": "Ergaalee",
+        "messagesDesc": "Yeroo ergaa haaraan argattu",
+        "system": "Beeksisaalee siisteemii",
+        "systemDesc": "Jijjiirama siisteemii barbaachisaa",
+        "promotions": "Kenneessa fooyya'aa",
+        "promotionsDesc": "Kenneessa addaa fi fooyya'aa"
+      },
+      "push": {
+        "title": "Beeksisaalee Push",
+        "enabled": "Beeksisaalee push dandeessisi",
+        "enabledDesc": "Beeksisaalee meeshaa kee irratti argadhu"
+      },
+      "sms": {
+        "title": "Beeksisaalee SMS",
+        "enabled": "Beeksisaalee SMS dandeessisi",
+        "enabledDesc": "Beeksisaalee SMS waliin argadhu (saffisa sadarkaa ta'uu danda'a)",
+        "urgentOnly": "Beeksisaalee gabaabaa qofa",
+        "urgentOnlyDesc": "SMS qofa beeksisaalee gabaabaa irratti qofa argadhu"
+      },
+      "frequency": {
+        "title": "Saffisa & Yeroo",
+        "frequencyLabel": "Saffisa Beksisaa",
+        "immediate": "Dhaqqabaadhaan",
+        "daily": "Guyyummaa",
+        "weekly": "Torbanummaa",
+        "quietHours": "Sa'aatii Qulqulluu",
+        "quietHoursDesc": "Beeksisaaleen sa'aatii kana keessatti hin ergamu",
+        "start": "Jalqaba",
+        "end": "Xumura",
+        "to": "ga'a"
+      },
+      "actions": {
+        "cancel": "Furii",
+        "save": "Filannoo Qabsiisi",
+        "saving": "Qabsiifama jira...",
+        "error": "Filannoo qabsiifachuu hin dandeenye"
+      },
+      "sentVia": {
+        "email": "Iimeelii",
+        "push": "Push",
+        "sms": "SMS",
+        "in_app": "App Keessaa",
+        "system": "Siisteemii"
+      }
+    },
+    "propertyInfo": {
+      "property": "Qabeenya",
+      "by": "Kan",
+      "viewProperty": "Qabeenya Ilali",
+      "unknown": "Kan hin beekamne"
+    },
+    "badges": {
+      "unread": "Kan Hin Dubbifne",
+      "approve": "MIRKANEESSI",
+      "reject": "DHIISI",
+      "changes": "JIJJIIRAMA"
+    },
+    "actions": {
+      "preferences": "Filannoo"
+    },
+    "errors": {
+      "loadFailed": "Beeksisaalee bu'uufachuu hin dandeenye",
+      "loadPreferencesFailed": "Filannoo bu'uufachuu hin dandeenye",
+      "markReadFailed": "Akka dubbifame taasifachuu hin dandeenye",
+      "deleteFailed": "Beeksisa faarsuu hin dandeenye"
+    }
+  },
+  "account": {
+    "pageTitle": "Akkaawuntii Koo",
+    "pageDescription": "Saayitii akkaawuntii kee, piroofaayilii, fi filannoo bulchi",
+    "profileSettings": "Saayitii Piroofaayilii",
+    "basicInformation": "Odeeffannoo Bu'uuraa",
+    "personalDetails": "Ibsa Dhuunfaa",
+    "contactInformation": "Odeeffannoo Qunnamtii",
+    "socialProfiles": "Piroofaayilii Hawaasaa",
+    "aboutMe": "Waa'ee Koo",
+    "passwordSecurity": "Iccitii & Paasaworidii",
+    "activityHistory": "Seenaa Dalagaa",
+    "deleteAccount": "Akkaawuntii Faarri",
+    "firstName": "Maqaa Jalqabaa",
+    "lastName": "Maqaa Xumuraa",
+    "email": "Iimeelii",
+    "phoneNumber": "Lakkoofsa Bilbila",
+    "dateOfBirth": "Guyyaa Dhalootaa",
+    "gender": "Saala",
+    "bio": "Bio",
+    "facebook": "Facebook",
+    "twitter": "Twitter",
+    "instagram": "Instagram",
+    "linkedin": "LinkedIn",
+    "currentPassword": "Paasaworidii Ammaa",
+    "newPassword": "Paasaworidii Haaraa",
+    "confirmPassword": "Paasaworidii Haaraa Mirkaneessi",
+    "passwordRequirements": "Paasaworidiin qabeenyaalee 8 yoo ta'u guddaa ta'uu qaba",
+    "updateProfile": "Piroofaayilii Haaraa Godhi",
+    "updatePassword": "Paasaworidii Haaraa Godhi",
+    "saveChanges": "Jijjiirama Qabsiisi",
+    "cancel": "Furii",
+    "deleteAccountWarning": "Yeroo tokko akkaawuntii kee faartee, duuba hin deebifamtu. Daataa kee hundi duuba baafatama.",
+    "deleteAccountReason": "Maaliif deema jirta? (Filannoo)",
+    "deleteAccountConfirm": "Eeyyee, Akkaawuntii Koo Faarri",
+    "accountDeleted": "Akkaawuntii sirriitti faarrame",
+    "profileUpdated": "Piroofaayilii sirriitti haaraa godhame",
+    "passwordUpdated": "Paasaworidii sirriitti haaraa godhame",
+    "uploading": "Ol kaayaa jira...",
+    "uploadProfilePicture": "Suuraa Piroofaayilii Ol Kaayi",
+    "removeProfilePicture": "Suuraa Piroofaayilii Faarri",
+    "profilePictureUpdated": "Suuraa piroofaayilii sirriitti haaraa godhame",
+    "profilePictureRemoved": "Suuraa piroofaayilii sirriitti faarrame",
+    "male": "Dhiira",
+    "female": "Dubartii",
+    "other": "Kan biraa",
+    "preferNotToSay": "Himuu hin barbaadu",
+    "selectGender": "Saala filadhu",
+    "enterFirstName": "Maqaa jalqabaa galchi",
+    "enterLastName": "Maqaa xumuraa galchi",
+    "enterPhoneNumber": "Lakkoofsa bilbila galchi",
+    "enterBio": "Waa'ee kee nu himi...",
+    "enterFacebookUrl": "https://facebook.com/maqaa_fayyadamaa",
+    "enterTwitterUrl": "https://twitter.com/maqaa_fayyadamaa",
+    "enterInstagramUrl": "https://instagram.com/maqaa_fayyadamaa",
+    "enterLinkedinUrl": "https://linkedin.com/in/maqaa_fayyadamaa",
+    "enterCurrentPassword": "Paasaworidii ammaa galchi",
+    "enterNewPassword": "Paasaworidii haaraa galchi",
+    "enterConfirmPassword": "Paasaworidii haaraa mirkaneessi",
+    "passwordMismatch": "Paasaworidiin wal hin makitamne",
+    "passwordTooShort": "Paasaworidiin qabeenyaalee 8 yoo ta'u guddaa ta'uu qaba",
+    "invalidEmail": "Lakkoofsa iimeelii dogoggora",
+    "invalidPhone": "Lakkoofsa bilbila dogoggora",
+    "fieldRequired": "Gareen kanaa barbaachisa",
+    "memberSince": "Miseensa eegaluu",
+    "verified": "Mirkaneeffamaa",
+    "notVerified": "Kan Hin Mirkaneeffamne",
+    "userType": "Gosa Fayyadamaa",
+    "regularUser": "Fayyadamaa Sadarkaa",
+    "agent": "Ajeentaa",
+    "admin": "Bulchinsa",
+    "loadingAccountInfo": "Odeeffannoo akkaawuntii buufatama jira...",
+    "loadingActivities": "Dalagaa kee buufatama jira...",
+    "updatePreferences": "Odeeffannoo dhuunfaa kee fi filannoo haaraa godhi",
+    "essentialDetails": "Ibsa dhuunfaa kee bu'uuraa",
+    "additionalInfo": "Odeeffannoo dhuunfaa dabalataa",
+    "connectSocialMedia": "Akkaawuntii meediyaa hawaasaa kee walitti qabi",
+    "tellAboutYourself": "Kan biraa waa'ee kee himi",
+    "shareYourStory": "Seenaa kee kan biraa waliin qoodi",
+    "passwordCannotBeSame": "Paasaworidii ammaa waliin wal hin taane",
+    "passwordCannotBeNumeric": "Lakkoofsa guutuu hin taane",
+    "updatePasswordSecure": "Paasaworidii kee haaraa godhi akkaawuntii kee nagaa taasisuuf",
+    "permanentlyRemoveAccount": "Akkaawuntii kee fi daataa hundaa duuba faarri",
+    "feedbackHelpsImprove": "Deebii kee nu tole taasisuuf gargaara",
+    "activitiesWillAppear": "Dalagaa kee asitti pirootokoollaa fayyadamtaniif mul'ata",
+    "recentActions": "Dalagaa kee dhiyoo fi fayyadama pirootokoollaa",
+    "actionCannotBeUndone": "Dalagaan kanaa duuba hin deebifamu. Daataa hundi duuba baafatama.",
+    "characterCount": "{current}/{max} qabeenyaalee",
+    "activity": {
+      "propertiesViewed": "Qabeenyaalee Ilaalaman",
+      "propertiesSaved": "Qabeenyaalee Qabsiifaman",
+      "inquiriesSent": "Gaafannoo Ergaman",
+      "searchesMade": "Barbaachisa Godhaman",
+      "lastActivity": "Dalagaa Duraanii",
+      "recentActivity": "Dalagaa Dhiyoo",
+      "noActivity": "Amma dalagaa hin jiru",
+      "login": "Seenuu",
+      "propertyView": "Ilaalcha Qabeenyaa",
+      "propertySave": "Qabsiifamuu Qabeenyaa",
+      "inquiry": "Gaafannoo",
+      "profileUpdate": "Haaraa Godhama Piroofaayilii",
+      "search": "Barbaachisa"
+    }
+  },
+  "savedProperties": {
+    "pageTitle": "Qabeenyaalee Qabsiifame - Jaallatamtoota Koo",
+    "pageDescription": "Qabeenyaalee qabsiifamtoota kee bulchi, jaallatamtoota hordofi, fi barbaacha qabeenyaa kee waliin walitti qindeessi.",
+    "header": {
+      "title": "Qabeenyaalee Qabsiifame",
+      "subtitle": "Qabeenyaalee {count} qabsiifame qabda"
+    },
+    "stats": {
+      "totalProperties": "Qabeenyaalee Waliigalaa",
+      "activeListings": "Liistii Hojiirra Jiran",
+      "recentlyAdded": "Dhiyoon Dabalamte",
+      "viewMode": "Ilaalcha Agarsiisuu"
+    },
+    "searchPlaceholder": "Qabeenyaalee qabsiifame barbaadi...",
+    "sortBy": "Waliin Daa'imessu",
+    "sortOptions": {
+      "recentlySaved": "Dhiyoon Qabsiifame",
+      "priceLowHigh": "Gatii: Dhihoo irraa Ol'aanaatti",
+      "priceHighLow": "Gatii: Ol'aanaa irraa Dhihootti",
+      "recentlyListed": "Dhiyoon Liistii Godhame",
+      "mostViewed": "Baay'ee Ilaalamu"
+    },
+    "export": "Baafadhu",
+    "savedBadge": "Qabsiifame",
+    "emptyState": {
+      "title": "Amma qabeenyaalee qabsiifame hin jiru",
+      "description": "Qabeenyaalee daawwannaa jalqabi fi iconee onnee calaqqisiisuun jaallatamtoota kee asitti qabsiisi.",
+      "ctaBrowse": "Qabeenyaalee Ilali",
+      "ctaRecommendations": "Gorsa Ilali"
+    },
+    "emptySearches": {
+      "title": "Barbaachisa qabsiifame hin jiru",
+      "description": "Qajeelfama barbaachisaa kee qabsiisi qabeenyaalee haaraan filannoo kee waliin waliigaltee ta'an yeroo liistii godhaman beeksisa argachuuf.",
+      "ctaBrowse": "Barbaachisaa Jalqabi"
+    },
+    "noResults": {
+      "title": "Qabeenyaalee waliigaltee argamtoota hin argamne",
+      "description": "Filtariiwwan barbaachisaa kee jijjiiri ykn barbaachisaa qulqulleessuun qabeenyaalee qabsiifame hundaa ilaaluuf yaali.",
+      "resetFilters": "Filtariiwwan Deebisi"
+    },
+    "errorState": {
+      "title": "Qabeenyaalee qabsiifame bu'uufachuu hin dandeenye",
+      "ctaBrowse": "Qabeenyaalee Ilali"
+    },
+    "actions": {
+      "clearAll": "Hundaa Qulqulleessi",
+      "export": "Liistii Baafadhu",
+      "shareWhatsApp": "WhatsApp irraan Qoodi",
+      "shareEmail": "Iimeelii irraan Qoodi",
+      "copyLink": "Linkii Nuqulessisi",
+      "remove": "Faarri"
+    },
+    "bulkActions": {
+      "selected": "filatame",
+      "description": "Qabeenyaalee filataman dalagaa baay'ee irratti",
+      "share": "Filatamtoota Qoodi",
+      "remove": "Filatamtoota Faarri",
+      "clear": "Filannoo Qulqulleessi"
+    },
+    "toasts": {
+      "bulkRemoveSuccess": "Qabeenyaalee faarrame",
+      "bulkRemoveDescription": "Qabeenyaalee {count} liistii qabsiifamtoota kee irraa faarrame",
+      "clearAllSuccess": "Qabeenyaalee hundaa faarrame",
+      "clearAllDescription": "Qabeenyaalee qabsiifame hundi qulqulleeffameera",
+      "removed": "Qabeenya faarrame",
+      "removedDescription": "Qabeenya liistii qabsiifamtoota kee irraa faarrame",
+      "linkCopied": "Linkii nuqulessifame",
+      "linkCopiedDescription": "Linkii qabeenyaa kaardaa irratti nuqulessifame",
+      "exportStarted": "Baafachuu eegale",
+      "exportDescription": "Liistii qabeenyaalee qabsiifamtoota kee baafatama jira",
+      "shareStarted": "Qooduu eegale",
+      "shareDescription": "Qabeenyaalee filataman qooduu irratti qophaa'aa jira",
+      "loadingMore": "Qabeenyaalee dabalataa buufatama jira",
+      "loadingMoreDescription": "Qabeenyaalee qabsiifame dabalataa argachaa jira...",
+      "error": "Dogoggora",
+      "removeError": "Qabeenya faarsuu hin dandeenye",
+      "clearAllError": "Qabeenyaalee hundaa qulqulleessuu hin dandeenye"
+    },
+    "clearAllConfirmation": "Mirkaniitti qabeenyaalee qabsiifame hundaa faarsuu barbaadda? Dalagaan kanaa duuba hin deebifamu.",
+    "loadMore": "Qabeenyaalee Dabalataa Buufadhu"
+  },
+  "myListings": {
+    "pageTitle": "Liistii Koo",
+    "pageDescription": "Liistii qabeenyaa kee hundaa iddoo tokko keessatti bulchi",
+    "listingOverview": "Ilaalcha Liistii",
+    "quickActions": "Dalagoota Aantaan",
+    "addNewListing": "Liistii Haaraa Dabalchi",
+    "refreshList": "Liistii Haaraa Godhi",
+    "showFilters": "Filtariiwwan Agarsiisi",
+    "hideFilters": "Filtariiwwan Dhoksi",
+    "refresh": "Haaraa Godhi",
+    "filters": "Filtariiwwan",
+    "viewMode": "Ilaalcha Agarsiisuu",
+    "resetFilters": "Filtariiwwan Deebisi",
+    "searchPlaceholder": "Liistii kee maqaa, iddoo, ykn ibsa waliin barbaadi...",
+    "deleteListingTitle": "Liistii Faarri",
+    "deleteListingDescription": "Mirkaniitti liistii kana faarsuu barbaadda? Dalagaan kanaa duuba hin deebifamu. Suuraawwan waliigaltee fi daataa hundi duuba baafatama.",
+    "cancel": "Furii",
+    "deleteListing": "Liistii Faarri",
+    "stats": {
+      "totalListings": "Liistii Waliigalaa",
+      "active": "Hojiirra jira",
+      "pending": "Eegaa jira",
+      "drafts": "Daraaftii",
+      "featured": "Addaa",
+      "promoted": "Fooyya'amaa"
+    },
+    "status": {
+      "pendingReview": "Eegaa Ilaaluu",
+      "active": "Hojiirra jira",
+      "rejected": "Dhiifame",
+      "changesRequested": "Jijjiirama Gaafatame",
+      "promoted": "Fooyya'amaa"
+    },
+    "actions": {
+      "viewDetails": "Ibsa Ilali",
+      "editListing": "Liistii Sirreessi",
+      "delete": "Faarri"
+    },
+    "emptyStates": {
+      "noListings": "Amma liistii hin jiru",
+      "noMatchingListings": "Liistii waliigaltee argamtoota hin argamne",
+      "noMatchingDescription": "Barbaachisa ykn filtariiwwan kee jijjiiri yaali",
+      "startCreating": "Liistii qabeenyaa kee jalqabaa uumuun jalqabi",
+      "createFirstListing": "Liistii Keessan Jalqabaa Uumi"
+    },
+    "results": {
+      "showing": "Liistii {showing} {total} irraa argama",
+      "yourListings": "Liistii Keessan"
+    }
+  },
+  "admin": {
+    "panel": "Bulchinsa",
+    "viewSite": "Saayitii Ilali",
+    "navigation": {
+      "title": "Naavigeeshinii"
+    },
+    "quickActions": {
+      "title": "Dalagoota Aantaan",
+      "pendingApprovals": "Eegaa Mirkaneessuuf",
+      "recentInquiries": "Gaafannoo Dhiyoo",
+      "generateReport": "Ripoortii Uumi"
+    },
+    "help": {
+      "title": "Gargaarsa & Deeggarsa"
+    },
+    "systemStatus": {
+      "title": "Haala Siisteemii",
+      "online": "Onlaayinii",
+      "offline": "Ooflaayinii"
+    },
+    "accessDenied": {
+      "title": "Dhaammachuu Hin Dandeenye",
+      "description": "Paaneelii bulchinsaa dhaammachuuf hayyama hin qabdu. Bulchinsaan qofa iddoo kana dhaammachuu danda'a.",
+      "goHome": "Mana Geessi"
+    },
+    "users": {
+      "title": "Bulchinsa Fayyadamaalee",
+      "subtitle": "Fayyadamaa pirootokoollaa hundaa fi hayyama isaanii bulchi",
+      "searchPlaceholder": "Fayyadamaa maqaa, iimeelii, ykn bilbila waliin barbaadi...",
+      "filters": {
+        "userType": "Gosa Fayyadamaa",
+        "allTypes": "Gosa Hundaa",
+        "admin": "Bulchinsa",
+        "regularUser": "Fayyadamaa Sadarkaa",
+        "agent": "Ajeentaa"
+      },
+      "actions": {
+        "search": "Barbaadi",
+        "reset": "Deebisi",
+        "viewDetails": "Ibsa Ilali",
+        "verifyUser": "Fayyadamaa Mirkaneessi",
+        "unverifyUser": "Fayyadamaa Hin Mirkaneessin",
+        "makeAdmin": "Bulchinsa Taasisii",
+        "deactivate": "Deactivate",
+        "activate": "Activate",
+        "deleteUser": "Fayyadamaa Faarri",
+        "deleteSuccess": "Fayyadamaa sirriitti faarrame",
+        "verifySuccess": "Fayyadamaa sirriitti mirkaneeffame",
+        "unverifySuccess": "Fayyadamaa sirriitti hin mirkaneeffamne",
+        "deactivateSuccess": "Fayyadamaa sirriitti deactivate godhame",
+        "activateSuccess": "Fayyadamaa sirriitti activate godhame",
+        "makeAdminSuccess": "Fayyadamaa bulchinsa ta'uuf sirriitti fooyya'ame"
+      },
+      "status": {
+        "inactive": "Kan Hin Hojiin",
+        "pending": "Eegaa jira",
+        "admin": "Bulchinsa",
+        "active": "Hojiirra jira",
+        "verified": "Mirkaneeffamaa",
+        "unverified": "Kan Hin Mirkaneeffamne"
+      },
+      "userTypes": {
+        "admin": "Bulchinsa",
+        "user": "Fayyadamaa Sadarkaa",
+        "agent": "Ajeentaa"
+      },
+      "columns": {
+        "user": "Fayyadamaa",
+        "type": "Gosa",
+        "status": "Haala",
+        "verified": "Mirkaneeffamaa",
+        "joined": "Makame",
+        "actions": "Dalagoota"
+      },
+      "tableTitle": "Fayyadamaalee Hundaa ({count})",
+      "showingRange": "Argama {start} - {end} {total} irraa",
+      "emptyState": {
+        "noUsers": "Fayyadamaalee hin argamne",
+        "addFirstUser": "Fayyadamaa Keessan Jalqabaa Dabalchi"
+      },
+      "dialogs": {
+        "delete": {
+          "title": "Mirkaniitta?",
+          "description": "Dalagaan kanaa duuba hin deebifamu. Kun akkaawuntii fayyadamaa fi daataa waliigaltee hundaa duuba baasa.",
+          "cancel": "Furii",
+          "confirm": "Fayyadamaa Faarri"
+        },
+        "verify": {
+          "title": "Fayyadamaa Mirkaneessi",
+          "description": "Mirkaniitti \"{userName}\" mirkaneessuu barbaadda? Fayyadamaalee mirkaneeffaman dhaammachuu pirootokoollaa guutu argatu.",
+          "cancel": "Furii",
+          "confirm": "Fayyadamaa Mirkaneessi"
+        },
+        "unverify": {
+          "title": "Fayyadamaa Hin Mirkaneessin",
+          "description": "Mirkaniitti \"{userName}\" hin mirkaneessin barbaadda? Fayyadamaalee hin mirkaneeffamne dhaammachuu xiqqaa qabu.",
+          "cancel": "Furii",
+          "confirm": "Fayyadamaa Hin Mirkaneessin"
+        }
+      },
+      "errors": {
+        "loadFailed": "Fayyadamaalee bu'uufachuu hin dandeenye",
+        "deleteFailed": "Fayyadamaa faarsuu hin dandeenye",
+        "toggleFailed": "Haala fayyadamaa haaraa godhuu hin dandeenye",
+        "makeAdminFailed": "Dhimma fayyadamaa haaraa godhuu hin dandeenye"
+      }
+    },
+    "properties": {
+      "title": "Bulchinsa Qabeenyaalee",
+      "subtitle": "Qabeenyaalee pirootokoollaa irratti liistii godhaman hundaa bulchi",
+      "filters": {
+        "searchPlaceholder": "Qabeenyaalee maqaa, iddoo... waliin barbaadi",
+        "propertyType": "Gosa Qabeenyaa",
+        "allTypes": "Gosa Hundaa",
+        "propertyStatus": "Haala",
+        "allStatuses": "Haala Hundaa",
+        "activeStatus": "Haala Hojiirra Jiraachuu",
+        "all": "Hundaa",
+        "activeOnly": "Hojiirra Jira Qofa",
+        "inactiveOnly": "Kan Hin Hojiin Qofa"
+      },
+      "actions": {
+        "search": "Barbaadi",
+        "reset": "Deebisi",
+        "view": "Ilaali",
+        "deactivate": "Deactivate",
+        "activate": "Activate",
+        "verify": "Mirkaneessi",
+        "unverify": "Hin Mirkaneessin",
+        "makeFeatured": "Addaa Taasisii",
+        "removeFeatured": "Addaa Faarri",
+        "delete": "Faarri",
+        "more": "Dalagoota dabalataa",
+        "deleteSuccess": "Qabeenya sirriitti faarrame",
+        "verifySuccess": "Qabeenya sirriitti mirkaneeffame",
+        "unverifySuccess": "Qabeenya sirriitti hin mirkaneeffamne",
+        "featureSuccess": "Qabeenya sirriitti addaa taasifame",
+        "unfeatureSuccess": "Qabeenya sirriitti addaa hin taasifamne",
+        "activateSuccess": "Qabeenya sirriitti activate godhame",
+        "deactivateSuccess": "Qabeenya sirriitti deactivate godhame"
+      },
+      "status": {
+        "available": "Argama",
+        "pending": "Eegaa jira",
+        "sold": "Gurgurame",
+        "rented": "Kafalle",
+        "offMarket": "Soorataa Ala",
+        "active": "Hojiirra jira",
+        "inactive": "Kan Hin Hojiin",
+        "featured": "Addaa",
+        "verified": "Mirkaneeffamaa",
+        "unverified": "Kan Hin Mirkaneeffamne"
+      },
+      "propertyTypes": {
+        "house": "Mana",
+        "apartment": "Apaartimaanti",
+        "villa": "Viilaa",
+        "commercial": "Daldala",
+        "land": "Lafa",
+        "office": "Iddoo Biroo",
+        "warehouse": "Goolii",
+        "farm": "Oorma",
+        "hotel": "Hoteela",
+        "other": "Kan biraa"
+      },
+      "columns": {
+        "property": "Qabeenya",
+        "type": "Gosa",
+        "status": "Haala",
+        "active": "Hojiirra jira",
+        "price": "Gatii",
+        "views": "Ilaalcha",
+        "verified": "Mirkaneeffamaa",
+        "actions": "Dalagoota"
+      },
+      "details": {
+        "beds": "saree",
+        "baths": "dhiqannaa",
+        "area": "m²",
+        "monthly": "Ji'a",
+        "sale": "Gurgurtaa",
+        "rent": "Kafaltii",
+        "inquiries": "gaafannoo",
+        "areaUnit": "m²"
+      },
+      "tableTitle": "Qabeenyaalee Hundaa ({count})",
+      "showingRange": "Argama {start} - {end} {total} irraa",
+      "location": {
+        "unspecified": "Iddoo hin ibsamine"
+      },
+      "timeAgo": {
+        "days": "guyyoota {count} dura{count, plural, one {} other {n}}",
+        "hours": "sa'aatii {count} dura{count, plural, one {} other {n}}",
+        "minutes": "daqiiqaa {count} dura{count, plural, one {} other {n}}",
+        "recently": "Dhiyoon"
+      },
+      "view": {
+        "list": "Ilaalcha Liistii",
+        "grid": "Ilaalcha Giraadii"
+      },
+      "emptyState": {
+        "noProperties": "Qabeenyaalee hin argamne",
+        "addFirstProperty": "Qabeenya Keessan Jalqabaa Dabalchi"
+      },
+      "dialogs": {
+        "delete": {
+          "title": "Mirkaniitta?",
+          "description": "Dalagaan kanaa duuba hin deebifamu. Kun qabeenyaa fi daataa waliigaltee hundaa suuraawwan, gaafannoo, fi fooyya'aa duuba baasa.",
+          "cancel": "Furii",
+          "confirm": "Qabeenya Faarri"
+        },
+        "activate": {
+          "title": "Qabeenya Activate Godhi",
+          "description": "Mirkaniitti \"{propertyTitle}\" activate godhuu barbaadda? Kun qabeenyi fayyadamaaleef mul'ata taasisa.",
+          "cancel": "Furii",
+          "confirm": "Qabeenya Activate Godhi"
+        },
+        "deactivate": {
+          "title": "Qabeenya Deactivate Godhi",
+          "description": "Mirkaniitti \"{propertyTitle}\" deactivate godhuu barbaadda? Kun qabeenyi fayyadamaalee irraa dhoksa.",
+          "cancel": "Furii",
+          "confirm": "Qabeenya Deactivate Godhi"
+        }
+      },
+      "errors": {
+        "loadFailed": "Qabeenyaalee bu'uufachuu hin dandeenye",
+        "deleteFailed": "Qabeenya faarsuu hin dandeenye",
+        "toggleFailed": "Haala qabeenyaa haaraa godhuu hin dandeenye",
+        "activateFailed": "Qabeenya activate godhuu hin dandeenye",
+        "deactivateFailed": "Qabeenya deactivate godhuu hin dandeenye"
+      }
+    },
+    "approval": {
+      "title": "Mirkaneessuu Qabeenyaa",
+      "subtitle": "Liistii qabeenyaa haaraa ilaali fi mirkaneessi",
+      "filters": {
+        "searchPlaceholder": "Qabeenyaalee barbaadi...",
+        "propertyType": "Gosa Qabeenyaa",
+        "allTypes": "Gosa Hundaa",
+        "listingType": "Gosa Liistii",
+        "allListings": "Liistii Hundaa",
+        "dateRange": "Madaala Guyyaa",
+        "today": "Har'a",
+        "week": "Torbani Kun",
+        "month": "Ji'aan Kun",
+        "allTime": "Yeroo Hundaa"
+      },
+      "actions": {
+        "refresh": "Haaraa Godhi",
+        "export": "Baafadhu",
+        "bulkActions": "Dalagaa Baay'ee ({count})",
+        "selectAll": "Hundaa Filadhu",
+        "approve": "Mirkaneessi",
+        "requestChanges": "Jijjiirama Gaafadhu",
+        "reject": "Dhiisi",
+        "viewPublic": "Fuula Ummataa Ilali",
+        "sendEmail": "Iimeelii Ergi",
+        "viewProfile": "Piroofaayilii Ilali",
+        "sendNotification": "Beeksisa kan qabeenyi irratti ergi",
+        "approveSuccess": "Qabeenya sirriitti mirkaneeffame",
+        "rejectSuccess": "Qabeenya sirriitti dhiifame",
+        "requestChangesSuccess": "Jijjiirama sirriitti gaafatame",
+        "bulkSuccess": "{count} qabeenyaalee sirriitti {action}d",
+        "emailSent": "Iimeelii kan qabeenyi irratti ergame",
+        "exportSuccess": "Ripoortii sirriitti buufatame"
+      },
+      "status": {
+        "pending": "Eegaa jira",
+        "approved": "Mirkaneeffame",
+        "rejected": "Dhiifame",
+        "changesRequested": "Jijjiirama Gaafatame"
+      },
+      "propertyTypes": {
+        "apartment": "Apaartimaanti",
+        "house": "Mana",
+        "villa": "Viilaa",
+        "commercial": "Daldala",
+        "land": "Lafa",
+        "office": "Iddoo Biroo",
+        "warehouse": "Goolii",
+        "farm": "Oorma",
+        "hotel": "Hoteela",
+        "other": "Kan biraa"
+      },
+      "listingTypes": {
+        "sale": "Gurguruf",
+        "rent": "Kafaltiif"
+      },
+      "columns": {
+        "property": "Qabeenya",
+        "owner": "Kan Qabeenyi",
+        "type": "Gosa",
+        "price": "Gatii",
+        "status": "Haala",
+        "actions": "Dalagoota"
+      },
+      "details": {
+        "id": "ID: {id}",
+        "owner": "Kan Qabeenyi",
+        "rent": "Kafaltii",
+        "images": "Suuraawwan Qabeenyaa",
+        "primary": "Jalqabaa",
+        "location": "Iddoo",
+        "pricing": "Gatii Saassaa",
+        "price": "Gatii",
+        "monthlyRent": "Kafaltii Ji'a",
+        "pricePerSqm": "Gatii m² irraa",
+        "specifications": "Ibsa",
+        "bedrooms": "Kutaa manaa",
+        "bathrooms": "Kutaa dhiqannaa",
+        "areaUnit": "m²",
+        "notAvailable": "N/A",
+        "keyFeatures": "Faayidaalee Bu'uuraa",
+        "description": "Ibsa",
+        "approvalHistory": "Seenaa Mirkaneessuu"
+      },
+      "features": {
+        "parking": "Parking",
+        "garden": "Ogeessa",
+        "security": "Nagaa",
+        "furnished": "Qopheeffamaa",
+        "petFriendly": "Pet Friendly"
+      },
+      "tableTitle": "Qabeenyaalee Ilaaluu Barbaachisan ({count})",
+      "stats": {
+        "pending": "Eegaa jira",
+        "approved": "Mirkaneeffame",
+        "rejected": "Dhiifame",
+        "changes_requested": "Jijjiirama Gaafatame",
+        "total": "Waliigalaa"
+      },
+      "emptyState": {
+        "noProperties": "Qabeenyaalee eegaa ilaaluu hin jiru",
+        "noMatch": "Qabeenyaaleen barbaachisa kee hin makitamu",
+        "clearSearch": "Barbaachisa Qulqulleessi"
+      },
+      "dialogs": {
+        "reviewDescription": "Murteessuu dura ibsa qabeenyaa ilaali",
+        "cancel": "Furii",
+        "notesDescription": "Kun kan qabeenyi irratti ergamu.",
+        "approve": {
+          "title": "Qabeenya Mirkaneessi",
+          "description": "Qabeenyi kun maxxanfama fi fayyadamaalee hundaa mul'ata.",
+          "notesLabel": "Qabxii Mirkaneessuu (Filannoo)",
+          "notesPlaceholder": "Mirkaneessuu kana irratti qabxii dabalchi..."
+        },
+        "reject": {
+          "title": "Qabeenya Dhiisi",
+          "description": "Qabeenyi kun dhiifama fi fayyadamaalee irraa dhoksa.",
+          "notesLabel": "Sababaa Dhiisuu*",
+          "notesPlaceholder": "Maaliif qabeenyi kana dhiifamu ibsi..."
+        },
+        "requestChanges": {
+          "title": "Jijjiirama Gaafadhu",
+          "description": "Kan qabeenyi jijjiirama taasistuuf gaafatama fi irra deebi'ii galchituuf gaafatama.",
+          "notesLabel": "Jijjiirama Barbaachisaa*",
+          "notesPlaceholder": "Jijjiirama barbaachisaa sirriitti lakkoofsi..."
+        },
+        "defaultRejectionReason": "Qajeelfama liistii hin makitamne.",
+        "defaultChangesRequest": "Maaloo odeeffannoo dabalataa qabeenyaa irratti kenni.",
+        "bulkAction": {
+          "title": "Dalagaa Baay'ee",
+          "description": "Dalagaa qabeenyaalee {count} filataman irratti iyyi",
+          "selectPlaceholder": "Dalagaa filadhu",
+          "notesLabel": "Qabxii (Filannoo)",
+          "notesPlaceholder": "Qabeenyaalee filataman hundaa irratti qabxii dabalchi...",
+          "approveAll": "Hundaa Mirkaneessi",
+          "rejectAll": "Hundaa Dhiisi"
+        }
+      },
+      "history": {
+        "submitted": "Qabeenya ilaaluuf galmaa'e",
+        "by": "Kan: {name} ({email})"
+      },
+      "errors": {
+        "loadFailed": "Qabeenyaalee eegaa bu'uufachuu hin dandeenye",
+        "approvalFailed": "Mirkaneessuu qabeenyaa tarkaanfii hin dandeenye",
+        "noPropertiesSelected": "Jalqabumatti qabeenyaalee filadhu",
+        "bulkFailed": "Dalagaa baay'ee gaggeessuu hin dandeenye",
+        "emailFailed": "Iimeelii erguu hin dandeenye"
+      }
+    },
+    "reports": {
+      "title": "Ripoortii & Xiinxala",
+      "subtitle": "Daataa guutuu baafadhu fi ripoortii siisteemii uumi",
+      "loadFailed": "Daataa ripoortii bu'uufachuu hin dandeenye",
+      "exportSuccess": "{name} sirriitti baafame",
+      "exportFailed": "Ripoortii baafachuu hin dandeenye",
+      "notAvailable": "Gosa ripoortii \"{name}\" hin jiru.",
+      "permissionDenied": "Hayyama dhiifame. Hayyama bulchinsaa barbaachisa.",
+      "serverError": "Dogoggora siisteemii. Yeroo biraa yaali.",
+      "refresh": "Haaraa Godhi",
+      "userAnalytics": "Xiinxala Fayyadamaa",
+      "userAnalyticsDesc": "Qorannoo ibsaa sochii fayyadamaa, giddugaleessa galmeessuu, fi tarminaalii dalagaa",
+      "propertyAnalytics": "Xiinxala Qabeenyaa",
+      "propertyAnalyticsDesc": "Hubannoo liistii qabeenyaalee, ilaalcha, fi raadiyoo dalagaa",
+      "inquiryAnalytics": "Xiinxala Gaafannoo",
+      "inquiryAnalyticsDesc": "Hordofii fi xiinxala gaafannoo bitataa fi jijjiiramaa dandeettii",
+      "revenueAnalytics": "Xiinxala Qarshii",
+      "revenueAnalyticsDesc": "Ripoortii qabeenyaa, giddugaleessa qarshii, fi xiinxala walgahii",
+      "performanceReport": "Ripoortii Dalagaa",
+      "performanceReportDesc": "Raadiyoo dalagaa siisteemii guutuu fi raadiyoo hojii",
+      "marketReport": "Ripoortii Soorataa",
+      "marketReportDesc": "Giddugaleessa soorataa, xiinxala makitamummaa, fi hubannoo daldalaa",
+      "activityReport": "Ripoortii Dalagaa",
+      "activityReportDesc": "Guyyummaa, torbanummaa, fi ji'a dalagaa giddugaleessa",
+      "comprehensiveReport": "Ripoortii Guutuu",
+      "comprehensiveReportDesc": "Ripoortii hundaa kan daataa baay'ee qindeessitu",
+      "systemSummary": "Giddugaleessa Siisteemii",
+      "systemSummaryDesc": "Ilaalcha ol'aanaa haala siisteemii fi raadiyoo bu'uuraa",
+      "usersData": "Daataa Fayyadamaalee",
+      "usersDataDesc": "Daataabeesii fayyadamaa guutuu piroofaayilii fi seenaa dalagaa waliin baafadhu",
+      "propertiesData": "Daataa Qabeenyaalee",
+      "propertiesDataDesc": "Liistii qabeenyaalee hundaa odeeffannoo ibsaa waliin baafadhu",
+      "inquiriesData": "Daataa Gaafannoo",
+      "inquiriesDataDesc": "Gaafannoo bitataa fi seenaa walqunnamtii baafadhu",
+      "auditLogs": "Loogii Auditii",
+      "auditLogsDesc": "Daandii auditii siisteemii fi loogii dalagaa baafadhu",
+      "transactions": "Walga'ii",
+      "transactionsDesc": "Walga'ii qabeenyaa fi galmeenyaa kaffaltii baafadhu",
+      "stats": {
+        "totalUsers": "Fayyadamaalee Waliigalaa",
+        "activeProperties": "Qabeenyaalee Hojiirra Jiran",
+        "monthlyRevenue": "Qarshii Ji'a",
+        "totalInquiries": "Gaafannoo Waliigalaa"
+      },
+      "customExport": {
+        "title": "Baafachuu Sirreessaa",
+        "description": "Ripoortii madaala guyyaa addaa ta'e waliin uumi",
+        "reportType": "Gosa Ripoortii",
+        "startDate": "Guyyaa Jalqabaa",
+        "endDate": "Guyyaa Xumuraa",
+        "summary": "Daataa {report} {start} hanga {end} irraa baafadhu",
+        "generating": "Ripoortii Uumama Jira...",
+        "generate": "Ripoortii Sirreessaa Uumi (CSV)",
+        "success": "{name} sirreessaa sirriitti baafame"
+      },
+      "tabs": {
+        "analytical": "Ripoortii Xiinxalaa",
+        "raw": "Baafachuu Daataa Raawaa"
+      },
+      "exporting": "Baafatama jira...",
+      "exportAsCSV": "Akka CSV Baafadhu",
+      "quickExports": {
+        "title": "Baafachuu Aantaan",
+        "description": "Baafachuu fayyadama baay'ee",
+        "userReport": "Ripoortii Fayyadamaa",
+        "propertyReport": "Ripoortii Qabeenyaa",
+        "usersData": "Daataa Fayyadamaalee",
+        "propertiesData": "Daataa Qabeenyaalee"
+      },
+      "information": {
+        "title": "Odeeffannoo",
+        "description": "Waa'ee siisteemii ripoortii",
+        "note": "Qabxii",
+        "noteDescription": "Baafachuu hundi foormaata CSV keessatti. Ripoortii xiinxalaan giddugaleessa walxaxaa kennu, baafachuu daataa raawaan galmee guutuu qabu.",
+        "analytical": {
+          "title": "Ripoortii Xiinxalaa",
+          "aggregated": "Raadiyoo walxaxaa",
+          "dateRange": "Filtrii madaala guyyaa",
+          "summary": "Daataa giddugaleessa"
+        },
+        "raw": {
+          "title": "Baafachuu Daataa Raawaa",
+          "complete": "Meeshaa daataabeesii guutuu",
+          "allRecords": "Galmee hundaa dabalame",
+          "direct": "Daataa sirriitti dhaammachuu"
+        },
+        "custom": {
+          "title": "Baafachuu Sirreessaa",
+          "specific": "Madaala guyyaa addaa",
+          "selected": "Gosa ripoortii filataman",
+          "csv": "Foormaata CSV qofa"
+        }
+      },
+      "badges": {
+        "analytical": "Xiinxalaa",
+        "raw": "Daataa Raawaa"
+      }
+    },
+    "analytics": {
+      "title": "Daashboordii Xiinxalaa",
+      "subtitle": "Hubannoo pirootokoollaa guutuu fi raadiyoo dalagaa",
+      "tabs": {
+        "overview": "Ilaalcha",
+        "market": "Soorataa",
+        "users": "Fayyadamaalee",
+        "platform": "Pirootokoollaa"
+      }
+    },
+    "dashboard": {
+      "title": "Daashboordii",
+      "subtitle": "Baga nagaan deebite! Xiinxala pirootokoollaa yeroo ammaa fi hubannoo.",
+      "loading": "Daashboordii buufatama jira...",
+      "stats": {
+        "totalUsers": "Fayyadamaalee Waliigalaa",
+        "registeredUsers": "Fayyadamaalee galmeeffaman",
+        "totalProperties": "Qabeenyaalee Waliigalaa",
+        "listedProperties": "Qabeenyaalee liistii godhaman",
+        "activeUsers": "Fayyadamaalee Hojiirra Jiran",
+        "last24Hours": "Sa'aatii 24 Duraanii",
+        "monthlyRevenue": "Qarshii Ji'a",
+        "currentMonth": "Ji'aan ammaa",
+        "todayInquiries": "Gaafannoo Har'a",
+        "inquiriesToday": "Gaafannoo Har'a",
+        "todayRevenue": "Qarshii Har'a",
+        "revenueToday": "Qarshii Har'a",
+        "fromLastPeriod": "dandeettii duraanii irraa",
+        "newUsersToday": "+{count} har'a",
+        "noChange": "Jijjiirama hin jiru",
+        "activeProperties": "Qabeenyaalee Hojiirra Jiran",
+        "verifiedProperties": "{count} mirkaneeffamaa",
+        "todaysViews": "Ilaalcha Har'a",
+        "retentionRate": "{rate}% qabsiisuu",
+        "todaysInquiries": "Gaafannoo Har'a",
+        "avgTransaction": "Giddugaleessaan: {amount}",
+        "systemPerformance": "Dalagaa Siisteemii",
+        "responseTime": "{time}ms deebii",
+        "today": "har'a",
+        "active": "hojiirra jira",
+        "active_users": "fayyadamaalee hojiirra jiran",
+        "transactions": "walga'ii",
+        "user": {
+          "propertiesListed": "Qabeenyaalee Liistii Godhaman",
+          "activeProperties": "{count} hojiirra jira",
+          "totalViews": "Ilaalcha Waliigalaa",
+          "inquiries": "{count} gaafannoo",
+          "revenueGenerated": "Qarshii Uumame",
+          "transactions": "{count} walga'ii"
+        }
+      },
+      "badges": {
+        "live": "Jireenya"
+      },
+      "actions": {
+        "refresh": "Haaraa Godhi",
+        "refreshing": "Haaraa godhama jira...",
+        "generateReport": "Ripoortii Uumi",
+        "viewAllActivities": "Dalagaa Hundaa Ilali",
+        "viewAllProperties": "Qabeenyaalee Hundaa Ilali",
+        "viewDetails": "Ibsa Ilali",
+        "generate_report": "Ripoortii Uumi",
+        "generate_trends": "Giddugaleessa Uumi"
+      },
+      "errors": {
+        "title": "Dogoggora Daataa Bu'uufachuu",
+        "loadFailed": "Daataa daashboordii bu'uufachuu hin dandeenye: {message}"
+      },
+      "tabs": {
+        "overview": "Ilaalcha",
+        "properties": "Qabeenyaalee",
+        "analytics": "Xiinxala",
+        "performance": "Dalagaa",
+        "insights": "Hubannoo"
+      },
+      "charts": {
+        "platformGrowth": "Guddina Pirootokoollaa (Guyyoota 30)",
+        "engagementMetrics": "Raadiyoo Makamummaa",
+        "users": "Fayyadamaalee",
+        "properties": "Qabeenyaalee",
+        "inquiries": "Gaafannoo",
+        "views": "Ilaalcha",
+        "noGrowthData": "Daataa guddinaa hin jiru",
+        "noEngagementData": "Daataa makamummaa hin jiru",
+        "dataWillAppear": "Daataan kan ta'u argamu yeroo argamu asitti mul'ata"
+      },
+      "activities": {
+        "recentActivity": "Dalagaa Pirootokoollaa Dhiyoo",
+        "dashboardRefreshed": "Daashboordii haaraa godhame",
+        "newRegistration": "Galmeessuu haaraa",
+        "addedProperty": "Qabeenya haaraa dabalate",
+        "madeInquiry": "Gaafannoo godhe",
+        "updatedSettings": "Saayitii haaraa godhe",
+        "propertyOwner": "Kan Qabeenyi",
+        "potentialBuyer": "Bitataa Danda'aa",
+        "noActivities": "Dalagaa dhiyoo hin jiru",
+        "activitiesWillAppear": "Dalagaan yeroo ta'aniif asitti mul'ata",
+        "property_listed": "Qabeenya liistii godhame"
+      },
+      "time": {
+        "justNow": "Amma qofa",
+        "minutesAgo": "daqiiqaa {count} dura{count, plural, one {} other {n}}",
+        "hoursAgo": "sa'aatii {count} dura{count, plural, one {} other {n}}",
+        "daysAgo": "guyyoota {count} dura{count, plural, one {} other {n}}",
+        "days_ago": "{count, plural, one {# guyyaa dura} other {# guyyoota dura}}",
+        "hours_ago": "{count, plural, one {# sa'aatii dura} other {# sa'aatii dura}}",
+        "minutes_ago": "{count, plural, one {# daqiiqaa dura} other {# daqiiqaa dura}}",
+        "recently": "Dhiyoon"
+      },
+      "system": {
+        "status": "Haala Siisteemii",
+        "platformStatus": "Haala Pirootokoollaa",
+        "allSystemsOperational": "Siisteemiin hundi hojiirra jira",
+        "online": "Onlaayinii",
+        "storageUsage": "Fayyadama Kuusaa",
+        "responseTime": "Yeroo Deebii",
+        "activeSessions": "Seeshinoota Hojiirra Jiran",
+        "apiPerformance": "Dalagaa API",
+        "uptime": "Yeroo Irra Jiraachuu"
+      },
+      "properties": {
+        "statistics": "Ra'iyii Qabeenyaa",
+        "totalProperties": "Qabeenyaalee Waliigalaa",
+        "activeProperties": "Qabeenyaalee Hojiirra Jiran",
+        "verifiedProperties": "Qabeenyaalee Mirkaneeffaman",
+        "featuredProperties": "Qabeenyaalee Addaa",
+        "averagePrice": "Gatii Giddugaleessaa",
+        "typeDistribution": "Qooda Gosa Qabeenyaa",
+        "properties": "qabeenyaalee",
+        "forSale": "Gurguruf",
+        "forRent": "Kafaltiif",
+        "featured": "Addaa",
+        "promoted": "Fooyya'amaa",
+        "quickActions": "Dalagoota Qabeenyaa Aantaan",
+        "addNewProperty": "Qabeenya Haaraa Dabalchi",
+        "createNewListing": "Liistii haaraa uumi",
+        "pendingReviews": "Eegaa Ilaaluu",
+        "reviewNewListings": "Liistii haaraa ilaali",
+        "verifyProperties": "Qabeenyaalee Mirkaneessi",
+        "approveListings": "Liistii mirkaneessi",
+        "propertyAnalytics": "Xiinxala Qabeenyaa",
+        "viewPerformance": "Dalagaa ilaali",
+        "latestProperties": "Qabeenyaalee Dhiyoo",
+        "verified": "Mirkaneeffamaa",
+        "beds": "saree",
+        "baths": "dhiqannaa",
+        "area": "m²",
+        "views": "ilaalcha",
+        "inquiries": "gaafannoo",
+        "noPropertiesFound": "Qabeenyaalee hin argamne",
+        "propertiesWillAppear": "Qabeenyaaleen dabalatanii yeroo dabalatan asitti mul'atu",
+        "noDistributionData": "Daataa qoodaa hin jiru",
+        "distributionWillAppear": "Qoodni Mul'ata",
+        "propertyDistribution": "Qooda Qabeenyaa",
+        "ofTotalProperties": "qabeenyaalee waliigalaa irraa",
+        "unknown": "Kan hin beekamne",
+        "viewAllProperties": "Qabeenyaalee Hundaa Ilali",
+        "viewDetails": "Ibsa Ilali"
+      },
+      "analytics": {
+        "noCityData": "Daataa magaalaa hin jiru",
+        "cityDataWillAppear": "Daataa magaalaa asitti mul'ata",
+        "propertyDistribution": "Qooda Qabeenyaa",
+        "properties": "qabeenyaalee",
+        "platformPerformance": "Dalagaa Pirootokoollaa",
+        "apiPerformance": "Dalagaa API",
+        "userGrowth": "Guddina Fayyadamaa",
+        "propertyGrowth": "Guddina Qabeenyaa",
+        "revenueGrowth": "Guddina Qarshii",
+        "optimal": "Gaarii",
+        "moderate": "Giddu galeessa",
+        "slow": "Suuta",
+        "strong": "Cimaa",
+        "growing": "Guddina jira",
+        "emerging": "Uumama jira",
+        "stable": "Tasgabbaa'aa",
+        "declining": "Gadi bu'aa jira",
+        "revenuePerformance": "Xiinxala Qarshii",
+        "totalRevenue": "Qarshii Waliigalaa",
+        "todaysRevenue": "Qarshii Har'a",
+        "avgTransaction": "Giddugaleessaan Walga'ii",
+        "totalTransactions": "Walga'ii Waliigalaa",
+        "userEngagement": "Makamummaa Fayyadamaa",
+        "totalUsers": "Fayyadamaalee Waliigalaa",
+        "newToday": "haaraa har'a",
+        "activeToday": "Hojiirra Jira Har'a",
+        "todaysInquiries": "Gaafannoo Har'a",
+        "today": "har'a",
+        "retentionRate": "saffisa qabsiisuu"
+      },
+      "performance": {
+        "systemPerformance": "Dalagaa Siisteemii & Fayyaa",
+        "cpuUsage": "Fayyadama CPU",
+        "memory": "Yaadannoo",
+        "database": "Daataabeesii",
+        "activeConnections": "Walqunnamtii hojiirra jiran",
+        "uptime": "Yeroo Irra Jiraachuu",
+        "days": "guyyoota {days}",
+        "inquiries": "Gaafannoo",
+        "views": "Ilaalcha",
+        "properties": "Qabeenyaalee",
+        "optimal": "Gaarii",
+        "moderate": "Giddu galeessa",
+        "slow": "Suuta",
+        "healthy": "Fayyaa qaba",
+        "high": "Ol'aanaa",
+        "noPerformanceData": "Daataa dalagaa hin jiru",
+        "dataWillAppear": "Daataan fayyadama pirootokoollaa yeroo guddatu asitti mul'ata"
+      },
+      "insights": {
+        "platformInsights": "Hubannoo Pirootokoollaa & Gorsa",
+        "userGrowth": "Guddina Fayyadamaa",
+        "propertyMarketplace": "Iddoo Soorataa Qabeenyaa",
+        "revenuePerformance": "Dalagaa Qarshii",
+        "verificationNeeded": "Mirkaneessuu Barbaacha",
+        "quickActions": "Dalagoota Aantaan",
+        "manageUsers": "Fayyadamaalee Bulchi",
+        "manageProperties": "Qabeenyaalee Bulchi",
+        "viewInquiries": "Gaafannoo Ilali",
+        "systemConfiguration": "Waliigaltee Siisteemii",
+        "advancedAnalytics": "Xiinxala Irra Geessoo",
+        "platformHasUsers": "Pirootokoollaan fayyadamaalee {count} galmeeffamaa qaba.",
+        "considerAdvancedSegmentation": " Gareen fayyadamaa irra geessoo akka gaarii ta'u yaali.",
+        "focusUserAcquisition": " Guddina fayyadamaa irratti hojii qindeessi akka guddina guddaa ta'uuf.",
+        "propertiesListed": "Qabeenyaalee {count} liistii godhamaniiru.",
+        "propertiesInactive": " Qabeenyaalee {count} hojiirra hin jiran. Liistii hojiirra hin jiran ilaali.",
+        "allPropertiesActive": " Qabeenyaaleen hundi hojiirra jiran. Faayidaalee premium dabaladhu yaali.",
+        "monthlyRevenue": "Qarshii ji'a: {amount}.",
+        "growingAtRate": " {rate}% guddina jira. Faayidaalee milkaa'aa guddisu yaali.",
+        "exploreNewRevenue": " Daandii qarshii haaraa fi faayidaalee premium qoradhu.",
+        "onlyPercentVerified": "Qabeenyaalee {percent}% qofa mirkaneeffaman.",
+        "considerAutomatedVerification": " Mirkaneessuu ofii ykn hojii mirkaneessuu guddisu yaali.",
+        "countUsers": "fayyadamaalee {count}",
+        "countProperties": "qabeenyaalee {count}",
+        "countInquiries": "gaafannoo {count}",
+        "platformSettings": "Saayitii pirootokoollaa fi waliigaltee",
+        "detailedReports": "Ripoortii ibsaa fi xiinxala"
+      },
+      "common": {
+        "per_month": "ji'a"
+      },
+      "location": {
+        "unspecified": "Iddoo hin ibsamine"
+      }
+    },
+    "audit": {
+      "title": "Loogii Auditii",
+      "subtitle": "Ilaalcha dalagaa siisteemii guutuu fi hordofii dalagaa fayyadamaa",
+      "loading": "Loogii auditii buufatama jira...",
+      "exporting": "Loogii auditii baafatama jira...",
+      "export_success": "Loogii auditii sirriitti baafame!",
+      "export_failed": "Loogii auditii baafachuu hin dandeenye",
+      "error": {
+        "title": "Dogoggora Loogii Auditii Bu'uufachuu",
+        "description": "Loogii auditii bu'uufachuu hin dandeenye. Irra deebi'ii yaali.",
+        "retry": "Irra Deebi'ii Yaali",
+        "clear_filters": "Filtariiwwan Qulqulleessi"
+      },
+      "tabs": {
+        "activity_logs": "Loogii Dalagaa",
+        "analytics": "Xiinxala"
+      },
+      "filters": {
+        "title": "Filtariiwwan",
+        "description": "Loogii auditii qajeelfama addaa waliin filtrii godhi",
+        "search": "Barbaadi",
+        "search_placeholder": "Loogii barbaadi...",
+        "action_type": "Gosa Dalagaa",
+        "all_actions": "Dalagaa hundaa",
+        "model": "Moodelii",
+        "all_models": "Moodelii hundaa",
+        "date_range": "Madaala Guyyaa",
+        "all_time": "Yeroo hundaa",
+        "device": "Meeshaa",
+        "all_devices": "Meeshaa hundaa"
+      },
+      "activity_logs": {
+        "title": "Loogii Dalagaa",
+        "loading": "Loogii buufatama jira...",
+        "logs_found": "loogii argame",
+        "filtered": "Filtrii godhame",
+        "refresh": "Haaraa Godhi"
+      },
+      "empty_state": {
+        "title": "Loogii auditii hin argamne",
+        "filtered": "Loogiin filtariiwwan kee ammaa hin makitamu. Qajeelfama barbaachisaa kee jijjiiri yaali.",
+        "default": "Amma loogii auditii hin galmeeffamne. Dalagaan yeroo ta'aniif asitti mul'atu.",
+        "clear_filters": "Filtariiwwan Hundaa Qulqulleessi"
+      },
+      "details": {
+        "technical_info": "Odeeffannoo Teknikaalaa",
+        "path": "Karaa",
+        "session": "Seeshinii",
+        "device_location": "Meeshaa & Iddoo",
+        "device": "Meeshaa",
+        "browser": "Browser",
+        "location": "Iddoo",
+        "object_info": "Odeeffannoo Objeektii",
+        "id": "ID",
+        "model": "Moodelii",
+        "not_available": "N/A",
+        "totalUsers": "Fayyadamaalee Waliigalaa",
+        "registeredUsers": "Fayyadamaalee galmeeffaman",
+        "totalProperties": "Qabeenyaalee Waliigalaa",
+        "listedProperties": "Qabeenyaalee liistii godhaman",
+        "todayInquiries": "Gaafannoo Har'a",
+        "inquiriesToday": "Gaafannoo Har'a",
+        "todayRevenue": "Qarshii Har'a",
+        "revenueToday": "Qarshii Har'a",
+        "fromLastPeriod": "dandeettii duraanii irraa",
+        "today": "har'a",
+        "active": "hojiirra jira",
+        "active_users": "fayyadamaalee hojiirra jiran",
+        "transactions": "walga'ii"
+      },
+      "sections": {
+        "changes": "Jijjiirama",
+        "old_values": "Garii Duraanii",
+        "new_values": "Garii Haaraa"
+      },
+      "pagination": {
+        "showing": "Argama",
+        "to": "hanga",
+        "of": "irraa",
+        "logs": "loogii"
+      },
+      "summary": {
+        "total_logs": "Loogii Waliigalaa",
+        "unique_users": "Fayyadamaalee Addaa",
+        "unique_ips": "IP Addaa",
+        "active_filters": "Filtriiwwan Hojiirra Jiran"
+      },
+      "charts": {
+        "action_distribution": "Qooda Gosa Dalagaa",
+        "action_distribution_desc": "Dalagaa fayyadama baay'ee",
+        "model_distribution": "Qooda Moodelii",
+        "model_distribution_desc": "Moodelii baay'ee dhiyeessan"
+      },
+      "top_users": {
+        "title": "Fayyadamaalee Hojiirra Jira Baay'ee",
+        "description": "Fayyadamaalee dalagaa baay'ee qaban",
+        "actions": "dalagaa",
+        "rank": "Sadarkaa"
+      },
+      "common": {
+        "system": "Siisteemii"
+      },
+      "all_actions": "Dalagaa Hundaa",
+      "all_models": "Moodelii Hundaa",
+      "actions": {
+        "login": "Seenuu",
+        "logout": "Ba'uu",
+        "register": "Galmeessuu",
+        "password_change": "Jijjiirama Paasaworidii",
+        "password_reset": "Paasaworidii Deebisi",
+        "create": "Uumuu",
+        "update": "Haaraa Godhuu",
+        "delete": "Faarsuu",
+        "view": "Ilaaluu",
+        "export": "Baafachuu",
+        "profile_update": "Haaraa Godhama Piroofaayilii",
+        "email_verification": "Mirkaneessuu Iimeelii",
+        "phone_verification": "Mirkaneessuu Bilbila",
+        "promotion_purchase": "Fooyya'aa",
+        "property_save": "Qabsiifamuu Qabeenyaa",
+        "property_unsave": "Qabsiifamuu Qabeenyaa Hin Taasisin",
+        "search": "Barbaachisa",
+        "inquiry_create": "Uumuu Gaafannoo",
+        "message_send": "Ergama Ergaa",
+        "notification_send": "Beeksisa",
+        "role_change": "Jijjiirama Dhimmaa",
+        "status_change": "Jijjiirama Haala",
+        "bulk_action": "Dalagaa Baay'ee",
+        "clear_filters": "Filtriiwwan Qulqulleessi",
+        "export_csv": "CSV Baafadhu"
+      },
+      "models": {
+        "user": "Fayyadamaa",
+        "property": "Qabeenya",
+        "inquiry": "Gaafannoo",
+        "city": "Magaalaa",
+        "sub_city": "Magaalaa Giddu Galeessa",
+        "amenity": "Qabeenya",
+        "notification": "Beeksisa",
+        "market_stats": "Ra'iyii Soorataa",
+        "valuation": "Gatii Saassaa",
+        "message": "Ergaa",
+        "payment": "Kaffaltii",
+        "promotion": "Fooyya'aa",
+        "saved_search": "Barbaachisa Qabsiifame",
+        "tracked_property": "Qabeenya Hordofame",
+        "comparison": "Wal Maki",
+        "system": "Siisteemii"
+      },
+      "date_ranges": {
+        "all_time": "Yeroo hundaa",
+        "today": "Har'a",
+        "last_7_days": "Guyyoota 7 Duraanii",
+        "last_30_days": "Guyyoota 30 Duraanii",
+        "last_year": "Waggoota Duraanii"
+      },
+      "devices": {
+        "all": "Meeshaa Hundaa",
+        "desktop": "Desktooppii",
+        "mobile": "Moobaayilii",
+        "tablet": "Taableettii"
+      }
+    }
+  },
+  "analytics": {
+    "title": "Daashboordii Xiinxalaa",
+    "subtitle": "Hubannoo pirootokoollaa guutuu fi raadiyoo dalagaa",
+    "tabs": {
+      "overview": "Ilaalcha",
+      "market": "Soorataa",
+      "users": "Fayyadamaalee",
+      "platform": "Pirootokoollaa"
+    },
+    "dashboard": {
+      "loadFailed": "Daataa xiinxalaa bu'uufachuu hin dandeenye",
+      "noData": "Daataa hin jiru",
+      "time": {
+        "daysAgo": "guyyoota {count} dura{count, plural, one {} other {n}}",
+        "hoursAgo": "sa'aatii {count} dura{count, plural, one {} other {n}}",
+        "minutesAgo": "daqiiqaa {count} dura{count, plural, one {} other {n}}"
+      },
+      "stats": {
+        "totalUsers": "Fayyadamaalee Waliigalaa",
+        "newUsersToday": "+{count} har'a",
+        "noChange": "Jijjiirama hin jiru",
+        "activeProperties": "Qabeenyaalee Hojiirra Jiran",
+        "verifiedProperties": "{count} mirkaneeffamaa",
+        "todaysViews": "Ilaalcha Har'a",
+        "retentionRate": "{rate}% qabsiisuu",
+        "todaysInquiries": "Gaafannoo Har'a",
+        "activeUsers": "fayyadamaalee {count} hojiirra jiran",
+        "revenueToday": "Qarshii Har'a",
+        "avgTransaction": "Giddugaleessaan: {amount}",
+        "systemPerformance": "Dalagaa Siisteemii",
+        "responseTime": "{time}ms deebii",
+        "user": {
+          "propertiesListed": "Qabeenyaalee Liistii Godhaman",
+          "activeProperties": "{count} hojiirra jira",
+          "totalViews": "Ilaalcha Waliigalaa",
+          "inquiries": "{count} gaafannoo",
+          "revenueGenerated": "Qarshii Uumame",
+          "transactions": "{count} walga'ii"
+        }
+      },
+      "recentActivity": {
+        "title": "Dalagaa Dhiyoo",
+        "newUser": "Fayyadamaa Haaraa",
+        "noActivity": "Dalagaa dhiyoo hin jiru"
+      },
+      "topPerformers": {
+        "title": "Dalagaa Gubbaa",
+        "views": "ilaalcha",
+        "noData": "Daataa dalagaa gubbaa hin jiru"
+      }
+    },
+    "market": {
+      "loadFailed": "Daataa soorataa bu'uufachuu hin dandeenye",
+      "noData": "Daataa soorataa hin jiru",
+      "tabs": {
+        "overview": "Ilaalcha Soorataa",
+        "prices": "Xiinxala Gatii"
+      },
+      "metrics": {
+        "totalListings": "Liistii Waliigalaa",
+        "avgPrice": "Gatii Giddugaleessaa",
+        "todaysViews": "Ilaalcha Har'a",
+        "marketHealth": "Fayyaa Soorataa",
+        "unknown": "Kan hin beekamne"
+      },
+      "charts": {
+        "propertyTypeDistribution": "Qooda Gosa Qabeenyaa",
+        "priceDistribution": "Qooda Gatii",
+        "unknown": "Kan hin beekamne",
+        "properties": "Qabeenyaalee",
+        "priceRange": "Madaala Gatii",
+        "numberOfProperties": "Lakkoofsa Qabeenyaalee",
+        "noPropertyData": "Daataa gosa qabeenyaa hin jiru",
+        "noPriceData": "Daataa qoodaa gatii hin jiru"
+      },
+      "topCities": {
+        "title": "Magaalota Dalagaa Gubbaa",
+        "city": "Magaalaa",
+        "properties": "Qabeenyaalee",
+        "avgPrice": "Gatii Giddugaleessaa",
+        "totalViews": "Ilaalcha Waliigalaa",
+        "unknown": "Kan hin beekamne",
+        "noData": "Daataa magaalaa hin jiru"
+      },
+      "priceAnalysis": {
+        "priceRange": "Xiinxala Madaala Gatii",
+        "minimum": "Xiqqaa",
+        "maximum": "Guddaa",
+        "average": "Giddugaleessaa",
+        "median": "Giddu galeessa",
+        "averageByCity": "Gatii Giddugaleessaa Magaalaa Waliin",
+        "averagePrice": "Gatii Giddugaleessaa",
+        "propertyCount": "Lakkoofsa Qabeenyaa",
+        "city": "Magaalaa",
+        "noCityData": "Daataa gatii magaalaa hin jiru",
+        "typeDetails": "Ibsa Gatii Gosa Qabeenyaa",
+        "propertyType": "Gosa Qabeenyaa",
+        "count": "Lakkoofsa",
+        "percentage": "Baay'ina",
+        "unknown": "Kan hin beekamne",
+        "noTypeData": "Daataa gosa qabeenyaa hin jiru"
+      }
+    },
+    "users": {
+      "title": "Xiinxala Fayyadamaa",
+      "subtitle": "Xiinxala guutuu fayyadamaalee pirootokoollaa hundaa",
+      "loadFailed": "Daataa fayyadamaa bu'uufachuu hin dandeenye",
+      "noData": "Daataa fayyadamaa hin jiru",
+      "timeRanges": {
+        "7d": "Guyyoota 7",
+        "30d": "Guyyoota 30",
+        "90d": "Guyyoota 90"
+      },
+      "actions": {
+        "exportCSV": "CSV Baafadhu"
+      },
+      "cards": {
+        "totalUsers": "Fayyadamaalee Waliigalaa",
+        "newToday": "haaraa har'a",
+        "activeToday": "Hojiirra Jira Har'a",
+        "ofTotal": "fayyadamaalee waliigalaa irraa",
+        "totalProperties": "Qabeenyaalee Waliigalaa",
+        "avgPerUser": "Giddugaleessaan {avg} fayyadamaa tokkoffaa",
+        "totalInquiries": "Gaafannoo Waliigalaa",
+        "conversionRate": "Saffisa jijjiiramaa: {rate}%"
+      },
+      "filters": {
+        "search": "Fayyadamaalee Barbaadi",
+        "searchPlaceholder": "Maqaa ykn iimeelii waliin barbaadi...",
+        "userType": "Gosa Fayyadamaa",
+        "allTypes": "Gosa Hundaa",
+        "user": "Fayyadamaa",
+        "seller": "Bitataa",
+        "agent": "Ajeentaa",
+        "admin": "Bulchinsa",
+        "activityStatus": "Haala Dalagaa",
+        "allUsers": "Fayyadamaalee Hundaa",
+        "activeToday": "Hojiirra Jira Har'a",
+        "inactiveToday": "Kan Hin Hojiin Har'a",
+        "showing": "Fayyadamaalee {showing} {total} irraa argama",
+        "clear": "Filtariiwwan Qulqulleessi"
+      },
+      "charts": {
+        "userGrowth": "Giddugaleessa Guddina Fayyadamaa",
+        "totalUsers": "Fayyadamaalee Waliigalaa",
+        "newUsers": "Fayyadamaalee Haaraa",
+        "noGrowthData": "Daataa guddinaa hin jiru"
+      },
+      "topPerformers": {
+        "title": "Dalagaa Gubbaa",
+        "subtitle": "Fayyadamaalee gaafannoo fi qabeenyaalee ol'aanaa qaban",
+        "mostInquiries": "Gaafannoo Baay'ee",
+        "mostProperties": "Qabeenyaalee Baay'ee",
+        "inquiries": "gaafannoo",
+        "properties": "qabeenyaalee"
+      },
+      "usersTable": {
+        "title": "Xiinxala Fayyadamaalee Hundaa",
+        "subtitle": "Xiinxala ibsaa fayyadamaa tokkooffaa. Ibsa ibsaa ilaaluuf fayyadamaa calaqqisi.",
+        "columns": {
+          "user": "Fayyadamaa",
+          "type": "Gosa",
+          "properties": "Qabeenyaalee",
+          "views": "Ilaalcha",
+          "inquiries": "Gaafannoo",
+          "conversion": "Jijjiiramaa",
+          "status": "Haala",
+          "actions": "Dalagoota"
+        },
+        "noName": "Maqaa Hin Qabu",
+        "joined": "Makame",
+        "active": "hojiirra jira",
+        "recent": "dhiyoo",
+        "activeStatus": "Hojiirra jira",
+        "inactiveStatus": "Kan Hin Hojiin",
+        "actionsLabel": "Dalagoota",
+        "viewDetails": "Ibsa Ilali",
+        "viewProperties": "Qabeenyaalee Ilali",
+        "copyEmail": "Iimeelii Nuqulessisi",
+        "suspendUser": "Fayyadamaa Dhaabi",
+        "noUsers": "Fayyadamaaleen qajeelfama kee hin makitaman",
+        "showing": "Fayyadamaalee {showing} {total} irraa argama",
+        "refresh": "Daataa Haaraa Godhi",
+        "exportJSON": "JSON Baafadhu"
+      }
+    },
+    "platform": {
+      "title": "Xiinxala Pirootokoollaa",
+      "subtitle": "Ilaalcha dalagaa siisteemii yeroo ammaa fi ilaalcha fayyaa",
+      "loadFailed": "Raadiyoo pirootokoollaa bu'uufachuu hin dandeenye",
+      "refreshing": "Haaraa godhama jira...",
+      "refresh": "Haaraa Godhi",
+      "cards": {
+        "uptime": "Yeroo Irra Jiraachuu",
+        "days": "guyyoota",
+        "cpu": "Fayyadama CPU",
+        "systemLoad": "Looodii Siisteemii",
+        "memory": "Yaadannoo",
+        "disk": "Diskaa"
+      },
+      "application": {
+        "title": "Dalagaa Appilikkeeshinii",
+        "responseTime": "Yeroo Deebii",
+        "errorRate": "Saffisa Dogoggoraa",
+        "dbConnections": "Walqunnamtii Daataabeesii",
+        "activeSessions": "Seeshinoota Hojiirra Jiran"
+      },
+      "systemInfo": {
+        "title": "Odeeffannoo Siisteemii",
+        "os": "Opeereting Siisteemii",
+        "python": "Vareeshinii Payithanii",
+        "django": "Vareeshinii Jaangoo",
+        "database": "Daataabeesii",
+        "dbSize": "Saayizii Daataabeesii"
+      },
+      "alerts": {
+        "title": "Beeksisa Siisteemii"
+      },
+      "performance": {
+        "title": "Raadiyoo Dalagaa",
+        "avgResponse": "Giddugaleessaan Deebii",
+        "p95Response": "Deebii P95",
+        "p99Response": "Deebii P99",
+        "requestsPerSec": "Gaafii/sek"
+      }
     }
   }
 }

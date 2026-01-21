@@ -1,142 +1,61 @@
-// lib/api.ts
+// lib/api/messaging.ts - Updated API calls
 import apiClient from './client';
 import {
     Message,
-    MessageThread,
-    QuickContact,
-    MessageStats,
-    CreateMessageData,
-    ThreadMessageData
+    Conversation,
+    SendMessageData,
+    User
 } from '@/lib/types/messaging';
 
 export const messagingApi = {
-    // Messages
-    getMessages: async (params?: {
-        thread?: number;
-        property?: number;
-        inquiry?: number;
-        unread?: boolean;
-        page?: number;
-        page_size?: number;
-    }) => {
-        const queryParams = new URLSearchParams();
-
-        if (params) {
-            Object.entries(params).forEach(([key, value]) => {
-                if (value !== undefined && value !== null) {
-                    queryParams.append(key, String(value));
-                }
-            });
-        }
-
-        const url = `/messages/${queryParams.toString() ? `?${queryParams}` : ''}`;
-        const response = await apiClient.get(url);
-        return response.data;
+    // Get all conversations
+    getConversations: async (): Promise<Conversation[]> => {
+        const response = await apiClient.get('/threads/');
+        return response.data.results || response.data;
     },
 
-    sendMessage: async (data: CreateMessageData) => {
+    // Get messages in a conversation
+    getConversationMessages: async (threadId: number): Promise<Message[]> => {
+        const response = await apiClient.get(`/threads/${threadId}/messages/`);
+        return response.data.results || response.data;
+    },
+
+    // Start new conversation - Use correct endpoint
+    startConversation: async (data: SendMessageData): Promise<Message> => {
         const formData = new FormData();
+        formData.append('receiver', data.receiver.toString());
+        formData.append('content', data.content);
 
-        try {
-            // Add all fields to FormData 
-            formData.append('receiver', data.receiver.toString());
-            formData.append('message_type', data.message_type);
-            formData.append('content', data.content);
-
-            if (data.subject) {
-                formData.append('subject', data.subject);
-            }
-
-            if (data.property) {
-                formData.append('property', data.property.toString());
-            }
-
-            if (data.inquiry) {
-                formData.append('inquiry', data.inquiry.toString());
-            }
-
-            if (data.attachment) {
-                // Validate file size (10MB limit)
-                if (data.attachment.size > 10 * 1024 * 1024) {
-                    throw new Error('File size must be less than 10MB');
-                }
-                formData.append('attachment', data.attachment);
-            }
-
-            const response = await apiClient.post('/messages/', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
-
-            return response.data;
-        } catch (error: any) {
-            console.error('Error sending message:', error);
-            if (error.response?.data) {
-                throw new Error(JSON.stringify(error.response.data));
-            }
-            throw error;
-        }
-    },
-
-    markMessageAsRead: async (messageId: number) => {
-        const response = await apiClient.post(`/messages/${messageId}/mark_as_read/`);
-        return response.data;
-    },
-
-    getUnreadCount: async () => {
-        const response = await apiClient.get('/messages/unread_count/');
-        return response.data;
-    },
-
-    // Message Threads
-    getMessageThreads: async (params?: {
-        property?: number;
-        inquiry?: number;
-        is_active?: boolean;
-        page?: number;
-        page_size?: number;
-    }) => {
-        const queryParams = new URLSearchParams();
-
-        if (params) {
-            Object.entries(params).forEach(([key, value]) => {
-                if (value !== undefined && value !== null) {
-                    queryParams.append(key, String(value));
-                }
-            });
+        if (data.attachment) {
+            formData.append('attachment', data.attachment);
         }
 
-        const url = `/message-threads/${queryParams.toString() ? `?${queryParams}` : ''}`;
-        const response = await apiClient.get(url);
+        // Use the standard create endpoint
+        const response = await apiClient.post('/messages/', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+
         return response.data;
     },
 
-    getThreadMessages: async (threadId: number, params?: {
-        page?: number;
-        page_size?: number;
-    }) => {
-        const queryParams = new URLSearchParams();
-
-        if (params) {
-            Object.entries(params).forEach(([key, value]) => {
-                if (value !== undefined && value !== null) {
-                    queryParams.append(key, String(value));
-                }
-            });
-        }
-
-        const url = `/message-threads/${threadId}/messages/${queryParams.toString() ? `?${queryParams}` : ''}`;
-        const response = await apiClient.get(url);
-        return response.data;
-    },
-
-    sendThreadMessage: async (threadId: number, data: ThreadMessageData) => {
+    // Send message in existing conversation
+    sendMessage: async (data: SendMessageData): Promise<Message> => {
         const formData = new FormData();
+        formData.append('receiver', data.receiver.toString());
         formData.append('content', data.content);
 
         if (data.message_type) {
             formData.append('message_type', data.message_type);
+        }
+
+        if (data.subject) {
+            formData.append('subject', data.subject);
+        }
+
+        if (data.property) {
+            formData.append('property', data.property.toString());
         }
 
         if (data.attachment) {
@@ -147,8 +66,40 @@ export const messagingApi = {
             formData.append('attachment', data.attachment);
         }
 
+        console.log('Sending message to /messages/ endpoint with data:', {
+            receiver: data.receiver,
+            content: data.content.substring(0, 100) + '...',
+            hasAttachment: !!data.attachment
+        });
+
+        // Use the messages endpoint for new conversations
+        const response = await apiClient.post('/messages/', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+
+        return response.data;
+    },
+
+    sendThreadMessage: async (threadId: number, content: string, attachment?: File, subject?: string): Promise<Message> => {
+        const formData = new FormData();
+        formData.append('content', content);
+
+        if (subject) {
+            formData.append('subject', subject);
+        }
+
+        if (attachment) {
+            // Validate file size (10MB limit)
+            if (attachment.size > 10 * 1024 * 1024) {
+                throw new Error('File size must be less than 10MB');
+            }
+            formData.append('attachment', attachment);
+        }
+
         const response = await apiClient.post(
-            `/message-threads/${threadId}/send_message/`,
+            `/threads/${threadId}/send_message/`,
             formData,
             {
                 headers: {
@@ -160,47 +111,34 @@ export const messagingApi = {
         return response.data;
     },
 
-    markThreadAsRead: async (threadId: number) => {
-        const response = await apiClient.post(`/message-threads/${threadId}/mark_all_read/`);
+    // Mark message as read
+    markAsRead: async (messageId: number): Promise<void> => {
+        await apiClient.post(`/messages/${messageId}/mark_as_read/`);
+    },
+
+    // Get unread count
+    getUnreadCount: async (): Promise<{ unread_count: number }> => {
+        const response = await apiClient.get('/messages/unread_count/');
         return response.data;
     },
 
-    archiveThread: async (threadId: number) => {
-        const response = await apiClient.post(`/message-threads/${threadId}/archive/`);
-        return response.data;
+    // Search users to message
+    searchUsers: async (query: string): Promise<User[]> => {
+        const response = await apiClient.get(`/users/?search=${query}&limit=10`);
+        return response.data.results || response.data;
     },
 
-    unarchiveThread: async (threadId: number) => {
-        const response = await apiClient.post(`/message-threads/${threadId}/unarchive/`);
-        return response.data;
+    deleteConversation: async (threadId: number): Promise<void> => {
+        try {
+            console.log(`Attempting to delete thread: ${threadId}`);
+            const response = await apiClient.delete(`/threads/${threadId}/`);
+            console.log(`Delete successful for thread: ${threadId}`, response.data);
+            return response.data;
+        } catch (error: any) {
+            console.error(`Error deleting thread ${threadId}:`, error);
+            console.error('Response data:', error.response?.data);
+            console.error('Response status:', error.response?.status);
+            throw error;
+        }
     },
-
-    // Quick Contacts
-    getQuickContacts: async () => {
-        const response = await apiClient.get('/message-threads/quick-contacts/');
-        return response.data;
-    },
-
-    // Analytics
-    getMessageAnalytics: async () => {
-        const response = await apiClient.get('/message/analytics/');
-        return response.data;
-    },
-
-    // Bulk Operations
-    bulkMarkAsRead: async (messageIds: number[]) => {
-        const response = await apiClient.post('/message/bulk/', {
-            message_ids: messageIds,
-            action: 'mark_read'
-        });
-        return response.data;
-    },
-
-    bulkDelete: async (messageIds: number[]) => {
-        const response = await apiClient.post('/message/bulk/', {
-            message_ids: messageIds,
-            action: 'delete'
-        });
-        return response.data;
-    }
 };

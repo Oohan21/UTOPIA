@@ -12,15 +12,83 @@ export interface AdminUser extends User {
 
 export interface AuditLog {
   id: number;
-  user: User | null;
+  user: {
+    id: number;
+    email: string;
+    first_name?: string;
+    last_name?: string;
+    profile_picture?: string;
+  } | null;
   action_type: string;
   model_name: string;
   object_id: string;
   object_repr: string;
   changes: Record<string, any>;
-  ip_address: string;
-  user_agent: string;
+  old_values: Record<string, any>;
+  new_values: Record<string, any>;
+  ip_address?: string;
+  user_agent?: string;
+  request_path?: string;
+  request_method?: string;
+  session_id?: string;
+  browser?: string;
+  os?: string;
+  device?: string;
+  country?: string;
+  city?: string;
   created_at: string;
+}
+
+export interface AuditLogResponse extends PaginatedResponse<AuditLog> {
+  summary?: {
+    total_logs: number;
+    unique_users: number;
+    unique_ips: number;
+    action_distribution: Array<{ action_type: string; count: number }>;
+    model_distribution: Array<{ model_name: string; count: number }>;
+    top_users: Array<{ user__email: string; user__first_name: string; user__last_name: string; count: number }>;
+    timeline: Array<{ date: string; count: number }>;
+  };
+}
+
+export interface AuditLogStats {
+  today: {
+    total: number;
+    by_hour: Array<{ hour: number; count: number; label: string }>;
+    top_actions: Array<{ action_type: string; count: number }>;
+    active_users: Array<{ user__email: string; user__first_name: string; user__last_name: string; count: number }>;
+    failed_logins: number;
+    error_rate: number;
+  };
+  week: {
+    total: number;
+    daily_trend: Array<{ date: string; count: number; day_name: string }>;
+    unique_users: number;
+    unique_ips: number;
+  };
+  month: {
+    total: number;
+    growth_rate: number;
+    top_models: Array<{ model_name: string; count: number }>;
+  };
+  all_time: {
+    total: number;
+    first_log: string | null;
+    last_log: string | null;
+  };
+}
+
+export interface AuditLogFilters {
+  search?: string;
+  action_type?: string;
+  model_name?: string;
+  date_range?: string;
+  device?: string;
+  user_id?: string;
+  page?: number;
+  page_size?: number;
+  start_date?: string;
+  end_date?: string;
 }
 
 export interface SystemReport {
@@ -35,6 +103,13 @@ export interface SystemReport {
   storage_used: number;
   avg_response_time: number;
   revenue_growth?: number;
+  user_stats?: any;
+  property_stats?: any;
+  inquiry_stats?: any;
+  market_stats?: any;
+  revenue_stats?: any;
+  activity_stats?: any;
+  performance_metrics?: any;
 }
 
 export interface AdminProperty {
@@ -129,7 +204,7 @@ export const adminApi = {
       ];
 
       let lastError: any = null;
-      
+
       for (const endpoint of endpoints) {
         try {
           console.log(`Trying admin dashboard: ${endpoint}`);
@@ -142,11 +217,11 @@ export const adminApi = {
           continue;
         }
       }
-      
+
       throw lastError;
     } catch (error: any) {
       console.error('Failed to load admin dashboard:', error);
-      
+
       // Return fallback data if endpoints fail
       return {
         total_users: 0,
@@ -169,7 +244,7 @@ export const adminApi = {
   getUsers: async (params?: any): Promise<PaginatedResponse<AdminUser>> => {
     const cleanedParams = cleanParams(params);
     const queryParams = new URLSearchParams(cleanedParams || {}).toString();
-    
+
     // Try different user endpoints
     const endpoints = [
       `/admin/users/${queryParams ? `?${queryParams}` : ''}`,
@@ -177,7 +252,7 @@ export const adminApi = {
     ];
 
     let lastError: any = null;
-    
+
     for (const endpoint of endpoints) {
       try {
         console.log(`Trying users endpoint: ${endpoint}`);
@@ -190,7 +265,7 @@ export const adminApi = {
         continue;
       }
     }
-    
+
     throw lastError;
   },
 
@@ -227,7 +302,7 @@ export const adminApi = {
     const response = await apiClient.post(`/admin/users/${userId}/toggle_verification/`);
     return response.data;
   },
-  
+
   toggleUserActiveStatus: async (userId: number): Promise<AdminUser> => {
     const response = await apiClient.post(`/admin/users/${userId}/toggle_active/`);
     return response.data;
@@ -237,7 +312,7 @@ export const adminApi = {
   getPropertiesAdmin: async (params?: any): Promise<PaginatedResponse<AdminProperty>> => {
     const cleanedParams = cleanParams(params);
     const queryParams = new URLSearchParams(cleanedParams || {}).toString();
-    
+
     // Try different property endpoints
     const endpoints = [
       `/admin/properties/${queryParams ? `?${queryParams}` : ''}`,
@@ -245,7 +320,7 @@ export const adminApi = {
     ];
 
     let lastError: any = null;
-    
+
     for (const endpoint of endpoints) {
       try {
         console.log(`Trying properties endpoint: ${endpoint}`);
@@ -258,7 +333,7 @@ export const adminApi = {
         continue;
       }
     }
-    
+
     throw lastError;
   },
 
@@ -289,14 +364,14 @@ export const adminApi = {
   // Inquiries
   getInquiriesAdmin: async (params?: any): Promise<PaginatedResponse<Inquiry>> => {
     const queryParams = new URLSearchParams(params || {}).toString();
-    
+
     const endpoints = [
       `/admin/inquiries/${queryParams ? `?${queryParams}` : ''}`,
       `/inquiries/${queryParams ? `?${queryParams}&admin=true` : '?admin=true'}`
     ];
 
     let lastError: any = null;
-    
+
     for (const endpoint of endpoints) {
       try {
         console.log(`Trying inquiries endpoint: ${endpoint}`);
@@ -308,7 +383,7 @@ export const adminApi = {
         continue;
       }
     }
-    
+
     throw lastError;
   },
 
@@ -323,29 +398,73 @@ export const adminApi = {
   },
 
   // Audit Logs
-  getAuditLogs: async (params?: any): Promise<PaginatedResponse<AuditLog>> => {
-    const queryParams = new URLSearchParams(params || {}).toString();
-    
-    const endpoints = [
-      `/admin/audit-logs/${queryParams ? `?${queryParams}` : ''}`,
-      `/audit-logs/${queryParams ? `?${queryParams}` : ''}`
-    ];
+  getAuditLogs: async (params?: AuditLogFilters): Promise<AuditLogResponse> => {
+    const queryParams = new URLSearchParams();
 
-    let lastError: any = null;
-    
-    for (const endpoint of endpoints) {
-      try {
-        console.log(`Trying audit logs: ${endpoint}`);
-        const response = await apiClient.get<PaginatedResponse<AuditLog>>(endpoint);
-        return response.data;
-      } catch (error: any) {
-        console.log(`Endpoint ${endpoint} failed:`, error?.response?.status || error.message);
-        lastError = error;
-        continue;
-      }
-    }
-    
-    throw lastError;
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.action_type && params.action_type !== 'all') queryParams.append('action_type', params.action_type);
+    if (params?.model_name && params.model_name !== 'all') queryParams.append('model_name', params.model_name);
+    if (params?.date_range && params.date_range !== 'all') queryParams.append('date_range', params.date_range);
+    if (params?.device && params.device !== 'all') queryParams.append('device', params.device);
+    if (params?.user_id) queryParams.append('user_id', params.user_id);
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+
+    const queryString = queryParams.toString();
+    const url = `/admin/audit-logs/${queryString ? `?${queryString}` : ''}`;
+
+    const response = await apiClient.get<AuditLogResponse>(url);
+    return response.data;
+  },
+
+  getAuditLogStats: async (): Promise<AuditLogStats> => {
+    const response = await apiClient.get<AuditLogStats>('/admin/audit-logs/stats/');
+    return response.data;
+  },
+
+  exportAuditLogs: async (params?: AuditLogFilters): Promise<Blob> => {
+    const queryParams = new URLSearchParams();
+
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.action_type && params.action_type !== 'all') queryParams.append('action_type', params.action_type);
+    if (params?.model_name && params.model_name !== 'all') queryParams.append('model_name', params.model_name);
+    if (params?.date_range && params.date_range !== 'all') queryParams.append('date_range', params.date_range);
+    if (params?.start_date) queryParams.append('start_date', params.start_date);
+    if (params?.end_date) queryParams.append('end_date', params.end_date);
+
+    const queryString = queryParams.toString();
+    const url = `/admin/audit-logs/export/${queryString ? `?${queryString}` : ''}`;
+
+    const response = await apiClient.get(url, {
+      responseType: 'blob'
+    });
+    return response.data;
+  },
+
+  searchAuditLogs: async (searchParams: {
+    query?: string;
+    action_types?: string[];
+    model_names?: string[];
+    start_date?: string;
+    end_date?: string;
+    user_id?: string;
+    ip_address?: string;
+    change_key?: string;
+    change_value?: string;
+    order_by?: string;
+    page?: number;
+    page_size?: number;
+  }): Promise<PaginatedResponse<AuditLog>> => {
+    const response = await apiClient.post<PaginatedResponse<AuditLog>>(
+      '/admin/audit-logs/search/',
+      searchParams
+    );
+    return response.data;
+  },
+
+  getSystemAuditInsights: async (): Promise<any> => {
+    const response = await apiClient.get('/admin/audit-logs/system/');
+    return response.data;
   },
 
   // Analytics
@@ -356,7 +475,7 @@ export const adminApi = {
     ];
 
     let lastError: any = null;
-    
+
     for (const endpoint of endpoints) {
       try {
         console.log(`Trying analytics: ${endpoint}`);
@@ -368,7 +487,7 @@ export const adminApi = {
         continue;
       }
     }
-    
+
     throw lastError;
   },
 
@@ -388,11 +507,12 @@ export const adminApi = {
 
   getSystemReport: async (): Promise<SystemReport> => {
     try {
-      const response = await apiClient.get('/admin/report/');
+      const response = await apiClient.get('/admin/reports/');
       return response.data;
     } catch (error: any) {
       console.error('System report failed:', error);
-      // Return fallback data
+
+      // Return comprehensive fallback data
       return {
         total_users: 0,
         total_properties: 0,
@@ -404,7 +524,45 @@ export const adminApi = {
         revenue_year: 0,
         storage_used: 0,
         avg_response_time: 0,
-        revenue_growth: 0
+        revenue_growth: 0,
+        user_stats: {
+          total: 0,
+          active: 0,
+          new_today: 0,
+          new_week: 0
+        },
+        property_stats: {
+          total: 0,
+          active: 0,
+          pending: 0,
+          featured: 0
+        },
+        inquiry_stats: {
+          total: 0,
+          pending: 0,
+          resolved: 0,
+          response_rate: 0
+        },
+        market_stats: {
+          avg_price: 0,
+          total_listings: 0,
+          sold_count: 0
+        },
+        revenue_stats: {
+          month: 0,
+          year: 0,
+          growth: 0
+        },
+        activity_stats: {
+          total_views: 0,
+          total_logins: 0,
+          peak_hour: 'N/A'
+        },
+        performance_metrics: {
+          uptime: 'N/A',
+          response_time: 0,
+          error_rate: 0
+        }
       };
     }
   },
@@ -485,49 +643,212 @@ export const adminApi = {
   },
 
   // Export Data
-  exportData: async (dataType: string, format: 'csv' | 'json' = 'json'): Promise<Blob> => {
+  exportData: async (dataType: string, format?: 'csv' | 'excel'): Promise<Blob> => {
     try {
-      // Try different endpoint patterns
-      const endpoints = [
-        `/admin/export/${dataType}/?format=${format}`,
-        `/analytics/export/?type=${dataType}&format=${format}`,
-        `/admin/data/export/?data_type=${dataType}&format=${format}`
-      ];
+      console.log(`Exporting ${dataType} in ${format || 'csv'} format...`);
 
-      let lastError: any = null;
-      
-      for (const endpoint of endpoints) {
-        try {
-          console.log(`Trying export endpoint: ${endpoint}`);
-          const response = await apiClient.get(endpoint, {
-            responseType: 'blob'
-          });
-          console.log(`Export successful from: ${endpoint}`);
-          return response.data;
-        } catch (error: any) {
-          console.log(`Endpoint ${endpoint} failed:`, error?.response?.status || error.message);
-          lastError = error;
-          continue;
-        }
+      const exportFormat = format || 'csv';
+
+      // Build URL based on format
+      let url = `/admin/export/${dataType}/`;
+      if (exportFormat === 'excel') {
+        url = `/admin/export/${dataType}/${exportFormat}/`;
       }
-      
-      throw lastError;
-      
+
+      console.log(`Export URL: ${url}`);
+
+      const response = await apiClient.get(url, {
+        responseType: 'blob',
+        timeout: 30000 // 30 second timeout for large exports
+      });
+
+      if (!response.data || response.data.size === 0) {
+        throw new Error('Empty response received from server');
+      }
+
+      // Create and trigger download
+      const blob = new Blob([response.data], {
+        type: response.headers['content-type'] || 'application/octet-stream'
+      });
+
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+
+      // Generate filename
+      const timestamp = new Date().toISOString().split('T')[0].replace(/-/g, '');
+      const fileExtension = exportFormat === 'excel' ? 'xlsx' : 'csv';
+      const filename = `${dataType}_export_${timestamp}.${fileExtension}`;
+      link.download = filename;
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+
+      console.log(`Export completed: ${filename}`);
+      return blob;
+
     } catch (error: any) {
-      console.error(`All export endpoints failed for ${dataType}:`, error);
-      
-      // Provide more specific error message
+      console.error(`Export failed for ${dataType}:`, error);
+
+      // Enhanced error messages
       if (error?.response?.status === 404) {
-        throw new Error(`Export endpoint not found. Please ensure backend has export endpoints implemented.`);
+        throw new Error(`Export endpoint not found. Please check if ${dataType} export is supported.`);
+      }
+      if (error?.response?.status === 405) {
+        throw new Error(`Method not allowed. Try a different format or contact support.`);
       }
       if (error?.response?.status === 403) {
-        throw new Error('Permission denied. You need admin privileges to export data.');
+        throw new Error('Permission denied. Admin privileges required.');
       }
       if (error?.response?.status === 500) {
-        throw new Error('Server error during export. Please try again later.');
+        throw new Error('Server error. Please try again later or contact support.');
       }
-      
-      throw new Error(`Failed to export ${dataType}: ${error.message || 'Unknown error'}`);
+      if (error?.code === 'ECONNABORTED') {
+        throw new Error('Export timeout. The file may be too large.');
+      }
+
+      throw new Error(`Export failed: ${error.message || 'Unknown error'}`);
+    }
+  },
+
+  exportBatch: async (reportTypes: string[], format?: 'csv' | 'excel'): Promise<Blob> => {
+    const exportFormat = format || 'csv';
+
+    try {
+      console.log('Starting batch export:', {
+        report_types: reportTypes,
+        format: exportFormat,
+        count: reportTypes.length
+      });
+
+      // Validate input
+      if (!reportTypes || reportTypes.length === 0) {
+        throw new Error('No report types selected');
+      }
+
+      // DEBUG: Log what we're sending
+      console.log('Sending POST request to /admin/exports/batch/');
+
+      // Make the POST request
+      const response = await apiClient.post(
+        '/admin/exports/batch/',
+        {
+          report_types: reportTypes,
+          format: exportFormat
+        },
+        {
+          responseType: 'blob',
+          timeout: 60000,
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/zip, application/octet-stream'
+          }
+        }
+      );
+
+      console.log('Batch export response status:', response.status);
+
+      if (!response.data || response.data.size === 0) {
+        throw new Error('Empty response received from server');
+      }
+
+      console.log('Batch export response received, size:', response.data.size, 'type:', response.data.type);
+
+      // Create download link for ZIP file
+      const blob = response.data;
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+
+      const timestamp = new Date().toISOString().split('T')[0].replace(/-/g, '');
+      link.download = `reports_batch_${timestamp}.zip`;
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+
+      console.log('Batch export completed successfully');
+      return blob;
+
+    } catch (error: any) {
+      console.error('Batch export failed:', error);
+      console.error('Error details:', {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        data: error?.response?.data,
+        headers: error?.response?.headers
+      });
+
+      // Enhanced error handling
+      if (error?.response?.status === 404) {
+        throw new Error('Batch export endpoint not found. Please ensure backend is properly configured.');
+      }
+      if (error?.response?.status === 405) {
+        // Check what methods are allowed
+        const allowedMethods = error?.response?.headers?.['allow'] || 'Unknown';
+        throw new Error(`Method not allowed. Allowed methods: ${allowedMethods}. Try a different approach.`);
+      }
+      if (error?.response?.status === 400) {
+        const errorData = error.response.data;
+        let errorMessage = 'Invalid request. Please check selected reports.';
+
+        if (typeof errorData === 'string') {
+          errorMessage = `Invalid request: ${errorData}`;
+        } else if (errorData?.error) {
+          errorMessage = `Invalid request: ${errorData.error}`;
+        } else if (errorData) {
+          try {
+            const text = await errorData.text();
+            errorMessage = `Invalid request: ${text}`;
+          } catch (e) {
+            errorMessage = 'Invalid request data format';
+          }
+        }
+
+        throw new Error(errorMessage);
+      }
+      if (error?.response?.status === 500) {
+        throw new Error('Server error during batch export. Please try again later.');
+      }
+      if (error?.code === 'ECONNABORTED') {
+        throw new Error('Batch export timeout. Reports may be too large.');
+      }
+      if (error?.message?.includes('Network Error')) {
+        throw new Error('Network error. Please check your connection.');
+      }
+
+      throw new Error(`Batch export failed: ${error.message || 'Unknown error'}`);
+    }
+  },
+
+  // Generate Custom Report - update format parameter
+  generateCustomReport: async (
+    reportType: string,
+    startDate: string,
+    endDate: string,
+    format?: 'csv' | 'excel'
+  ): Promise<Blob> => {
+    const exportFormat = format || 'csv';
+
+    try {
+      let url = '';
+      if (exportFormat === 'csv') {
+        url = `/admin/export/${reportType}/?start_date=${startDate}&end_date=${endDate}`;
+      } else {
+        url = `/admin/export/${reportType}/${exportFormat}/?start_date=${startDate}&end_date=${endDate}`;
+      }
+
+      const response = await apiClient.get(url, {
+        responseType: 'blob'
+      });
+
+      return response.data;
+    } catch (error: any) {
+      console.error('Custom report failed:', error);
+      throw new Error(`Failed to generate custom report: ${error.message || 'Unknown error'}`);
     }
   },
 
@@ -611,7 +932,7 @@ export const adminApi = {
     const response = await apiClient.get('/admin/listings/pending/')
     return response.data
   },
-  
+
   approveProperty: async (data: {
     property_id: number
     action: 'approve' | 'reject' | 'request_changes'

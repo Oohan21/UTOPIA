@@ -4,7 +4,7 @@ import { useEffect } from "react";
 export const useAuth = () => {
   const {
     user,
-     isAuthenticated,
+    isAuthenticated,
     isLoading,
     error,
     login,
@@ -12,11 +12,12 @@ export const useAuth = () => {
     register,
     checkAuth,
     updateUser,
-    updateProfilePicture, // Add this
-    removeProfilePicture, // Add this
+    updateProfilePicture,
+    removeProfilePicture,
     setAuthState,
     clearError,
     checkAdminAccess,
+    rehydrateFromSession,
   } = useAuthStore();
 
   useEffect(() => {
@@ -39,10 +40,11 @@ export const useAuth = () => {
     register,
     checkAuth,
     updateUser,
-    updateProfilePicture, // Add this
-    removeProfilePicture, // Add this
+    updateProfilePicture,
+    removeProfilePicture, 
     setAuthState,
     clearError,
     checkAdminAccess,
+    rehydrateFromSession,
   };
 };

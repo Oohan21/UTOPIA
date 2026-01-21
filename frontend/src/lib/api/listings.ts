@@ -14,13 +14,21 @@ export const listingsApi = {
   getProperties: async (filters?: PropertyFilters) => {
     const params = new URLSearchParams()
 
+    // Add filter to exclude sold properties by default
+    if (!params.has('property_status')) {
+      params.append('property_status', 'available')
+    }
+
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== undefined && value !== '' && value !== null) {
           if (Array.isArray(value)) {
             value.forEach(v => params.append(key, v))
           } else {
-            params.append(key, String(value))
+            // Don't override the property_status filter if user wants to see sold properties
+            if (key !== 'property_status' || value !== 'sold') {
+              params.append(key, String(value))
+            }
           }
         }
       })
@@ -46,7 +54,6 @@ export const listingsApi = {
       }))
     }
 
-    // Convert to ApiResponse type
     return {
       ...response.data,
       results: response.data.results
@@ -152,8 +159,58 @@ export const listingsApi = {
   },
 
   saveProperty: async (id: number) => {
-    const response = await apiClient.post(`/properties/${id}/save/`)
-    return response.data
+    try {
+      console.log('Saving property:', id);
+      const response = await apiClient.post(`/listings/${id}/save/`);
+      console.log('Save response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error saving property:', error);
+      throw error;
+    }
+  },
+
+  unsaveProperty: async (id: number) => {
+    try {
+      const response = await apiClient.delete(`/listings/${id}/unsave/`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error unsaving property:', error);
+      throw error;
+    }
+  },
+
+  getSavedProperties: async () => {
+    try {
+      const response = await apiClient.get('/listings/saved/');
+
+      // Process images to ensure full URLs
+      if (response.data.results) {
+        response.data.results = response.data.results.map((property: any) => ({
+          ...property,
+          images: property.images?.map((img: any) => ({
+            ...img,
+            image: img.image?.startsWith('http')
+              ? img.image
+              : `${apiClient.defaults.baseURL}${img.image}`
+          })) || []
+        }));
+      }
+
+      return response.data;
+    } catch (error: any) {
+      console.error('Error fetching saved properties:', error);
+      throw error;
+    }
+  },
+
+  // Add toggle method for convenience
+  toggleSaveProperty: async (id: number, currentlySaved: boolean) => {
+    if (currentlySaved) {
+      return await listingsApi.unsaveProperty(id);
+    } else {
+      return await listingsApi.saveProperty(id);
+    }
   },
 
   // City and location endpoints - UPDATED

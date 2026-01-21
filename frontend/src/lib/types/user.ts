@@ -1,5 +1,4 @@
 // lib/types/user.ts
-// lib/types/user.ts
 export interface User {
   id: number;
   email: string;
@@ -20,12 +19,12 @@ export interface User {
   profile_completion: number;
   created_at: string;
   updated_at: string;
-  
+
   // Admin properties
   is_staff?: boolean;
   is_superuser?: boolean;
   is_admin_user?: boolean;
-  
+
   // Activity tracking fields - ADD THESE
   last_activity?: string;
   total_logins?: number;
@@ -33,10 +32,10 @@ export interface User {
   total_properties_saved?: number;
   total_inquiries_sent?: number;
   total_searches?: number;
-  
+
   // Helper methods
   get_full_name?: () => string;
-  
+
   // Other properties
   email_verified?: boolean;
   phone_verified?: boolean;
@@ -56,8 +55,7 @@ export interface UserProfile {
   id: number;
   user: number;
   date_of_birth?: string;
-  gender?: 'male' | 'female' | 'other';
-  marital_status?: 'single' | 'married' | 'divorced' | 'widowed';
+  gender?: string;
   address?: string;
   city?: string;
   sub_city?: string;
@@ -84,10 +82,21 @@ export interface LoginCredentials {
 
 export interface RegisterData {
   email: string;
+  password: string;
+  password2: string;
   first_name: string;
   last_name: string;
   phone_number: string;
-  user_type?: 'admin' | 'user';
-  password: string;
-  password2: string;
+  user_type: "user" | "admin";
+}
+
+export interface Activity {
+  id: number;
+  activity_type: string;
+  activity_type_display: string;
+  metadata: any;
+  created_at: string;
+  ip_address?: string;
+  user_agent?: string;
+  user_email: string;
 }

@@ -37,27 +37,27 @@ export interface ComparisonResult {
     is_featured: boolean
     days_on_market: number
     views_count: number
-    
+
     // Sale-specific fields
     price_etb?: number | null
     price_per_sqm?: number | null
-    
+
     // Rent-specific fields
     monthly_rent?: number | null
     rent_per_sqm?: number | null
     estimated_sale_value?: number | null
   }>
-  
+
   matrix: Record<string, any[]>
   has_mixed_types: boolean
   warning?: string
-  
+
   summary: {
     total_properties: number
     sale_properties_count: number
     rent_properties_count: number
     has_mixed_types: boolean
-    
+
     common_stats: {
       area_range: {
         min: number
@@ -70,7 +70,7 @@ export interface ComparisonResult {
         avg: number
       }
     }
-    
+
     sale_stats?: {
       price_range: {
         min: number
@@ -84,7 +84,7 @@ export interface ComparisonResult {
         best_value: number | null
       }
     }
-    
+
     rent_stats?: {
       rent_range: {
         min: number
@@ -102,7 +102,7 @@ export interface ComparisonResult {
         avg: number
       }
     }
-    
+
     best_sale_value?: {
       id: number
       title: string
@@ -110,7 +110,7 @@ export interface ComparisonResult {
       total_price: number
       area: number
     }
-    
+
     best_rent_value?: {
       id: number
       title: string
@@ -118,7 +118,7 @@ export interface ComparisonResult {
       monthly_rent: number
       area: number
     }
-    
+
     most_features?: {
       id: number
       title: string
@@ -126,7 +126,7 @@ export interface ComparisonResult {
       feature_count: number
     }
   }
-  
+
   comparison_date: string
   comparison_id?: number
   save_url?: string
@@ -162,8 +162,28 @@ export const comparisonApi = {
 
   // Get user's saved comparisons
   getSavedComparisons: async (): Promise<SavedComparison[]> => {
-    const response = await apiClient.get('/comparisons/my_comparisons/')
-    return response.data
+    try {
+      const response = await apiClient.get('/comparisons/my_comparisons/')
+
+      // Ensure response is an array
+      if (!Array.isArray(response.data)) {
+        console.warn('API response is not an array, converting:', response.data)
+        return Array.isArray(response.data.results)
+          ? response.data.results
+          : response.data.data || []
+      }
+
+      return response.data
+    } catch (error: any) {
+      console.error('API Error fetching saved comparisons:', error)
+
+      // Return empty array instead of throwing for better UX
+      if (error.response?.status === 404 || error.response?.status === 403) {
+        return []
+      }
+
+      throw error
+    }
   },
 
   // Add property to comparison session

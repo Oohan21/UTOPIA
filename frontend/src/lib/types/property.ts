@@ -117,6 +117,7 @@ export interface Property {
   approved_at?: string;
   rejection_reason?: string;
   is_approved?: boolean;
+  is_saved?: boolean;
 
   // Promotion fields - UPDATED
   promotion_tier?: string
@@ -138,6 +139,14 @@ export interface Property {
     homepage_featured?: boolean
     badge_display?: boolean
   }
+
+  tracking_info?: {
+    tracking_type: string
+    tracked_at: string
+    tracked_id: number
+    notification_enabled: boolean
+    notes?: string
+  }
 }
 
 // Add promotion types
@@ -155,6 +164,12 @@ export interface PromotionTier {
   email_inclusion: boolean
   social_media_promotion: boolean
   badge_display: boolean
+  max_images?: number
+  max_videos?: number
+  has_virtual_tour?: boolean
+  priority_support?: boolean
+  analytics_access?: boolean
+  is_active?: boolean
 }
 
 export interface PropertyPromotion {
@@ -182,7 +197,7 @@ export interface PropertyFilters {
   max_bedrooms?: number
   min_area?: number
   max_area?: number
-  listing_type?: 'for_sale' | 'for_rent' | string  
+  listing_type?: 'for_sale' | 'for_rent' | string
   property_type?: string
   city?: number
   sub_city?: number
@@ -214,7 +229,7 @@ export interface PropertyFilters {
 }
 
 export interface FileDraft {
-  name: string 
+  name: string
   size: number
   type?: string
   lastModified?: number
