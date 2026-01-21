@@ -1,4 +1,4 @@
-// components/listings/PropertyGallery.tsx
+// src/components/listings/PropertyGallery.tsx
 'use client'
 
 import React, { useState } from 'react'
@@ -17,32 +17,51 @@ import {
 
 interface PropertyGalleryProps {
   images: any[]
-  propertyTitle: string
+  propertyTitle?: string
   propertyVideo?: string
+  propertyId?: number
+  showThumbnails?: boolean
+  className?: string
 }
 
 const PropertyGallery: React.FC<PropertyGalleryProps> = ({ 
   images, 
-  propertyTitle, 
-  propertyVideo 
+  propertyTitle = 'Property',
+  propertyVideo,
+  propertyId,
+  showThumbnails = true,
+  className = ''
 }) => {
   const [activeImage, setActiveImage] = useState(0)
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
 
-  const primaryImage = images.find(img => img.is_primary) || images[0]
+  // Handle empty images array
+  const validImages = images && Array.isArray(images) ? images : []
+  const primaryImage = validImages.find(img => img.is_primary) || validImages[0]
 
   const handlePreviousImage = () => {
-    setActiveImage((prev) => (prev - 1 + images.length) % images.length)
+    setActiveImage((prev) => (prev - 1 + validImages.length) % validImages.length)
   }
 
   const handleNextImage = () => {
-    setActiveImage((prev) => (prev + 1) % images.length)
+    setActiveImage((prev) => (prev + 1) % validImages.length)
   }
 
-  const currentImage = images[activeImage] || primaryImage
+  const currentImage = validImages[activeImage] || primaryImage
+
+  if (validImages.length === 0) {
+    return (
+      <div className={`aspect-video overflow-hidden rounded-lg bg-muted flex items-center justify-center ${className}`}>
+        <div className="text-muted-foreground text-center">
+          <div className="text-lg mb-2">No images available</div>
+          <div className="text-sm">Add images to showcase this property</div>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-4">
+    <div className={`space-y-4 ${className}`}>
       {/* Main Image/Video Display */}
       <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
         {propertyVideo && (
@@ -54,21 +73,15 @@ const PropertyGallery: React.FC<PropertyGalleryProps> = ({
           </div>
         )}
         
-        {images.length > 0 ? (
-          <SafeImage
-            src={currentImage?.image}
-            alt={`${propertyTitle} - ${activeImage + 1}`}
-            className="object-cover"
-            priority
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <SafeImage src={null} alt="No image available" />
-          </div>
-        )}
+        <SafeImage
+          src={currentImage?.image}
+          alt={`${propertyTitle} - ${activeImage + 1}`}
+          className="object-cover w-full h-full"
+          priority
+        />
         
         {/* Navigation Buttons */}
-        {images.length > 1 && (
+        {validImages.length > 1 && (
           <>
             <Button
               variant="ghost"
@@ -103,20 +116,20 @@ const PropertyGallery: React.FC<PropertyGalleryProps> = ({
         )}
 
         {/* Image Counter */}
-        {images.length > 1 && (
+        {validImages.length > 1 && (
           <div className="absolute bottom-2 right-2 rounded-full bg-background/80 px-3 py-1 text-sm backdrop-blur-sm">
-            {activeImage + 1} / {images.length}
+            {activeImage + 1} / {validImages.length}
           </div>
         )}
       </div>
 
       {/* Thumbnails */}
-      {images.length > 1 && (
+      {showThumbnails && validImages.length > 1 && (
         <ScrollArea>
           <div className="flex gap-2 pb-2">
-            {images.map((image, index) => (
+            {validImages.map((image, index) => (
               <button
-                key={image.id}
+                key={image.id || index}
                 onClick={() => setActiveImage(index)}
                 className={`relative h-20 w-32 flex-shrink-0 overflow-hidden rounded-lg transition-all ${
                   activeImage === index 
@@ -127,7 +140,7 @@ const PropertyGallery: React.FC<PropertyGalleryProps> = ({
                 <SafeImage
                   src={image.image}
                   alt={`${propertyTitle} - ${index + 1}`}
-                  className="object-cover"
+                  className="object-cover w-full h-full"
                 />
               </button>
             ))}

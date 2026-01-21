@@ -1,8 +1,8 @@
-// components/properties/SimpleMessageDialog.tsx - FIXED WITH RADIX UI SCROLLAREA
+// components/properties/SimpleMessageDialog.tsx - WORKING VERSION
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, X, User, Building } from 'lucide-react';
+import { Send, Paperclip, X, User, Building, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
 import { Input } from '@/components/ui/Input';
@@ -21,8 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/Select";
-import { ScrollArea } from '@/components/ui/Scroll-area';
-import { Separator } from '@/components/ui/Separator';
 import { Property } from '@/lib/types/property';
 import { User as UserType } from '@/lib/types/user';
 import { messagingApi } from '@/lib/api/messaging';
@@ -53,7 +51,7 @@ export function SimpleMessageDialog({
   });
   const [attachment, setAttachment] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -67,11 +65,12 @@ export function SimpleMessageDialog({
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-      
-      // Focus on textarea when dialog opens
+
+      // Small delay to ensure dialog is fully rendered
       setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.focus();
+        const textarea = document.querySelector('textarea');
+        if (textarea) {
+          textarea.focus();
         }
       }, 100);
     }
@@ -82,7 +81,8 @@ export function SimpleMessageDialog({
     
     if (!messageData.content.trim()) {
       toast.error('Please enter a message');
-      textareaRef.current?.focus();
+      const textarea = document.querySelector('textarea');
+      if (textarea) textarea.focus();
       return;
     }
 
@@ -94,21 +94,38 @@ export function SimpleMessageDialog({
     setIsLoading(true);
     
     try {
-      await messagingApi.sendMessage({
+      console.log('Creating new message to user:', receiver.id);
+      
+      const response = await messagingApi.sendMessage({
         receiver: receiver.id,
-        property: property?.id,
+        content: messageData.content,
         message_type: messageData.message_type,
         subject: messageData.subject || `Regarding ${property?.title || 'Property'}`,
-        content: messageData.content,
+        property: property?.id,
         attachment: attachment || undefined,
       });
 
+      console.log('Message created successfully:', response);
       toast.success('Message sent successfully!');
       
       onOpenChange(false);
       onSuccess?.();
+      
+      // Reset form
+      setMessageData({
+        subject: property?.title ? `Regarding ${property.title}` : '',
+        content: '',
+        message_type: 'general',
+      });
+      setAttachment(null);
+      
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to send message');
+      console.error('Error sending message:', error);
+      const errorMessage = error.response?.data?.error || 
+                        error.response?.data?.detail || 
+                        error.message || 
+                        'Failed to send message';
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -122,7 +139,7 @@ export function SimpleMessageDialog({
         toast.error('File size must be less than 10MB');
         return;
       }
-      
+
       // Check file type
       const allowedTypes = [
         'application/pdf',
@@ -132,12 +149,12 @@ export function SimpleMessageDialog({
         'image/jpg',
         'image/png'
       ];
-      
+
       if (!allowedTypes.includes(file.type)) {
         toast.error('File type not supported. Please upload PDF, DOC, DOCX, JPG, JPEG, or PNG files.');
         return;
       }
-      
+
       setAttachment(file);
     }
   };
@@ -149,7 +166,7 @@ export function SimpleMessageDialog({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Allow Ctrl+Enter or Cmd+Enter to submit
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       if (messageData.content.trim()) {
@@ -168,63 +185,67 @@ export function SimpleMessageDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] h-[80vh] max-h-[80vh] p-0 overflow-hidden flex flex-col">
-        {/* Fixed Header */}
-        <div className="px-6 pt-6 pb-4 border-b shrink-0">
-          <DialogHeader className="text-left">
-            <DialogTitle className="flex items-center gap-2">
-              <Send className="h-5 w-5" />
-              Send Direct Message
-            </DialogTitle>
-            <DialogDescription>
-              Send a message to {receiver ? `${receiver.first_name} ${receiver.last_name}` : 'the property owner'}
-            </DialogDescription>
-          </DialogHeader>
-        </div>
+      <DialogContent className="sm:max-w-[600px] h-[90vh] p-0 gap-0 flex flex-col">
+        <form 
+          ref={formRef} 
+          onSubmit={handleSubmit} 
+          className="flex flex-col flex-1 min-h-0"
+        >
+          {/* Fixed Header */}
+          <div className="px-6 pt-6 pb-4 border-b shrink-0 bg-background">
+            <DialogHeader className="text-left">
+              <DialogTitle className="flex items-center gap-2">
+                <Send className="h-5 w-5" />
+                Send Direct Message
+              </DialogTitle>
+              <DialogDescription>
+                Send a message to {receiver ? `${receiver.first_name} ${receiver.last_name}` : 'the property owner'}
+              </DialogDescription>
+            </DialogHeader>
+          </div>
 
-        {/* Scrollable Content Area - Using Radix ScrollArea correctly */}
-        <ScrollArea className="flex-1 px-6">
-          <form onSubmit={handleSubmit} className="space-y-4 py-4">
-            {/* Property Info */}
-            {property && (
-              <div className="rounded-lg border p-3 bg-muted/30">
-                <div className="flex items-start gap-3">
-                  <Building className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold truncate">{property.title}</h4>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {property.city?.name}, {property.sub_city?.name}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Receiver Info */}
-            {receiver && (
-              <div className="rounded-lg border p-3 bg-muted/30">
-                <div className="flex items-start gap-3">
-                  <User className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-semibold">
-                        {receiver.first_name} {receiver.last_name}
-                      </h4>
-                      {receiver.is_verified && (
-                        <Badge variant="outline" className="h-5 text-xs bg-green-50 text-green-700">
-                          Verified
-                        </Badge>
-                      )}
+          {/* Scrollable Content Area */}
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            <div className="space-y-4 pb-4">
+              {/* Property Info */}
+              {property && (
+                <div className="rounded-lg border p-3 bg-muted/30">
+                  <div className="flex items-start gap-3">
+                    <Building className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold truncate">{property.title}</h4>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {property.city?.name}, {property.sub_city?.name}
+                      </p>
                     </div>
-                    <p className="text-sm text-muted-foreground truncate capitalize">
-                      {receiver.user_type?.replace('_', ' ')}
-                    </p>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            <div className="space-y-4">
+              {/* Receiver Info */}
+              {receiver && (
+                <div className="rounded-lg border p-3 bg-muted/30">
+                  <div className="flex items-start gap-3">
+                    <User className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold">
+                          {receiver.first_name} {receiver.last_name}
+                        </h4>
+                        {receiver.is_verified && (
+                          <Badge variant="outline" className="h-5 text-xs bg-green-50 text-green-700">
+                            Verified
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground truncate capitalize">
+                        {receiver.user_type?.replace('_', ' ')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Message Type */}
               <div className="space-y-2">
                 <Label htmlFor="message_type">Message Type</Label>
@@ -234,9 +255,6 @@ export function SimpleMessageDialog({
                     setMessageData({ ...messageData, message_type: value })
                   }
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select message type" />
-                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="general">General Inquiry</SelectItem>
                     <SelectItem value="viewing">Viewing Request</SelectItem>
@@ -271,18 +289,14 @@ export function SimpleMessageDialog({
                   </span>
                 </div>
                 <Textarea
-                  ref={textareaRef}
                   id="content"
                   placeholder="Type your message here... You can use Ctrl+Enter or Cmd+Enter to send."
                   value={messageData.content}
                   onChange={handleContentChange}
                   onKeyDown={handleKeyDown}
                   rows={6}
-                  className={cn(
-                    "min-h-[120px] resize-y",
-                    "max-h-[200px] overflow-y-auto",
-                    "custom-scrollbar"
-                  )}
+                  className="min-h-[120px] resize-y"
+                  disabled={isLoading}
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>Be specific for better response</span>
@@ -305,12 +319,14 @@ export function SimpleMessageDialog({
                       onChange={handleFileSelect}
                       className="hidden"
                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                      disabled={isLoading}
                     />
                     <Button
                       type="button"
                       variant="outline"
                       onClick={() => fileInputRef.current?.click()}
                       className="gap-2"
+                      disabled={isLoading}
                     >
                       <Paperclip className="h-4 w-4" />
                       {attachment ? 'Replace File' : 'Attach File'}
@@ -322,13 +338,14 @@ export function SimpleMessageDialog({
                         size="sm"
                         onClick={removeAttachment}
                         className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        disabled={isLoading}
                       >
                         <X className="h-4 w-4 mr-1" />
                         Remove
                       </Button>
                     )}
                   </div>
-                  
+
                   {attachment && (
                     <div className="rounded-lg border p-3 bg-muted/30">
                       <div className="flex items-center justify-between">
@@ -339,7 +356,7 @@ export function SimpleMessageDialog({
                               {attachment.name}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {(attachment.size / 1024 / 1024).toFixed(2)} MB • 
+                              {(attachment.size / 1024 / 1024).toFixed(2)} MB •
                               {attachment.type.includes('image') ? ' Image' : ' Document'}
                             </p>
                           </div>
@@ -347,39 +364,47 @@ export function SimpleMessageDialog({
                       </div>
                     </div>
                   )}
-                  
+
                   <p className="text-xs text-muted-foreground">
                     Supported formats: PDF, DOC, DOCX, JPG, JPEG, PNG (max 10MB)
                   </p>
                 </div>
               </div>
             </div>
-          </form>
-        </ScrollArea>
-
-        {/* Fixed Footer with Buttons */}
-        <div className="px-6 py-4 border-t bg-background/95 shrink-0">
-          <div className="flex flex-col sm:flex-row gap-2 justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isLoading}
-              className="w-full sm:w-auto"
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="submit"
-              onClick={handleSubmit}
-              disabled={isLoading || !messageData.content.trim()}
-              className="w-full sm:w-auto"
-            >
-              <Send className="mr-2 h-4 w-4" />
-              {isLoading ? 'Sending...' : 'Send Message'}
-            </Button>
           </div>
-        </div>
+
+          {/* Fixed Footer with Buttons */}
+          <div className="px-6 py-4 border-t bg-background shrink-0">
+            <div className="flex flex-col sm:flex-row gap-2 justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={isLoading}
+                className="w-full sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isLoading || !messageData.content.trim()}
+                className="w-full sm:w-auto"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Send Message
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

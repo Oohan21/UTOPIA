@@ -31,18 +31,23 @@ const SafeImage: React.FC<SafeImageProps> = ({
   const getProcessedUrl = (url: string | null | undefined): string | null => {
     if (!url) return null
     
-    // If URL is already absolute, use it as-is
+    // If URL is already absolute (with http/https), use it as-is
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return url
     }
     
     // Handle relative URLs (common in Django)
+    // If it starts with /media/, it's from Django
+    if (url.startsWith('/media/')) {
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+      // Ensure we don't have double slashes
+      const cleanApiBaseUrl = apiBaseUrl.replace(/\/$/, '')
+      const cleanUrl = url.replace(/^\//, '')
+      return `${cleanApiBaseUrl}/${cleanUrl}`
+    }
+    
+    // For other relative paths, assume they're from the frontend
     if (url.startsWith('/')) {
-      // For development, prepend localhost:8000
-      if (process.env.NODE_ENV === 'development') {
-        return `http://localhost:8000${url}`
-      }
-      // For production, you might need to adjust this
       return url
     }
     
@@ -83,7 +88,7 @@ const SafeImage: React.FC<SafeImageProps> = ({
       className={className}
       sizes={sizes}
       priority={priority}
-      unoptimized={process.env.NODE_ENV === 'development'} // Bypass optimization in dev
+      unoptimized={true} // Always use unoptimized for external images
       onLoad={onLoad}
       onError={() => {
         setHasError(true)

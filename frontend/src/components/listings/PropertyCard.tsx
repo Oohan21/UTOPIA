@@ -41,6 +41,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { useSavedProperties } from '@/lib/hooks/useSavedProperties'
 import { formatCurrency, formatPricePerSqm } from '@/lib/utils/formatCurrency'
 import { formatDate } from '@/lib/utils/formatDate'
 import toast from 'react-hot-toast'
@@ -126,8 +127,11 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
 }) => {
     const { isAuthenticated } = useAuthStore()
     const { addToComparison, isInComparison } = useComparisonStore()
-    const [isSaved, setIsSaved] = useState(property.save_count > 0)
+    const { isPropertySaved, toggleSaveProperty, refreshSavedProperties } = useSavedProperties()
+    const [isSaved, setIsSaved] = useState(false)
+    const [saveCount, setSaveCount] = useState(property.save_count || 0)
     const [isImageLoading, setIsImageLoading] = useState(true)
+    const [isSaving, setIsSaving] = useState(false)
 
     // Translation hooks
     const t = useTranslations()
@@ -135,9 +139,21 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
     const tListings = useTranslations('listings')
     const tCommon = useTranslations('common')
     const locale = useLocale()
+    const statusConfig = {
+        available: { color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300', label: 'Available' },
+        pending: { color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300', label: 'Pending' },
+        sold: { color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300', label: 'Sold' },
+        rented: { color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300', label: 'Rented' },
+        off_market: { color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300', label: 'Off Market' }
+    };
 
     useEffect(() => {
-        setIsSaved(property.save_count > 0)
+        setIsSaved(isPropertySaved(property.id))
+    }, [property.id, isPropertySaved])
+
+    // Update save count from property
+    useEffect(() => {
+        setSaveCount(property.save_count || 0)
     }, [property.save_count])
 
     // Get primary image or first image
@@ -179,12 +195,21 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
             return
         }
 
+        setIsSaving(true)
         try {
-            await listingsApi.saveProperty(property.id)
-            setIsSaved(!isSaved)
-            toast.success(isSaved ? tListings('actions.removedFromSaved') : tListings('actions.propertySaved'))
+            await toggleSaveProperty(property)
+            // Update local save count
+            if (isSaved) {
+                setSaveCount(prev => Math.max(0, prev - 1))
+                toast.success(tListings('actions.removedFromSaved'))
+            } else {
+                setSaveCount(prev => prev + 1)
+                toast.success(tListings('actions.propertySaved'))
+            }
         } catch (error: any) {
             toast.error(error.response?.data?.error || tListings('errors.saveFailed'))
+        } finally {
+            setIsSaving(false)
         }
     }
 
@@ -381,7 +406,15 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                                         "shadow-lg shadow-amber-500/30"
                                     )}>
                                         <Sparkles className="h-3 w-3" />
-                                        {tListings('featured')}
+                                        {tListings('featuredLabel')}
+                                    </Badge>
+                                )}
+                                {property.property_status !== 'available' && (
+                                    <Badge variant="outline" className={cn(
+                                        "ml-2",
+                                        statusConfig[property.property_status as keyof typeof statusConfig]?.color
+                                    )}>
+                                        {statusConfig[property.property_status as keyof typeof statusConfig]?.label}
                                     </Badge>
                                 )}
 
@@ -397,11 +430,16 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                                     size="icon"
                                     className="absolute top-4 right-4 rounded-full bg-white/90 backdrop-blur-sm hover:bg-white dark:bg-gray-900/90 dark:hover:bg-gray-900"
                                     onClick={handleSaveProperty}
+                                    disabled={isSaving}
                                 >
-                                    <Heart className={cn(
-                                        "h-5 w-5 transition-colors",
-                                        isSaved ? "fill-red-500 text-red-500" : "text-gray-700 dark:text-gray-300"
-                                    )} />
+                                    {isSaving ? (
+                                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                    ) : (
+                                        <Heart className={cn(
+                                            "h-5 w-5 transition-colors",
+                                            isSaved ? "fill-red-500 text-red-500" : "text-gray-700 dark:text-gray-300"
+                                        )} />
+                                    )}
                                 </Button>
                             )}
                         </div>
@@ -518,9 +556,16 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                             {/* Footer */}
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                                    {/* Save count display */}
+                                    {saveCount > 0 && (
+                                        <div className="flex items-center gap-1">
+                                            <Heart className="h-3 w-3" />
+                                            <span>{saveCount}</span>
+                                        </div>
+                                    )}
                                     <div className="flex items-center gap-1">
                                         <Eye className="h-4 w-4" />
-                                        <span>{property.views_count.toLocaleString()} {tListings('stats.views')}</span>
+                                        <span>{property.views_count.toLocaleString()} </span>
                                     </div>
                                     {property.is_verified && (
                                         <div className="flex items-center gap-1">
@@ -617,6 +662,14 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                                 {tListings('featuredLabel')}
                             </Badge>
                         )}
+                        {property.property_status !== 'available' && (
+                            <Badge variant="outline" className={cn(
+                                "ml-2",
+                                statusConfig[property.property_status as keyof typeof statusConfig]?.color
+                            )}>
+                                {statusConfig[property.property_status as keyof typeof statusConfig]?.label}
+                            </Badge>
+                        )}
 
                         <Badge variant="outline" className="bg-white/90 backdrop-blur-sm dark:bg-gray-900/90 capitalize">
                             {propertyTypeDisplay}
@@ -635,13 +688,18 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                             size="icon"
                             className="absolute right-4 bottom-4 rounded-full bg-white/90 backdrop-blur-sm hover:bg-white dark:bg-gray-900/90 dark:hover:bg-gray-900 shadow-lg"
                             onClick={handleSaveProperty}
+                            disabled={isSaving}
                         >
-                            <Heart className={cn(
-                                "h-5 w-5 transition-all duration-300",
-                                isSaved
-                                    ? "fill-red-500 text-red-500 scale-110"
-                                    : "text-gray-700 dark:text-gray-300 group-hover:scale-110"
-                            )} />
+                            {isSaving ? (
+                                <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            ) : (
+                                <Heart className={cn(
+                                    "h-5 w-5 transition-all duration-300",
+                                    isSaved
+                                        ? "fill-red-500 text-red-500 scale-110"
+                                        : "text-gray-700 dark:text-gray-300 group-hover:scale-110"
+                                )} />
+                            )}
                         </Button>
                     )}
 
@@ -771,6 +829,13 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                     <div className="flex flex-col gap-4">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                                {/* Save count display */}
+                                {saveCount > 0 && (
+                                    <div className="flex items-center gap-1">
+                                        <Heart className="h-3 w-3" />
+                                        <span>{saveCount}</span>
+                                    </div>
+                                )}
                                 <div className="flex items-center gap-1">
                                     <Eye className="h-4 w-4" />
                                     <span>{property.views_count.toLocaleString()}</span>
