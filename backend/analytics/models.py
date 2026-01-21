@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from real_estate.models import Property, City
+from users.models import CustomUser
 from django.db.models import Avg, Count, Sum, Max, Min
 from decimal import Decimal
 

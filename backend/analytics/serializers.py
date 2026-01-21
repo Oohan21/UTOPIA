@@ -43,10 +43,12 @@ class MarketOverviewSerializer(serializers.Serializer):
     price_change_weekly = serializers.DecimalField(max_digits=10, decimal_places=2)
     total_views_today = serializers.IntegerField()
     total_inquiries_today = serializers.IntegerField()
+    total_inquiries = serializers.IntegerField()  
     market_health = serializers.CharField()
     top_performing_cities = serializers.JSONField()
     property_type_distribution = serializers.JSONField()
     price_distribution = serializers.JSONField()
+    market_trends = serializers.JSONField()  
 
 class PriceAnalysisSerializer(serializers.Serializer):
     """Price analysis data"""

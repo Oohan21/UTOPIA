@@ -16,6 +16,7 @@ urlpatterns = [
     path('export/', views.AnalyticsExportView.as_view(), name='analytics-export'),
     path('users/<int:user_id>/', views.UserAnalyticsView.as_view(), name='user-analytics'),
     path('users/me/', views.UserAnalyticsView.as_view(), name='my-analytics'),
+    path('admin/all-users/', views.AdminUserAnalyticsView.as_view(), name='admin-all-users-analytics'),
     
     # Add these new endpoints:
     path('user-growth/', views.UserGrowthView.as_view(), name='user-growth'),
