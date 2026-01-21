@@ -12,7 +12,19 @@ class PropertyComparisonService:
         """Calculate comprehensive score with multiple factors"""
         if criteria is None:
             criteria = {}
-        
+    
+        # If no comparison properties, we cannot compute a meaningful score
+        if len(properties_list) == 0:
+            return {
+                'price_value': 0,
+                'features': 0,
+                'location': 0,
+                'condition': 0,
+                'market_position': 0,
+                'documentation': 0,
+                'total': 0
+            }
+
         scores = {
             'price_value': 0,
             'features': 0,
@@ -22,7 +34,7 @@ class PropertyComparisonService:
             'documentation': 0,
             'total': 0
         }
-        
+    
         weights = {
             'price_value': criteria.get('price_weight', 0.25),
             'features': criteria.get('features_weight', 0.20),
@@ -31,18 +43,19 @@ class PropertyComparisonService:
             'market_position': criteria.get('market_weight', 0.15),
             'documentation': criteria.get('doc_weight', 0.10),
         }
-        
-        # Calculate price value score (25%)
+
+        # === Price Value (requires comparison) ===
         if property.price_etb and property.total_area:
             price_per_sqm = property.price_etb / property.total_area
-            all_prices = [p.price_etb / p.total_area for p in properties_list 
-                         if p.price_etb and p.total_area]
-            
-            if all_prices:
+            all_prices = [
+                p.price_etb / p.total_area for p in properties_list
+                if p.price_etb and p.total_area and p != property  # exclude self if included
+            ]
+        
+            if all_prices:  # only if we have valid comparables
                 avg_price_sqm = sum(all_prices) / len(all_prices)
                 min_price_sqm = min(all_prices)
-                
-                # Score based on deviation from average
+            
                 if price_per_sqm <= min_price_sqm:
                     scores['price_value'] = 100
                 elif price_per_sqm <= avg_price_sqm:
@@ -51,54 +64,50 @@ class PropertyComparisonService:
                 else:
                     deviation = (price_per_sqm - avg_price_sqm) / avg_price_sqm
                     scores['price_value'] = max(50 - (deviation * 100), 0)
-        
-        # Calculate features score (20%)
-        property_features = property.key_features
-        all_features = [p.key_features for p in properties_list]
+
+        # === Features ===
+        property_features = property.key_features or []
+        all_features = [getattr(p, 'key_features', []) or [] for p in properties_list]
         max_features = max(len(feats) for feats in all_features) if all_features else 0
-        
+    
         if max_features > 0:
             scores['features'] = (len(property_features) / max_features) * 100
-        
-        # Premium features bonus
+    
         premium_features = ['Security', 'Air Conditioning', 'Elevator', 'Virtual Tour', 'Furnished']
         premium_count = sum(1 for feat in property_features if feat in premium_features)
-        scores['features'] += premium_count * 5
-        
-        # Calculate location score (15%)
+        scores['features'] = min(100 + premium_count * 5, 150)  # cap bonus
+
+        # === Location ===
         if property.sub_city and property.sub_city.is_popular:
             scores['location'] = 85
         elif property.city and property.city.is_capital:
             scores['location'] = 70
         else:
             scores['location'] = 50
-        
-        # Add bonus for specific location preferences
+
         if criteria.get('preferred_locations'):
-            if property.sub_city.name in criteria['preferred_locations']:
+            if property.sub_city and property.sub_city.name in criteria['preferred_locations']:
                 scores['location'] = 100
-        
-        # Calculate condition score (15%)
+
+        # === Condition ===
         if property.built_year:
             age = timezone.now().year - property.built_year
             if age <= 5:
                 scores['condition'] = 95
             elif age <= 10:
                 scores['condition'] = 80
-            elif age <= 20:
+            elif     age <= 20:
                 scores['condition'] = 65
             else:
                 scores['condition'] = 50
-            
-            # Bonus for recent renovation
+        
             if hasattr(property, 'last_renovated') and property.last_renovated:
                 renovation_age = timezone.now().year - property.last_renovated
                 if renovation_age <= 5:
                     scores['condition'] = min(100, scores['condition'] + 20)
-        
-        # Calculate market position score (15%)
-        scores['market_position'] = 50  # Base score
-        
+
+        # === Market Position (some parts are absolute, but still contextual) ===
+        scores['market_position'] = 50
         if property.views_count > 100:
             scores['market_position'] += 10
         if property.inquiry_count > 10:
@@ -107,33 +116,30 @@ class PropertyComparisonService:
             scores['market_position'] += 10
         if property.is_featured:
             scores['market_position'] += 15
-        
-        # Low days on market is good
         if property.days_on_market < 30:
             scores['market_position'] += 10
         elif property.days_on_market > 90:
             scores['market_position'] -= 10
-        
-        # Calculate documentation score (10%)
-        scores['documentation'] = 0
+        scores['market_position'] = max(0, min(100, scores['market_position']))
+
+    # === Documentation (absolute) ===
         if property.has_title_deed:
             scores['documentation'] += 40
         if property.has_construction_permit:
             scores['documentation'] += 30
         if property.has_occupancy_certificate:
             scores['documentation'] += 30
-        
-        # Calculate total weighted score
+        scores['documentation'] = min(100, scores['documentation'])
+
+        # === Final Weighted Total ===
         total_score = 0
         total_weight = 0
-        
-        for category in scores:
-            if category != 'total':
-                total_score += scores[category] * weights[category]
-                total_weight += weights[category]
-        
+        for category, weight in weights.items():
+            total_score += scores[category] * weight
+            total_weight += weight
+
         scores['total'] = round(total_score / total_weight if total_weight > 0 else 0, 2)
-        
+
         return scores
     
     @staticmethod

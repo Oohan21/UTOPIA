@@ -18,6 +18,7 @@ from .models import (
     PropertyView,
     SavedSearch,
     SearchHistory,
+    TrackedProperty
 )
 from .serializers import (
     PropertySerializer,
@@ -259,7 +260,7 @@ class AmenityListView(generics.ListAPIView):
 class TrackPropertyView(generics.GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = (
-        PropertySerializer  # Add a serializer class if using GenericAPIView
+        PropertySerializer 
     )
 
     def post(self, request, id):
@@ -269,7 +270,6 @@ class TrackPropertyView(generics.GenericAPIView):
             # Get unique viewer identifier
             viewer_id = self.get_viewer_id(request)
 
-            # Check if this viewer has already viewed this property today
             today = timezone.now().date()
             today_start = timezone.datetime.combine(today, datetime.min.time())
             today_start = timezone.make_aware(today_start)
@@ -342,7 +342,6 @@ class TrackPropertyView(generics.GenericAPIView):
         else:
             ip = request.META.get("REMOTE_ADDR")
         return ip
-
 
 class SearchHistoryViewSet(viewsets.ModelViewSet):
     """
@@ -1019,6 +1018,19 @@ def track_search(request):
             history_record.clicked_promotion = clicked_promotion
             history_record.save(update_fields=["clicked_promotion"])
 
+        # Log activity for authenticated users
+        if request.user.is_authenticated:
+            log_user_activity(
+                request.user,
+                'search',
+                {
+                    'query': search_data['query'],
+                    'filters': search_data['filters'],
+                    'results_count': search_data['results_count']
+                },
+                request=request
+            )
+
         return Response(
             {
                 "status": "success",
@@ -1070,3 +1082,210 @@ def get_recent_searches(request):
     return Response(
         {"recent_searches": serializer.data, "total_count": len(serializer.data)}
     )
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def save_property_view(request, id):
+    """
+    Save a property to user's tracked properties
+    """
+    try:
+        property = Property.objects.get(id=id)
+        user = request.user
+        
+        # Check if property is already saved
+        existing_track = TrackedProperty.objects.filter(
+            user=user, 
+            property=property
+        ).first()
+        
+        if existing_track:
+            # Already saved - we can either toggle or return error
+            return Response({
+                'status': 'already_saved',
+                'message': 'Property already saved to your tracked list',
+                'tracking_type': existing_track.tracking_type
+            }, status=status.HTTP_200_OK)
+        
+        # Create new tracked property
+        tracked_property = TrackedProperty.objects.create(
+            user=user,
+            property=property,
+            tracking_type='interested',
+            notification_enabled=True
+        )
+        
+        # Log the activity
+        log_user_activity(
+            user,
+            'property_save',
+            {'property_id': property.id, 'property_title': property.title},
+            request=request
+        )
+        
+        # Increment save count on property
+        Property.objects.filter(id=id).update(
+            save_count=F('save_count') + 1
+        )
+        property.refresh_from_db()
+        
+        return Response({
+            'status': 'success',
+            'message': 'Property saved successfully',
+            'save_count': property.save_count,
+            'tracked_property_id': tracked_property.id
+        }, status=status.HTTP_201_CREATED)
+        
+    except Property.DoesNotExist:
+        return Response(
+            {'error': 'Property not found'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {'error': f'Failed to save property: {str(e)}'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def unsave_property_view(request, id):
+    """
+    Remove a property from user's tracked properties
+    """
+    try:
+        property = Property.objects.get(id=id)
+        user = request.user
+        
+        # Check if property is saved
+        tracked_property = TrackedProperty.objects.filter(
+            user=user, 
+            property=property
+        ).first()
+        
+        if not tracked_property:
+            return Response({
+                'status': 'not_saved',
+                'message': 'Property not in your saved list'
+            }, status=status.HTTP_200_OK)
+        
+        # Delete the tracked property
+        tracked_property.delete()
+        
+        # Decrement save count (ensure it doesn't go below 0)
+        Property.objects.filter(id=id, save_count__gt=0).update(
+            save_count=F('save_count') - 1
+        )
+        property.refresh_from_db()
+        
+        return Response({
+            'status': 'success',
+            'message': 'Property removed from saved list',
+            'save_count': property.save_count
+        }, status=status.HTTP_200_OK)
+        
+    except Property.DoesNotExist:
+        return Response(
+            {'error': 'Property not found'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {'error': f'Failed to remove property: {str(e)}'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+# Add to views.py or update existing view
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_saved_properties_view(request):
+    """
+    Get all properties saved by the current user
+    """
+    try:
+        user = request.user
+        
+        # Get all tracked properties for the user using the correct relationship
+        tracked_properties = TrackedProperty.objects.filter(
+            user=user
+        ).select_related(
+            'property',
+            'property__city',
+            'property__sub_city',
+            'property__owner'
+        ).prefetch_related(
+            'property__images'
+        ).order_by('-created_at')
+        
+        # Serialize the properties
+        properties_data = []
+        for tracked in tracked_properties:
+            # Get the property from the tracked relationship
+            property = tracked.property
+            
+            # Serialize the property
+            property_data = PropertySerializer(
+                property, 
+                context={'request': request}
+            ).data
+            
+            # Add tracking info - check if tracking_info exists in the response
+            tracking_info = {
+                'tracking_type': tracked.tracking_type,
+                'tracked_at': tracked.created_at,
+                'tracked_id': tracked.id,
+                'notification_enabled': tracked.notification_enabled,
+                'notes': tracked.notes or ''
+            }
+            
+            # Merge tracking info into property data
+            property_data['tracking_info'] = tracking_info
+            
+            # Add is_saved flag for frontend
+            property_data['is_saved'] = True
+            
+            properties_data.append(property_data)
+        
+        return Response({
+            'count': len(properties_data),
+            'results': properties_data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        import traceback
+        print(f"Error in get_saved_properties_view: {str(e)}")
+        traceback.print_exc()
+        return Response(
+            {'error': f'Failed to get saved properties: {str(e)}'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def debug_inquiry_count(request, property_id):
+    """
+    Debug endpoint to check inquiry count status
+    """
+    try:
+        property = Property.objects.get(id=property_id)
+        
+        # Get actual count from database
+        actual_count = property.inquiries.count()
+        
+        # Get cached count from property model
+        cached_count = property.inquiry_count
+        
+        return Response({
+            'property_id': property.id,
+            'property_title': property.title,
+            'cached_inquiry_count': cached_count,
+            'actual_inquiry_count': actual_count,
+            'in_sync': cached_count == actual_count,
+            'inquiries': list(property.inquiries.values('id', 'created_at', 'inquiry_type')[:10])
+        })
+        
+    except Property.DoesNotExist:
+        return Response({'error': 'Property not found'}, status=404)

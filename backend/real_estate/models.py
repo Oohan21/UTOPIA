@@ -1,9 +1,13 @@
 from django.db import models
+from django.db.models.signals import post_save
+from django.db.models import F, Q, Count, Avg, Max, Min  
+from django.dispatch import receiver
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from datetime import datetime, timedelta
+from decimal import Decimal
 import decimal
 from django.utils.text import slugify
 import uuid
@@ -91,7 +95,7 @@ class Amenity(models.Model):
     amenity_type = models.CharField(
         max_length=20, choices=AMENITY_TYPES, default="general"
     )
-    icon = models.CharField(max_length=50, blank=True)  # FontAwesome icon class
+    icon = models.CharField(max_length=50, blank=True) 
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(default=timezone.now)
@@ -338,21 +342,29 @@ class Property(models.Model):
     def __str__(self):
         return f"{self.title} - {self.price_etb} ETB"
 
-    # models.py - Property model save method
     def save(self, *args, **kwargs):
         is_new = self.pk is None
-        original_status = getattr(self, '_original_approval_status', None)
-        original_is_promoted = getattr(self, '_original_is_promoted', False)
+    
+        if not is_new:
+            try:
+                original = Property.objects.get(pk=self.pk)
+                self._original_approval_status = original.approval_status
+                self._original_is_promoted = original.is_promoted
+            except Property.DoesNotExist:
+                self._original_approval_status = self.approval_status
+                self._original_is_promoted = self.is_promoted
+        else:
+            self._original_approval_status = 'pending'
+            self._original_is_promoted = False
     
         if is_new:
             is_promoted_property = (
                 self.promotion_tier and self.promotion_tier != 'basic' or
                 self.is_promoted or
                 kwargs.pop('auto_approve_if_promoted', False)
-        )
+            )
         
             if is_promoted_property:
-            # Auto-approve promoted properties
                 self.approval_status = 'approved'
                 self.is_active = True
                 if self.owner:
@@ -360,23 +372,19 @@ class Property(models.Model):
                     self.approved_at = timezone.now()
                 print(f"Auto-approving new promoted property: {self.title}")
             else:
-            # Normal flow for non-promoted properties
                 self.approval_status = 'pending'
                 self.is_active = False
             
-            # Auto-approve for staff/superusers
                 if self.owner and (self.owner.is_staff or self.owner.is_superuser):
                     self.approval_status = 'approved'
                     self.is_active = True
                     self.approved_by = self.owner
                     self.approved_at = timezone.now()
     
-    # Handle status changes for existing properties
         if not is_new:
-        # Check if property was just promoted
-            if not original_is_promoted and self.is_promoted:
+            if not self._original_is_promoted and self.is_promoted:
                 print(f"Property {self.id} was just promoted")
-            # Auto-approve if not already approved
+    
                 if self.approval_status != 'approved':
                     self.approval_status = 'approved'
                     self.is_active = True
@@ -385,8 +393,8 @@ class Property(models.Model):
                     if not self.approved_at:
                         self.approved_at = timezone.now()
         
-            if original_status != self.approval_status:
-                if self.approval_status == 'approved' and original_status != 'approved':
+            if self._original_approval_status != self.approval_status:
+                if self.approval_status == 'approved' and self._original_approval_status != 'approved':
                     self.is_active = True
                     self.approved_at = timezone.now()
                     if not self.approved_by and self.owner:
@@ -395,16 +403,14 @@ class Property(models.Model):
                     self.is_active = False
     
         if self.is_promoted and not self.promotion_tier:
-            self.promotion_tier = 'standard'  # Default tier
+            self.promotion_tier = 'standard'  
     
         super().save(*args, **kwargs)
-        self._original_approval_status = self.approval_status
-        self._original_is_promoted = self.is_promoted
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._original_approval_status = self.approval_status
-        self._original_is_promoted = self.is_promoted
+       super().__init__(*args, **kwargs)
+       self._original_approval_status = self.approval_status
+       self._original_is_promoted = self.is_promoted
 
     def get_price_display(self):
         if self.listing_type == "for_rent":
@@ -418,20 +424,9 @@ class Property(models.Model):
 
     @property
     def price_per_sqm(self):
-        if self.listing_type == "for_rent":
-            price = self.monthly_rent
-        else:
-            price = self.price_etb
-
-        if price is None or price <= 0:
-            return Decimal("0")
-        if self.total_area is None or self.total_area <= 0:
-            return Decimal("0")
-
-        try:
-            return price / self.total_area
-        except (TypeError, ZeroDivisionError, decimal.InvalidOperation):
-            return Decimal("0")
+        if self.price_etb and self.total_area and self.total_area != 0:
+            return (self.price_etb / Decimal(self.total_area)).quantize(Decimal('0.01'))
+        return Decimal('0')
 
     @property
     def is_promotion_active(self):
@@ -503,6 +498,91 @@ class Property(models.Model):
             and self.is_active 
             and self.property_status == 'available'
         )
+
+    def toggle_save(self, user):
+        """
+        Toggle save status for a user
+        Returns: (is_saved, save_count)
+        """
+        from .models import TrackedProperty
+        
+        # Check if already saved
+        tracked = TrackedProperty.objects.filter(
+            user=user,
+            property=self
+        ).first()
+        
+        if tracked:
+            # Unsaved it
+            tracked.delete()
+            if self.save_count > 0:
+                self.save_count -= 1
+                self.save(update_fields=['save_count'])
+            return False, self.save_count
+        else:
+            # Save it
+            TrackedProperty.objects.create(
+                user=user,
+                property=self,
+                tracking_type='interested',
+                notification_enabled=True
+            )
+            self.save_count += 1
+            self.save(update_fields=['save_count'])
+            return True, self.save_count
+    
+    def sync_inquiry_count(self):
+        """
+        Sync inquiry count with actual database count
+        Useful for fixing counts if they get out of sync
+        """
+        from django.db.models import Count
+        
+        actual_count = self.inquiries.count()
+        
+        if self.inquiry_count != actual_count:
+            self.inquiry_count = actual_count
+            self.save(update_fields=['inquiry_count'])
+            print(f"🔄 Synced property {self.id} inquiry count: {self.inquiry_count}")
+        
+        return self.inquiry_count
+    
+    def get_inquiry_count(self):
+        """
+        Get the actual count from database (not cached)
+        """
+        return self.inquiries.count()
+        
+    def get_tracking_info(self, user):
+        """Get tracking info for a specific user"""
+        try:
+            tracked = TrackedProperty.objects.filter(
+                user=user,
+                property=self
+            ).first()
+            
+            if tracked:
+                return {
+                    'tracking_type': tracked.tracking_type,
+                    'tracked_at': tracked.created_at,
+                    'tracked_id': tracked.id,
+                    'notification_enabled': tracked.notification_enabled,
+                    'notes': tracked.notes
+                }
+        except TrackedProperty.DoesNotExist:
+            pass
+        return None
+    
+    # Add this property method to check if property is saved by a user
+    def is_saved_by_user(self, user):
+        """Check if property is saved by a specific user"""
+        if not user or not user.is_authenticated:
+            return False
+            
+        return TrackedProperty.objects.filter(
+            user=user,
+            property=self
+        ).exists()
 
 class PropertyImage(models.Model):
     property = models.ForeignKey(
@@ -606,11 +686,11 @@ class TrackedProperty(models.Model):
     class Meta:
         verbose_name = _("tracked property")
         verbose_name_plural = _("tracked properties")
-        unique_together = ["user", "property"]
+        unique_together = ["user", "property", "tracking_type"]
+        ordering = ['-created_at']
 
     def __str__(self):
         return f"{self.user.email} tracks {self.property.title}"
-
 
 class Inquiry(models.Model):
     INQUIRY_TYPES = (
@@ -629,11 +709,36 @@ class Inquiry(models.Model):
         ("spam", "Spam"),
     )
 
-    # CORRECTED: Use a different name or remove the property method
-    property_rel = models.ForeignKey(  # Changed from 'property' to 'property_rel'
+    PRIORITY_CHOICES = (
+        ("low", "Low"),
+        ("medium", "Medium"),
+        ("high", "High"),
+        ("urgent", "Urgent"),
+    )
+
+    CATEGORY_CHOICES = (
+        ("buyer", "Buyer Inquiry"),
+        ("seller", "Seller Inquiry"),
+        ("general", "General Inquiry"),
+    )
+
+    SOURCE_CHOICES = (
+        ("website", "Website Form"),
+        ("phone", "Phone Call"),
+        ("email", "Email"),
+        ("whatsapp", "WhatsApp"),
+        ("walk_in", "Walk-in"),
+        ("referral", "Referral"),
+    )
+
+    # Basic Information
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    property = models.ForeignKey(
         Property, on_delete=models.CASCADE, related_name="inquiries"
     )
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="inquiries")
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="inquiries", null=True, blank=True
+    )
     inquiry_type = models.CharField(
         max_length=20, choices=INQUIRY_TYPES, default="general"
     )
@@ -649,64 +754,58 @@ class Inquiry(models.Model):
         default="any",
     )
 
-    # Contact Information (in case user is not logged in)
+    # Contact Information (for anonymous inquiries)
     full_name = models.CharField(max_length=200, blank=True)
     email = models.EmailField(blank=True)
     phone = models.CharField(max_length=20, blank=True)
 
+    # Status and Management
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    priority = models.CharField(
+        max_length=10, choices=PRIORITY_CHOICES, default="medium"
+    )
+    
+    # Assignment - only admins can be assigned
     assigned_to = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="assigned_inquiries",
-    )
-    priority = models.CharField(
-        max_length=10,
-        choices=[
-            ("low", "Low"),
-            ("medium", "Medium"),
-            ("high", "High"),
-            ("urgent", "Urgent"),
-        ],
-        default="medium",
+        limit_choices_to={'user_type': 'admin'}  # Only admins can be assigned
     )
 
     # Response tracking
     response_sent = models.BooleanField(default=False)
     response_notes = models.TextField(blank=True)
     responded_at = models.DateTimeField(null=True, blank=True)
+    response_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="responded_inquiries"
+    )
 
-    # Additional fields from the enhanced version
+    # Additional fields
     scheduled_viewing = models.DateTimeField(null=True, blank=True)
     viewing_address = models.CharField(max_length=500, blank=True)
     tags = models.JSONField(default=list, blank=True)
     internal_notes = models.TextField(blank=True)
     follow_up_date = models.DateTimeField(null=True, blank=True)
     category = models.CharField(
-        max_length=50,
-        choices=[
-            ('buyer', 'Buyer Inquiry'),
-            ('seller', 'Seller Inquiry'),
-            ('agent', 'Agent Inquiry'),
-            ('general', 'General Inquiry'),
-        ],
-        default='general'
+        max_length=50, choices=CATEGORY_CHOICES, default="general"
     )
     source = models.CharField(
-        max_length=50,
-        choices=[
-            ('website', 'Website Form'),
-            ('phone', 'Phone Call'),
-            ('email', 'Email'),
-            ('whatsapp', 'WhatsApp'),
-            ('walk_in', 'Walk-in'),
-            ('referral', 'Referral'),
-        ],
-        default='website'
+        max_length=50, choices=SOURCE_CHOICES, default="website"
     )
 
+    # Metadata
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+    session_id = models.CharField(max_length=100, blank=True)
+    
+    # Timestamps
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -717,47 +816,351 @@ class Inquiry(models.Model):
         indexes = [
             models.Index(fields=['status', 'priority']),
             models.Index(fields=['assigned_to', 'created_at']),
-            models.Index(fields=['property_rel', 'created_at']),
+            models.Index(fields=['property', 'created_at']),
             models.Index(fields=['follow_up_date']),
+            models.Index(fields=['user', 'created_at']),
+            models.Index(fields=['email', 'created_at']),
         ]
 
     def __str__(self):
-        return f"Inquiry #{self.id} - {self.property_rel.title}"
+        if self.user:
+            return f"Inquiry #{self.id} - {self.user.email} - {self.property.title}"
+        return f"Inquiry #{self.id} - {self.full_name} - {self.property.title}"
 
-    @property
-    def is_urgent(self):
+    def get_is_urgent(self):
         """Check if inquiry requires urgent attention"""
         from django.utils import timezone
         from datetime import timedelta
         
         urgent_statuses = ['pending', 'viewing_scheduled']
-        return (self.priority in ['high', 'urgent'] and 
-                self.status in urgent_statuses and
-                self.created_at >= timezone.now() - timedelta(hours=24))
-    
-    @property
-    def response_time(self):
+        is_high_priority = self.priority in ['high', 'urgent']
+        is_recent = self.created_at >= timezone.now() - timedelta(hours=24)
+        
+        return is_high_priority and self.status in urgent_statuses and is_recent
+
+    def get_response_time_hours(self):
         """Calculate response time in hours"""
         if self.responded_at:
             return (self.responded_at - self.created_at).total_seconds() / 3600
         return None
-    
-    def mark_as_contacted(self):
+
+    def get_user_display_name(self):
+        """Get user's display name"""
+        if self.user:
+            return f"{self.user.first_name} {self.user.last_name}"
+        return self.full_name or "Anonymous"
+
+    def get_user_email_address(self):
+        """Get user's email"""
+        if self.user:
+            return self.user.email
+        return self.email
+
+    def get_days_since_creation(self):
+        """Get days since inquiry was created"""
+        from django.utils import timezone
+        return (timezone.now() - self.created_at).days
+
+    def get_has_scheduled_viewing(self):
+        """Check if viewing is scheduled"""
+        return self.scheduled_viewing is not None
+
+    def get_is_overdue_followup(self):
+        """Check if follow-up is overdue"""
+        from django.utils import timezone
+        if self.follow_up_date:
+            return self.follow_up_date < timezone.now() and self.status != 'closed'
+        return False
+
+
+    def get_status_display_name(self):
+        """Get display name for status"""
+        return dict(self.STATUS_CHOICES).get(self.status, self.status)
+
+    def get_priority_display_name(self):
+        """Get display name for priority"""
+        return dict(self.PRIORITY_CHOICES).get(self.priority, self.priority)
+
+    def get_inquiry_type_display_name(self):
+        """Get display name for inquiry type"""
+        return dict(self.INQUIRY_TYPES).get(self.inquiry_type, self.inquiry_type)
+
+    def get_category_display_name(self):
+        """Get display name for category"""
+        return dict(self.CATEGORY_CHOICES).get(self.category, self.category)
+
+    def get_source_display_name(self):
+        """Get display name for source"""
+        return dict(self.SOURCE_CHOICES).get(self.source, self.source)
+
+    def get_contact_preference_display_name(self):
+        """Get display name for contact preference"""
+        choices = dict([
+            ("call", "Call"),
+            ("email", "Email"),
+            ("whatsapp", "WhatsApp"),
+            ("any", "Any"),
+        ])
+        return choices.get(self.contact_preference, self.contact_preference)
+
+    # ========== BUSINESS LOGIC METHODS ==========
+
+    def save(self, *args, **kwargs):
+        """Override save to add automatic timestamp updates"""
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+        
+        # Log creation if new
+        if is_new:
+            try:
+                # Use F() expression to avoid race conditions
+                from django.db.models import F
+                self.property.inquiry_count = F('inquiry_count') + 1
+                self.property.save(update_fields=['inquiry_count'])
+                
+                # IMPORTANT: Refresh from database to get the updated value
+                self.property.refresh_from_db()
+                
+                print(f"✅ Inquiry created. Property {self.property.id} inquiry count updated to: {self.property.inquiry_count}")
+            except Exception as e:
+                print(f"❌ Error updating property inquiry count: {str(e)}")
+
+        if is_new:
+            try:
+                from users.models import UserActivity
+                UserActivity.objects.create(
+                    user=self.user if self.user else None,
+                    activity_type="inquiry_created",
+                    ip_address=self.ip_address,
+                    user_agent=self.user_agent,
+                    metadata={
+                        "inquiry_id": str(self.id),
+                        "property_id": self.property.id,
+                        "inquiry_type": self.inquiry_type
+                    }
+                )
+            except Exception:
+                pass  # Skip logging if users app not available
+
+    def mark_as_contacted(self, user=None, notes=""):
         """Mark inquiry as contacted"""
         from django.utils import timezone
         
         self.status = 'contacted'
         self.responded_at = timezone.now()
         self.response_sent = True
+        if user:
+            self.response_by = user
+        if notes:
+            self.response_notes = notes
         self.save()
-    
-    def schedule_viewing(self, date_time, address):
+
+    def schedule_viewing(self, date_time, address, notes=""):
         """Schedule a property viewing"""
+        from django.utils import timezone
+        
         self.status = 'viewing_scheduled'
         self.scheduled_viewing = date_time
         self.viewing_address = address
+        if notes:
+            self.response_notes = notes
+        self.responded_at = timezone.now()
+        self.response_sent = True
         self.save()
 
+    def assign_to_admin(self, admin_user):
+        """Assign inquiry to an admin"""
+        if admin_user.user_type != 'admin':
+            raise ValueError("Only admin users can be assigned inquiries")
+        
+        self.assigned_to = admin_user
+        self.save()
+        
+        # Log the assignment
+        try:
+            from users.models import UserActivity
+            UserActivity.objects.create(
+                user=admin_user,
+                activity_type="inquiry_assigned",
+                ip_address=self.ip_address,
+                user_agent=self.user_agent,
+                metadata={
+                    "inquiry_id": str(self.id),
+                    "property_title": self.property.title
+                }
+            )
+        except Exception:
+            pass
+
+    def close_inquiry(self, user=None, notes=""):
+        """Close the inquiry"""
+        from django.utils import timezone
+        
+        self.status = 'closed'
+        if user:
+            self.response_by = user
+        if notes:
+            self.response_notes = notes
+        if not self.responded_at:
+            self.responded_at = timezone.now()
+        self.response_sent = True
+        self.save()
+
+    def can_view(self, user):
+        """Check if user can view this inquiry"""
+        if user.user_type == 'admin':
+            return True
+        return self.user == user or self.property.owner == user
+
+    def can_update(self, user):
+        """Check if user can update this inquiry"""
+        if user.user_type == 'admin':
+            return True
+        return self.user == user
+
+    def get_status_color(self):
+        """Get color for status display"""
+        status_colors = {
+            'pending': 'warning',
+            'contacted': 'info',
+            'viewing_scheduled': 'success',
+            'follow_up': 'warning',
+            'closed': 'secondary',
+            'spam': 'danger',
+        }
+        return status_colors.get(self.status, 'secondary')
+
+    def get_priority_color(self):
+        """Get color for priority display"""
+        priority_colors = {
+            'low': 'success',
+            'medium': 'info',
+            'high': 'warning',
+            'urgent': 'danger',
+        }
+        return priority_colors.get(self.priority, 'secondary')
+
+    def to_dict(self):
+        """Convert inquiry to dictionary for serialization"""
+        return {
+            'id': str(self.id),
+            'property_id': self.property.id,
+            'property_title': self.property.title,
+            'user_id': self.user.id if self.user else None,
+            'user_display_name': self.get_user_display_name(),
+            'inquiry_type': self.inquiry_type,
+            'status': self.status,
+            'priority': self.priority,
+            'created_at': self.created_at.isoformat(),
+            'is_urgent': self.get_is_urgent(),
+            'response_time_hours': self.get_response_time_hours(),
+        }
+
+    def add_tag(self, tag):
+        """Add a tag to the inquiry"""
+        if not self.tags:
+            self.tags = []
+        if tag not in self.tags:
+            self.tags.append(tag)
+            self.save()
+
+    def remove_tag(self, tag):
+        """Remove a tag from the inquiry"""
+        if self.tags and tag in self.tags:
+            self.tags.remove(tag)
+            self.save()
+
+    def clear_tags(self):
+        """Clear all tags from the inquiry"""
+        self.tags = []
+        self.save()
+
+    @classmethod
+    def get_open_inquiries(cls):
+        """Get all open (non-closed) inquiries"""
+        return cls.objects.exclude(status='closed').exclude(status='spam')
+
+    @classmethod
+    def get_urgent_inquiries(cls):
+        """Get all urgent inquiries"""
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        urgent_threshold = timezone.now() - timedelta(hours=24)
+        return cls.objects.filter(
+            status='pending',
+            priority__in=['high', 'urgent'],
+            created_at__gte=urgent_threshold
+        )
+
+    @classmethod
+    def get_unassigned_inquiries(cls):
+        """Get all unassigned inquiries"""
+        return cls.objects.filter(assigned_to__isnull=True).exclude(status='closed')
+
+    @classmethod
+    def get_user_inquiries(cls, user):
+        """Get all inquiries for a user"""
+        if user.user_type == 'admin':
+            return cls.objects.all()
+        return cls.objects.filter(user=user)
+
+    @classmethod
+    def create_anonymous_inquiry(cls, property, full_name, email, phone, message, 
+                                  inquiry_type='general', **kwargs):
+        """Create an inquiry from anonymous user"""
+        from django.utils import timezone
+        
+        return cls.objects.create(
+            property=property,
+            full_name=full_name,
+            email=email,
+            phone=phone,
+            message=message,
+            inquiry_type=inquiry_type,
+            **kwargs
+        )
+
+    @classmethod
+    def get_stats(cls, user=None):
+        """Get inquiry statistics"""
+        from django.db.models import Count, Q
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        queryset = cls.objects.all()
+        
+        if user and user.user_type != 'admin':
+            queryset = queryset.filter(user=user)
+        
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        
+        stats = queryset.aggregate(
+            total=Count('id'),
+            pending=Count('id', filter=Q(status='pending')),
+            closed=Count('id', filter=Q(status='closed')),
+            responded=Count('id', filter=Q(response_sent=True)),
+            recent=Count('id', filter=Q(created_at__gte=thirty_days_ago))
+        )
+        
+        # Calculate average response time
+        responded_inquiries = queryset.filter(responded_at__isnull=False)
+        total_response_hours = 0
+        count = 0
+        
+        for inquiry in responded_inquiries:
+            response_time = inquiry.get_response_time_hours()
+            if response_time:
+                total_response_hours += response_time
+                count += 1
+        
+        if count > 0:
+            stats['avg_response_hours'] = total_response_hours / count
+        else:
+            stats['avg_response_hours'] = 0
+        
+        return stats
+        
 class PropertyView(models.Model):
     property = models.ForeignKey(
         Property, on_delete=models.CASCADE, related_name="property_views"
@@ -850,7 +1253,7 @@ class Message(models.Model):
         choices=MESSAGE_TYPES, 
         default='general'
     )
-    subject = models.CharField(max_length=200, blank=True)
+    subject = models.CharField(max_length=200, blank=True, null=True)
     content = models.TextField()
     
     # Attachment support
@@ -858,6 +1261,14 @@ class Message(models.Model):
         upload_to='message_attachments/%Y/%m/%d/',
         null=True,
         blank=True
+    )
+
+    thread = models.ForeignKey(
+        'MessageThread',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='thread_messages'  
     )
     
     # Read status
@@ -1278,3 +1689,10 @@ class SearchHistory(models.Model):
         else:
             ip = request.META.get('REMOTE_ADDR')
         return ip
+
+@receiver(post_save, sender=Inquiry)
+def update_property_inquiry_count(sender, instance, created, **kwargs):
+    if created:
+        Property.objects.filter(id=instance.property.id).update(
+            inquiry_count=F('inquiry_count') + 1
+        )

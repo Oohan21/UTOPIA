@@ -31,10 +31,15 @@ class CitySerializer(serializers.ModelSerializer):
 
 class SubCitySerializer(serializers.ModelSerializer):
     city = CitySerializer(read_only=True)
+    city_id = serializers.PrimaryKeyRelatedField(
+        queryset=City.objects.all(),
+        source='city',
+        write_only=True
+    )
     city_name = serializers.SerializerMethodField() 
     class Meta:
         model = SubCity
-        fields = ['id', 'city', 'city_name', 'name', 'name_amharic', 'description',
+        fields = ['id', 'city', 'city_id', 'city_name', 'name', 'name_amharic', 'description',
                  'zip_code', 'population_density', 'average_price_per_sqm',
                  'is_popular', 'created_at', 'updated_at']
 
@@ -102,10 +107,18 @@ class PropertySerializer(serializers.ModelSerializer):
         max_digits=15, 
         decimal_places=2, 
         read_only=True,
-        source='get_price_per_sqm'
     )
     days_on_market = serializers.IntegerField(read_only=True, source='get_days_on_market')
     is_active = serializers.BooleanField(default=True, write_only=True)
+    is_saved = serializers.SerializerMethodField()
+    save_count = serializers.IntegerField(read_only=True)
+    inquiry_count = serializers.IntegerField(read_only=True)
+    owner_id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        source='owner',
+        write_only=True,
+        required=False
+    )
     
     class Meta:
         model = Property
@@ -124,9 +137,20 @@ class PropertySerializer(serializers.ModelSerializer):
             'is_featured', 'is_verified', 'is_active', 'is_premium',
             'views_count', 'inquiry_count', 'save_count', 'virtual_tour_url',
             'video_url', 'has_title_deed', 'has_construction_permit',
-            'has_occupancy_certificate', 'created_at', 'updated_at',
+            'has_occupancy_certificate', 'created_at', 'updated_at', 'is_saved', 'owner_id',
             'listed_date', 'expiry_date', 'property_video', 'price_per_sqm', 'days_on_market'
         ]
+        read_only_fields = ['views_count', 'inquiry_count', 'save_count', 'owner']
+
+    def create(self, validated_data):
+        # Set owner from request context if not provided
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            validated_data['owner'] = request.user
+        elif 'owner' not in validated_data:
+            # If no owner provided and no request context, raise error
+            raise serializers.ValidationError({"owner": "This field is required."})
+        return super().create(validated_data)
 
     def get_images(self, obj):
         images = obj.images.all()
@@ -190,6 +214,15 @@ class PropertySerializer(serializers.ModelSerializer):
         
         return super().to_internal_value(data)
 
+    def get_is_saved(self, obj):
+        """
+        Check if the current user has saved this property
+        """
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.is_saved_by_user(request.user)
+        return False
+
 class ComparisonPropertySerializer(PropertySerializer):
     """Simplified property serializer for comparison"""
     class Meta:
@@ -205,13 +238,38 @@ class ComparisonPropertySerializer(PropertySerializer):
 
 class PropertyComparisonSerializer(DynamicFieldsModelSerializer):
     properties = ComparisonPropertySerializer(many=True, read_only=True)
+    property_ids = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Property.objects.all(),
+        source='properties',
+        write_only=True,
+        required=False
+    )
     comparison_summary = serializers.SerializerMethodField()
     
     class Meta:
         model = PropertyComparison
-        fields = ['id', 'name', 'properties', 'comparison_summary', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'properties', 'property_ids', 'comparison_summary', 'created_at', 'updated_at']
         read_only_fields = ['user']
     
+    def create(self, validated_data):
+        # Extract properties from validated_data
+        properties = validated_data.pop('properties', [])
+        
+        # Get user from request context
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            validated_data['user'] = request.user
+        
+        # Create the comparison
+        comparison = PropertyComparison.objects.create(**validated_data)
+        
+        # Add properties if any
+        if properties:
+            comparison.properties.set(properties)
+        
+        return comparison
+
     def get_comparison_summary(self, obj):
         properties = obj.properties.all()
         if properties.count() == 0:
