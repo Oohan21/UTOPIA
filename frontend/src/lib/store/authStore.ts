@@ -38,6 +38,10 @@ interface LoginResponse {
   user: User;
   message: string;
   session_key?: string;
+  tokens?: {
+    access: string;
+    refresh: string;
+  };
 }
 
 interface RegisterResponse {
@@ -110,6 +114,14 @@ export const useAuthStore = create<AuthState>()(
 
           // Successful login
           const processedUser = ensureUserWithAbsoluteUrls(response.user);
+
+          // Store tokens if present in response
+          if (response.tokens) {
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('access_token', response.tokens.access);
+              localStorage.setItem('refresh_token', response.tokens.refresh);
+            }
+          }
 
           set({
             user: processedUser,

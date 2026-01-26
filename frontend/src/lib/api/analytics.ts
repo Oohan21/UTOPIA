@@ -1,5 +1,34 @@
 // src/lib/api/analytics.ts 
 import apiClient from './client';
+
+// Server-aware fetch helper: forward incoming cookies when running in Next server
+async function fetchWithForwardedCookie(endpoint: string, opts: any = {}) {
+  if (typeof window === 'undefined') {
+    try {
+      const { headers } = await import('next/headers');
+      const cookie = headers().get('cookie') || '';
+      const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const url = `${base}/api${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+      const res = await fetch(url, {
+        method: opts.method || 'GET',
+        headers: {
+          ...(opts.headers || {}),
+          cookie,
+        },
+        body: opts.body,
+        credentials: 'include',
+        cache: opts.cache || 'no-store',
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    } catch (e) {
+      throw e;
+    }
+  } else {
+    const response = await apiClient.get(endpoint, opts);
+    return response.data;
+  }
+}
 import {
   MarketTrend,
   PlatformMetrics,
@@ -20,7 +49,7 @@ export const analyticsApi = {
   // Market trends
   getMarketTrends: async (days: number = 30): Promise<MarketTrend[]> => {
     try {
-      const response = await apiClient.get(`/analytics/market-trends/?days=${days}`);
+      const response = await fetchWithForwardedCookie(`/analytics/market-trends/?days=${days}`);
 
       // If backend returns empty results, try market-overview
       if (!response.data ||
@@ -31,7 +60,7 @@ export const analyticsApi = {
 
         try {
           // Try to get from market overview which has trend generation
-          const marketResponse = await apiClient.get(`/analytics/market-overview/?period=${days}d`);
+          const marketResponse = await fetchWithForwardedCookie(`/analytics/market-overview/?period=${days}d`);
 
           if (marketResponse.data?.market_trends && marketResponse.data.market_trends.length > 0) {
             console.log('Using market trends from market-overview');
@@ -39,7 +68,7 @@ export const analyticsApi = {
           }
 
           // Try to get properties and generate trends manually
-          const propertiesResponse = await apiClient.get(`/properties/?limit=1000&ordering=-created_at`);
+          const propertiesResponse = await fetchWithForwardedCookie(`/properties/?limit=1000&ordering=-created_at`);
           const properties = propertiesResponse.data.results || [];
 
           if (properties.length > 0) {
@@ -131,9 +160,9 @@ export const analyticsApi = {
     for (const endpoint of endpoints) {
       try {
         console.log(`Trying platform metrics endpoint: ${endpoint}`);
-        const response = await apiClient.get(endpoint);
+        const data = await fetchWithForwardedCookie(endpoint);
         console.log(`Platform metrics loaded from: ${endpoint}`);
-        return response.data;
+        return data;
       } catch (error: any) {
         console.log(`Endpoint ${endpoint} failed:`, error?.response?.status || error.message);
         continue;
@@ -200,9 +229,9 @@ export const analyticsApi = {
     for (const endpoint of endpoints) {
       try {
         console.log(`Trying platform analytics endpoint: ${endpoint}`);
-        const response = await apiClient.get(endpoint);
+        const data = await fetchWithForwardedCookie(endpoint);
         console.log(`Platform analytics loaded from: ${endpoint}`);
-        return response.data;
+        return data;
       } catch (error: any) {
         console.log(`Endpoint ${endpoint} failed:`, error?.response?.status || error.message);
         continue;

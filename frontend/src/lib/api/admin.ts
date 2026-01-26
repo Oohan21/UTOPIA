@@ -1,4 +1,35 @@
 import apiClient from './client';
+
+// Helper to perform a request that forwards incoming cookies when running
+// in Next server-side (SSR / server components). If running in the browser
+// we fall back to the `apiClient` which has `withCredentials` enabled.
+async function fetchWithForwardedCookie(endpoint: string, opts: any = {}) {
+  if (typeof window === 'undefined') {
+    try {
+      const { headers } = await import('next/headers');
+      const cookie = headers().get('cookie') || '';
+      const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const url = `${base}/api${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+      const res = await fetch(url, {
+        method: opts.method || 'GET',
+        headers: {
+          ...(opts.headers || {}),
+          cookie,
+        },
+        body: opts.body,
+        credentials: 'include',
+        cache: opts.cache || 'no-store',
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    } catch (e) {
+      throw e;
+    }
+  } else {
+    const response = await apiClient.get(endpoint, opts);
+    return response.data;
+  }
+}
 import { User } from '@/lib/types/user';
 import { Property as PropertyType } from '@/lib/types/property';
 
@@ -208,9 +239,9 @@ export const adminApi = {
       for (const endpoint of endpoints) {
         try {
           console.log(`Trying admin dashboard: ${endpoint}`);
-          const response = await apiClient.get(endpoint);
+          const data = await fetchWithForwardedCookie(endpoint);
           console.log(`Admin dashboard loaded from: ${endpoint}`);
-          return response.data;
+          return data;
         } catch (error: any) {
           console.log(`Endpoint ${endpoint} failed:`, error?.response?.status || error.message);
           lastError = error;
@@ -246,19 +277,19 @@ export const adminApi = {
     const queryParams = new URLSearchParams(cleanedParams || {}).toString();
 
     // Try different user endpoints
-    const endpoints = [
-      `/admin/users/${queryParams ? `?${queryParams}` : ''}`,
-      `/users/${queryParams ? `?${queryParams}` : ''}`
-    ];
+      const endpoints = [
+        `/admin/users/${queryParams ? `?${queryParams}` : ''}`,
+        `/users/${queryParams ? `?${queryParams}` : ''}`
+      ];
 
     let lastError: any = null;
 
     for (const endpoint of endpoints) {
       try {
         console.log(`Trying users endpoint: ${endpoint}`);
-        const response = await apiClient.get<PaginatedResponse<AdminUser>>(endpoint);
-        console.log(`Users loaded from: ${endpoint}`, response.data);
-        return response.data;
+        const data = await fetchWithForwardedCookie(endpoint);
+        console.log(`Users loaded from: ${endpoint}`);
+        return data as PaginatedResponse<AdminUser>;
       } catch (error: any) {
         console.log(`Endpoint ${endpoint} failed:`, error?.response?.status || error.message);
         lastError = error;
@@ -324,9 +355,9 @@ export const adminApi = {
     for (const endpoint of endpoints) {
       try {
         console.log(`Trying properties endpoint: ${endpoint}`);
-        const response = await apiClient.get<PaginatedResponse<AdminProperty>>(endpoint);
-        console.log(`Properties loaded from: ${endpoint}`, response.data.count);
-        return response.data;
+        const data = await fetchWithForwardedCookie(endpoint);
+        console.log(`Properties loaded from: ${endpoint}`, data.count);
+        return data as PaginatedResponse<AdminProperty>;
       } catch (error: any) {
         console.log(`Endpoint ${endpoint} failed:`, error?.response?.status || error.message);
         lastError = error;

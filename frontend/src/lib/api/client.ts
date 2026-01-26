@@ -2,7 +2,9 @@
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
+// Use relative API base in development so Next.js rewrites can proxy requests
+// and keep requests same-origin (cookies and CSRF will work).
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api'
 
 // ============ SESSION-BASED API CLIENT ============
 export const apiClient = axios.create({
@@ -13,11 +15,18 @@ export const apiClient = axios.create({
   withCredentials: true,
 })
 
+// Let axios automatically read the CSRF cookie and set the header for XHR requests
+apiClient.defaults.xsrfCookieName = 'csrftoken'
+apiClient.defaults.xsrfHeaderName = 'X-CSRFToken'
+
 // ============ FILE UPLOAD CLIENT ============
 export const uploadClient = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
 })
+
+uploadClient.defaults.xsrfCookieName = 'csrftoken'
+uploadClient.defaults.xsrfHeaderName = 'X-CSRFToken'
 
 // ============ CSRF TOKEN MANAGEMENT ============
 let csrfToken: string | null = null
@@ -26,12 +35,19 @@ let csrfInitialized = false
 // Helper function to safely get CSRF token from cookies
 const getCSRFTokenFromCookies = (): string | null => {
   if (typeof document === 'undefined') return null
-  
+
   const cookies = document.cookie.split(';')
   for (let cookie of cookies) {
     cookie = cookie.trim()
+    // check common names used by server
     if (cookie.startsWith('csrftoken=')) {
       return cookie.substring('csrftoken='.length)
+    }
+    if (cookie.startsWith('utopia_csrftoken=')) {
+      return cookie.substring('utopia_csrftoken='.length)
+    }
+    if (cookie.startsWith('XSRF-TOKEN=')) {
+      return cookie.substring('XSRF-TOKEN='.length)
     }
   }
   return null
@@ -46,7 +62,7 @@ export const getCSRFToken = (): string | null => {
       return storedToken
     }
   }
-  
+
   // Then check cookies
   const cookieToken = getCSRFTokenFromCookies()
   if (cookieToken && typeof window !== 'undefined') {
@@ -54,7 +70,7 @@ export const getCSRFToken = (): string | null => {
     localStorage.setItem('csrf_token', cookieToken)
     return cookieToken
   }
-  
+
   return csrfToken // Return the module variable as last resort
 }
 
@@ -62,10 +78,10 @@ export const initCSRF = async (): Promise<string | null> => {
   if (csrfInitialized && csrfToken) {
     return csrfToken
   }
-  
+
   try {
     console.log('Initializing CSRF token...')
-    
+
     // Fetch CSRF token from server
     const response = await axios.get(`${API_BASE_URL}/auth/csrf/`, {
       withCredentials: true,
@@ -75,25 +91,25 @@ export const initCSRF = async (): Promise<string | null> => {
     })
 
     console.log('CSRF response:', response.data)
-    
+
     // Check cookies first (they should be set by browser)
     let token = getCSRFTokenFromCookies()
-    
+
     if (!token) {
       // Fallback to response data
       token = response.data?.csrf_token || null
     }
-    
+
     if (token) {
       csrfToken = token
       csrfInitialized = true
-      
+
       // Store in localStorage for persistence
       if (typeof window !== 'undefined') {
         localStorage.setItem('csrf_token', token)
         localStorage.setItem('csrf_initialized', 'true')
       }
-      
+
       console.log('CSRF token initialized:', token.substring(0, 10) + '...')
       return token
     } else {
@@ -143,13 +159,25 @@ const initCSRFAndGetToken = async (): Promise<string | null> => {
 apiClient.interceptors.request.use(async (config) => {
   // Get CSRF token
   let token = csrfToken || getCSRFToken()
-  
+
   // If still no token, try to get one
   if (!token && typeof window !== 'undefined') {
     token = await ensureCSRFToken()
   }
 
-  // Only add token if it exists and it's a non-GET request
+  // Add Authorization header if available
+  if (typeof window !== 'undefined') {
+    const accessToken = localStorage.getItem('access_token')
+    if (accessToken) {
+      // ⚠️ DO NOT REVERT THIS BLOCK ⚠️
+      // This is required for JWT Authentication to work.
+      // It attaches the token and disables cookies to avoid 403 errors.
+      config.headers['Authorization'] = `Bearer ${accessToken}`
+      config.withCredentials = false
+    }
+  }
+
+  // Only add CSRF token if it exists and it's a non-GET request
   const method = config.method?.toUpperCase()
   if (token && method && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
     config.headers['X-CSRFToken'] = token
@@ -164,13 +192,13 @@ apiClient.interceptors.request.use(async (config) => {
 // Upload client interceptor - FIXED
 uploadClient.interceptors.request.use(async (config) => {
   const method = config.method?.toUpperCase()
-  
+
   if (method && ['GET', 'HEAD', 'OPTIONS'].includes(method)) {
     return config
   }
 
   const token = await ensureCSRFToken()
-  
+
   if (token) {
     config.headers['X-CSRFToken'] = token
   }
@@ -296,7 +324,7 @@ export const sessionApi = {
       sessionStorage.removeItem('user')
       localStorage.removeItem('csrf_token')
       localStorage.removeItem('csrf_initialized')
-      
+
       // Clear cookies
       document.cookie = 'sessionid=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
       document.cookie = 'csrftoken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
