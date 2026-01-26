@@ -150,9 +150,23 @@ USE_LOCAL_HTTPS = config('USE_LOCAL_HTTPS', default=False, cast=bool)
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_NAME = 'sessionid'
 SESSION_COOKIE_AGE = 1209600  # 2 weeks
-SESSION_COOKIE_SECURE = True if not DEBUG else USE_LOCAL_HTTPS
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'None' if USE_LOCAL_HTTPS else 'Lax'
+SESSION_COOKIE_PATH = '/'
+SESSION_COOKIE_DOMAIN = None  # Don't restrict to subdomain
+
+# For local development over plain HTTP we must not mark cookies as Secure
+# or browsers/clients will refuse to send them. In production (DEBUG=False)
+# cookies should be Secure and SameSite=None when using cross-site setups.
+if DEBUG:
+    # In local development allow cross-site cookies so frontend at
+    # localhost:3000 can send credentials to the API at :8000.
+    # Note: browsers may require Secure for SameSite=None; in local dev
+    # we keep Secure=False so cookies are accepted over HTTP.
+    SESSION_COOKIE_SECURE = False
+    SESSION_COOKIE_SAMESITE = 'Lax'
+else:
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_SAMESITE = 'None' if USE_LOCAL_HTTPS else 'Lax'
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Keep session alive
 SESSION_COOKIE_PATH = '/'
@@ -160,12 +174,19 @@ SESSION_COOKIE_DOMAIN = None  # Don't restrict to subdomain
 
 # ============ CRITICAL CSRF SETTINGS ============
 CSRF_COOKIE_NAME = 'csrftoken'
-CSRF_COOKIE_SECURE = True if not DEBUG else USE_LOCAL_HTTPS
+# CSRF cookie settings
+if DEBUG:
+    # Allow cross-site CSRF cookie for local frontend dev
+    CSRF_COOKIE_SECURE = False
+    CSRF_COOKIE_SAMESITE = 'Lax'
+else:
+    CSRF_COOKIE_SECURE = True
+    CSRF_COOKIE_SAMESITE = 'None' if USE_LOCAL_HTTPS else 'Lax'
+
 CSRF_COOKIE_HTTPONLY = False  # MUST be False for JavaScript access
-CSRF_COOKIE_SAMESITE = 'None' if USE_LOCAL_HTTPS else 'Lax'
 CSRF_COOKIE_PATH = '/'
-CSRF_COOKIE_DOMAIN = 'None'
-CSRF_USE_SESSIONS = False  # Store in cookie, not session
+CSRF_COOKIE_DOMAIN = None
+CSRF_USE_SESSIONS = False  # CRITICAL: Must be False so CSRF token is sent as cookie, not stored in session
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:3000',
     'http://127.0.0.1:3000',
@@ -206,7 +227,7 @@ if USE_LOCAL_HTTPS:
 # REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.SessionAuthentication',
+        'users.authentication.CsrfExemptSessionAuthentication',  # Custom CSRF-exempt session auth
         'rest_framework.authentication.BasicAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
@@ -349,6 +370,11 @@ LOGGING = {
         'utopia': {
             'handlers': ['console', 'file', 'error_file'],
             'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
+        'django.security.csrf': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
             'propagate': False,
         },
     },

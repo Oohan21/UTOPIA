@@ -1,4 +1,5 @@
 from rest_framework import generics, permissions, status
+from rest_framework.decorators import authentication_classes, permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
@@ -8,13 +9,14 @@ from django.db.models.functions import TruncDate
 from collections import defaultdict
 from django.core.cache import cache
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
-from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
 from django.utils.decorators import method_decorator
 from django.middleware.csrf import get_token
 from django.db import models 
 from django.db.models import Count, Sum, Q
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
+from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import *
 from .models import CustomUser, UserActivity
 from .utils.email import send_password_reset_email
@@ -38,60 +40,38 @@ class GetCSRFToken(APIView):
     
     def get(self, request):
         """Set CSRF cookie and return success"""
-        # Get CSRF token
+        # Get CSRF token from Django's middleware
         csrf_token = get_token(request)
         
         # Create session if it doesn't exist
         if not request.session.session_key:
             request.session.create()
         
-        # Check if we're getting cookies from the request
-        print(f"\n🔍 REQUEST COOKIES: {request.COOKIES}")
-        print(f"🔍 REQUEST ORIGIN: {request.headers.get('Origin')}")
-        print(f"🔍 REQUEST REFERER: {request.headers.get('Referer')}")
+        # Log request info for debugging
+        logger.debug(f"CSRF Request - Origin: {request.headers.get('Origin')}, Referer: {request.headers.get('Referer')}")
+        logger.debug(f"CSRF Token generated: {csrf_token[:20]}...")
         
-        # Create response
+        # Create response with token info
         response = Response({
             "success": "CSRF cookie set",
             "csrf_token": csrf_token,
             "session_key": request.session.session_key,
-            "session_exists": True,
-            "user_authenticated": request.user.is_authenticated,
-            "cookie_test": "Check if cookie was actually set"
         })
         
-        # Try DIFFERENT cookie settings to see what works
-        # Most browsers accept these settings for localhost
-        
-        # OPTION 1: Simple cookie for localhost (no SameSite, no domain)
+        # Django's @ensure_csrf_cookie decorator already sets the cookie,
+        # but we'll explicitly set it here to ensure correct configuration
         response.set_cookie(
-            key='csrftoken',
+            key=settings.CSRF_COOKIE_NAME,
             value=csrf_token,
-            max_age=60 * 60 * 24 * 7,  # 1 week
-            httponly=False,
-            # No samesite specified - let browser default
-            secure=False,
-            path='/',
-            # No domain specified - will use current
+            max_age=settings.CSRF_COOKIE_AGE if hasattr(settings, 'CSRF_COOKIE_AGE') else 31449600,  # 1 year default
+            httponly=settings.CSRF_COOKIE_HTTPONLY,
+            samesite=settings.CSRF_COOKIE_SAMESITE,
+            secure=settings.CSRF_COOKIE_SECURE,
+            path=settings.CSRF_COOKIE_PATH,
+            domain=settings.CSRF_COOKIE_DOMAIN,
         )
         
-        # OPTION 2: Also set a test cookie
-        response.set_cookie(
-            key='test_cookie',
-            value='working',
-            max_age=3600,
-            httponly=False,
-            samesite='Lax',
-            secure=False,
-            path='/',
-        )
-        
-        print(f"\n🔐 ATTEMPTING TO SET COOKIES:")
-        print(f"   csrftoken: {csrf_token[:20]}...")
-        print(f"   Headers being sent:")
-        for key, value in response.items():
-            if 'set-cookie' in key.lower():
-                print(f"     {key}: {value}")
+        logger.info(f"✅ CSRF cookie set: {settings.CSRF_COOKIE_NAME}")
         
         return response
 
@@ -272,13 +252,17 @@ class RegisterView(generics.CreateAPIView):
 
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
+    authentication_classes = []  # No authentication needed for login
     
     def post(self, request):
-        print(f"\n🔐 LOGIN ATTEMPT - DEBUG:")
-        print(f"   Request data: {request.data}")
-        print(f"   Email provided: {request.data.get('email')}")
-        print(f"   Password provided: {request.data.get('password')}")
-        print(f"   CSRF token: {request.headers.get('X-CSRFToken')}")
+        logger.info("🔐 LOGIN ATTEMPT")
+        logger.info(f"   Request data keys: {list(request.data.keys())}")
+        logger.info(f"   Email provided: {request.data.get('email')}")
+        logger.info(f"   CSRF token header (request.headers): {request.headers.get('X-CSRFToken')}")
+        logger.info(f"   CSRF token header (META HTTP_X_CSRFTOKEN): {request.META.get('HTTP_X_CSRFTOKEN')}")
+        logger.info(f"   Request cookies: {request.COOKIES}")
+        logger.info(f"   Session key: {request.session.session_key}")
+        logger.info(f"   Session CSRF token (session['csrf_token']): {request.session.get('csrf_token')}")
         
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
@@ -291,14 +275,14 @@ class LoginView(APIView):
             try:
                 # First, try to get the user
                 user = CustomUser.objects.get(email=email)
-                print(f"   User found in DB: {user.email}")
-                print(f"   User ID: {user.id}")
-                print(f"   Is active: {user.is_active}")
-                print(f"   Email verified: {user.email_verified}")
-                
+                logger.debug(f"   User found in DB: {user.email}")
+                logger.debug(f"   User ID: {user.id}")
+                logger.debug(f"   Is active: {user.is_active}")
+                logger.debug(f"   Email verified: {user.email_verified}")
+
                 # Check password
                 password_correct = user.check_password(password)
-                print(f"   Password check result: {password_correct}")
+                logger.debug(f"   Password check result: {password_correct}")
                 
                 if password_correct:
                     if not user.is_active:
@@ -320,21 +304,28 @@ class LoginView(APIView):
                             status=status.HTTP_403_FORBIDDEN,
                         )
                     
-                    # Authenticate user
-                    user = authenticate(request, email=email, password=password)
-                    print(f"   Authenticate() result: {user}")
-                    
-                    if user is not None:
-                        # LOGIN USER
-                        login(request, user)
+                    # Authenticate user using username fallback (ModelBackend expects 'username')
+                    auth_user = authenticate(request, username=email, password=password)
+                    logger.debug(f"   authenticate() result: {auth_user}")
+
+                    # If backend didn't return a user but we've already verified the password,
+                    # allow login of the fetched user instance (useful when custom kwargs are not supported).
+                    if auth_user is None:
+                        auth_user = user
+
+                    if auth_user is not None:
+                        # LOGIN USER - Django's login() handles session creation
+                        login(request, auth_user)
                         request.session.save()
-                        
-                        print(f"   ✅ Login successful")
-                        print(f"   Session created: {request.session.session_key}")
-                        
+
+                        logger.info("✅ Login successful")
+                        logger.info(f"   Session created: {request.session.session_key}")
+
                         # Get user data
-                        user_data = UserSerializer(user, context={'request': request}).data
-                        
+                        user_data = UserSerializer(auth_user, context={'request': request}).data
+
+                        # Return success response
+                        # Django's CSRF middleware will automatically rotate the CSRF token after login
                         return Response({
                             "user": user_data,
                             "message": "Login successful",
