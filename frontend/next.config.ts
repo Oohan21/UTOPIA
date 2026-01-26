@@ -5,6 +5,28 @@ const withNextIntl = createNextIntlPlugin()
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:8000/api/:path*',
+      },
+      {
+        source: '/admin/:path*',
+        destination: 'http://localhost:8000/admin/:path*',
+      },
+      {
+        source: '/media/:path*',
+        destination: 'http://localhost:8000/media/:path*',
+      },
+      {
+        source: '/static/:path*',
+        destination: 'http://localhost:8000/static/:path*',
+      },
+    ]
+  },
+
   images: {
     remotePatterns: [
       {
@@ -20,12 +42,17 @@ const nextConfig: NextConfig = {
         pathname: '/media/**',
       },
       {
+        protocol: 'http',
+        hostname: 'localhost',
+        pathname: '/media/**',
+      },
+      {
         protocol: 'https',
         hostname: 'your-domain.com',
         pathname: '/media/**',
       },
     ],
-    unoptimized: process.env.NODE_ENV === 'development',
+    unoptimized: true,
   },
   experimental: {
     serverActions: {
