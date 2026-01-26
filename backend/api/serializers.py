@@ -1,5 +1,7 @@
 # api/serializers.py (FIXED VERSION)
 from rest_framework import serializers
+from django.core.mail import send_mail
+from django.conf import settings
 from django.utils import timezone
 from datetime import datetime, timedelta
 from django.contrib.auth import get_user_model
@@ -915,6 +917,18 @@ class InquirySerializer(serializers.ModelSerializer):
                     'inquiry_type': inquiry.inquiry_type
                 }
             )
+            
+            # Send email notification to owner
+            try:
+                send_mail(
+                    subject=f'New Inquiry: {inquiry.property.title}',
+                    message=f'You have received a new inquiry from {inquiry.full_name}.\n\nMessage: {inquiry.message}\n\nLogin to the platform to view details and respond.',
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[inquiry.property.owner.email],
+                    fail_silently=True
+                )
+            except Exception as e:
+                print(f"Failed to send inquiry email to owner: {e}")
         
         # Create notification for admins
         admins = User.objects.filter(user_type='admin', is_active=True)

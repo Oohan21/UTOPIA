@@ -1,4 +1,6 @@
 from rest_framework import viewsets, generics, filters, status
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import (
@@ -1446,6 +1448,7 @@ class BulkMessageView(generics.GenericAPIView):
         return Response({"error": "Invalid action"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class InquiryViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing inquiries with role-based access control.
@@ -1503,6 +1506,15 @@ class InquiryViewSet(viewsets.ModelViewSet):
         'follow_up_date', 'scheduled_viewing'
     ]
     ordering = ['-created_at']
+    
+    def get_permissions(self):
+        """
+        Allow anonymous users to create inquiries (guest inquiries).
+        All other actions require authentication.
+        """
+        if self.action == 'create':
+            return [AllowAny()]
+        return [IsAuthenticated()]
     
     def get_object(self):
         """

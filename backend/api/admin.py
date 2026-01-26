@@ -119,7 +119,7 @@ class NotificationAdmin(admin.ModelAdmin):
     list_display = ('user', 'notification_type', 'title', 'is_read', 
                    'is_sent', 'sent_via')
     list_filter = ('notification_type', 'is_read', 'is_sent', 'sent_via')
-    search_fields = ('user__email', 'title', 'message', 'content_type')
+    search_fields = ('user__email', 'title', 'message', 'content_type__model')
     readonly_fields = ()  # Empty initially
     list_per_page = 50
     
@@ -195,3 +195,15 @@ class AuditLogAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+    actions = ['send_digest']
+
+    def send_digest(self, request, queryset):
+        """Admin action to trigger digest send for selected notifications' users"""
+        from django.core.management import call_command
+        users = set(n.user for n in queryset if n.user)
+        for u in users:
+            # We call management command which will collect all deferred notifs per user
+            call_command('send_notification_digest')
+        self.message_user(request, f"Triggered digest send for {len(users)} users")
+    send_digest.short_description = 'Send digest for selected notifications'
