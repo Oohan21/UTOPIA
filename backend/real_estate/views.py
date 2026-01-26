@@ -257,6 +257,10 @@ class AmenityListView(generics.ListAPIView):
         return Amenity.objects.filter(is_active=True).order_by("amenity_type", "name")
 
 
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+
+@method_decorator(csrf_exempt, name='dispatch')
 class TrackPropertyView(generics.GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = (

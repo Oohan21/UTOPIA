@@ -2,7 +2,7 @@
 from rest_framework import serializers
 from django.db.models import Min, Max, Avg
 import decimal
-from .models import Property, PropertyImage, City, SubCity, Amenity, User, PropertyComparison, SavedSearch, SearchHistory
+from .models import Property, PropertyImage, City, SubCity, Amenity, User, PropertyComparison, SavedSearch, SearchHistory, Inquiry
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     """
@@ -491,3 +491,89 @@ class SavedSearchSerializer(serializers.ModelSerializer):
         
         # You can add more specific validation here
         return value
+
+class InquirySerializer(serializers.ModelSerializer):
+    """Serializer for Inquiry model"""
+    property_title = serializers.CharField(source='property.title', read_only=True)
+    property_image = serializers.SerializerMethodField()
+    sender_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Inquiry
+        fields = [
+            'id', 'property', 'property_title', 'property_image',
+            'inquiry_type', 'message', 'contact_preference',
+            'full_name', 'email', 'phone', 'sender_name',
+            'status', 'priority', 'created_at',
+            'response_sent', 'response_notes', 'responded_at',
+            'scheduled_viewing', 'viewing_address'
+        ]
+        read_only_fields = [
+            'id', 'status', 'created_at', 'sender_name',
+            'response_sent', 'response_notes', 'responded_at',
+            'property_title', 'property_image'
+        ]
+        extra_kwargs = {
+            'property': {'required': True}
+        }
+
+    def get_property_image(self, obj):
+        first_image = obj.property.images.first()
+        if first_image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(first_image.image.url)
+            return first_image.image.url
+        return None
+
+    def get_sender_name(self, obj):
+        if obj.user:
+            return obj.user.get_full_name()
+        return obj.full_name
+
+    def validate(self, data):
+        request = self.context.get('request')
+        
+        # If user is authenticated, they don't need to provide contact info
+        if request and request.user.is_authenticated:
+            return data
+            
+        # For guest users, contact info is required
+        if not data.get('full_name'):
+            raise serializers.ValidationError({"full_name": "Full name is required for guest inquiries"})
+        if not data.get('email') and not data.get('phone'):
+            raise serializers.ValidationError("Either email or phone is required")
+            
+        return data
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            validated_data['user'] = request.user
+            # Use user data if contact info missing
+            if not validated_data.get('email'):
+                validated_data['email'] = request.user.email
+            if not validated_data.get('full_name'):
+                validated_data['full_name'] = request.user.get_full_name()
+            if not validated_data.get('phone'):
+                validated_data['phone'] = request.user.phone_number
+        
+        return super().create(validated_data)
+
+class InquiryActionSerializer(serializers.Serializer):
+    """Serializer for owner actions on inquiries"""
+    action = serializers.ChoiceField(choices=['reply', 'schedule_viewing', 'mark_spam', 'archive'])
+    message = serializers.CharField(required=False, allow_blank=True)
+    viewing_time = serializers.DateTimeField(required=False)
+    viewing_address = serializers.CharField(required=False, allow_blank=True)
+    
+    def validate(self, data):
+        action = data.get('action')
+        
+        if action == 'reply' and not data.get('message'):
+            raise serializers.ValidationError({"message": "Message is required for reply"})
+            
+        if action == 'schedule_viewing' and not data.get('viewing_time'):
+            raise serializers.ValidationError({"viewing_time": "Viewing time is required"})
+            
+        return data
