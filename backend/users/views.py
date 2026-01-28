@@ -19,6 +19,7 @@ from django.core.exceptions import ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import *
 from .models import CustomUser, UserActivity
+from .utils.activity import log_user_activity
 from .utils.email import send_password_reset_email
 from real_estate.models import Property
 from subscriptions.models import Payment

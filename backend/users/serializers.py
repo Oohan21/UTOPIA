@@ -90,6 +90,34 @@ class RegisterSerializer(serializers.ModelSerializer):
             "phone_number": {"required": True},
         }
 
+    def validate_phone_number(self, value):
+        import re
+        # Ethiopian phone number regex
+        # Matches: +2519..., 2519..., 09...
+        pattern = re.compile(r'^(?:\+251|251|0)?9\d{8}$')
+        
+        if not pattern.match(value):
+            raise serializers.ValidationError(
+                "Enter a valid Ethiopian phone number (e.g., 0911223344 or +251911223344)"
+            )
+            
+        # Normalize to +251 format
+        if value.startswith('0'):
+            normalized = '+251' + value[1:]
+        elif value.startswith('251'):
+            normalized = '+' + value
+        elif value.startswith('+251'):
+            normalized = value
+        else:
+             # Should be caught by regex, but safe fallback
+             normalized = '+251' + value[-9:]
+
+        # Check uniqueness manually since we are modifying the value
+        if User.objects.filter(phone_number=normalized).exists():
+            raise serializers.ValidationError("User with this phone number already exists.")
+            
+        return normalized
+
     def validate(self, attrs):
         if attrs["password"] != attrs["password2"]:
             raise serializers.ValidationError(
