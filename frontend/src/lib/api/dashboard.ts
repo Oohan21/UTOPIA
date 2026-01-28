@@ -1,9 +1,9 @@
 // src/lib/api/dashboard.ts
 import apiClient from './client';
-import { 
-  DashboardStats, 
-  UserDashboard, 
-  MarketStats, 
+import {
+  DashboardStats,
+  UserDashboard,
+  MarketStats,
   MarketTrend,
   PlatformAnalytics
 } from '@/lib/types/dashboard';
@@ -35,13 +35,13 @@ interface AnalyticsResponse<T> {
 
 const handleApiError = (error: any, endpoint: string, defaultData: any) => {
   console.error(`Error fetching ${endpoint}:`, error);
-  
+
   // Log more details for debugging
   if (error.response) {
     console.error('Response status:', error.response.status);
     console.error('Response data:', error.response.data);
   }
-  
+
   // Return fallback data with error flag
   return {
     ...defaultData,
@@ -167,10 +167,10 @@ export const dashboardApi = {
   // Admin dashboard stats with fallback endpoints
   getAdminDashboard: async (): Promise<DashboardStats> => {
     const endpoints = [
-      '/analytics/dashboard/',
-      '/admin/dashboard/',
-      '/dashboard/admin/',
-      '/analytics/admin-dashboard/'
+      'analytics/dashboard/',
+      'admin/dashboard/',
+      'dashboard/admin/',
+      'analytics/admin-dashboard/'
     ];
 
     for (const endpoint of endpoints) {
@@ -196,7 +196,7 @@ export const dashboardApi = {
   // User dashboard stats
   getUserDashboard: async (): Promise<UserDashboard> => {
     try {
-      const response = await apiClient.get<UserDashboard>('/auth/dashboard/');
+      const response = await apiClient.get<UserDashboard>('auth/dashboard/');
       return response.data;
     } catch (error) {
       console.error('Error fetching user dashboard:', error);
@@ -217,7 +217,7 @@ export const dashboardApi = {
   // Market overview with period filter
   getMarketOverview: async (period: string = '30d'): Promise<MarketStats> => {
     try {
-      const response = await apiClient.get<MarketStats>(`/analytics/market-overview/?period=${period}`);
+      const response = await apiClient.get<MarketStats>(`analytics/market-overview/?period=${period}`);
       return response.data;
     } catch (error) {
       return handleApiError(error, 'market overview', {
@@ -253,7 +253,7 @@ export const dashboardApi = {
   // Market trends with days parameter
   getMarketTrends: async (days: number = 30): Promise<MarketTrend[]> => {
     try {
-      const response = await apiClient.get<MarketTrend[]>(`/analytics/market-trends/?days=${days}`);
+      const response = await apiClient.get<MarketTrend[]>(`analytics/market-trends/?days=${days}`);
       return response.data;
     } catch (error) {
       return generateFallbackData('market-trends', days) as MarketTrend[];
@@ -263,64 +263,64 @@ export const dashboardApi = {
   // Platform analytics
   // src/lib/api/dashboard.ts
 
-// Update these methods:
-getPlatformAnalytics: async (period: string = '30d'): Promise<PlatformAnalytics> => {
-  try {
-    const response = await apiClient.get<PlatformAnalytics>(`/analytics/platform-analytics/?period=${period}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching platform analytics:', error);
-    // Return fallback data
-    return {
-      date: new Date().toISOString().split('T')[0],
-      total_users: 0,
-      new_users: 0,
-      active_users: 0,
-      user_growth_rate: 0,
-      total_properties: 0,
-      verified_properties: 0,
-      featured_properties: 0,
-      promoted_properties: 0,
-      total_page_views: 0,
-      avg_session_duration: 0,
-      bounce_rate: 0,
-      total_inquiries: 0,
-      successful_contacts: 0,
-      total_promotions: 0,
-      total_revenue: 0,
-      api_response_time: 0,
-      error_rate: 0,
-      server_uptime: 0,
-      _source: 'fallback',
-      _timestamp: new Date().toISOString()
-    };
-  }
-},
+  // Update these methods:
+  getPlatformAnalytics: async (period: string = '30d'): Promise<PlatformAnalytics> => {
+    try {
+      const response = await apiClient.get<PlatformAnalytics>(`analytics/platform-analytics/?period=${period}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching platform analytics:', error);
+      // Return fallback data
+      return {
+        date: new Date().toISOString().split('T')[0],
+        total_users: 0,
+        new_users: 0,
+        active_users: 0,
+        user_growth_rate: 0,
+        total_properties: 0,
+        verified_properties: 0,
+        featured_properties: 0,
+        promoted_properties: 0,
+        total_page_views: 0,
+        avg_session_duration: 0,
+        bounce_rate: 0,
+        total_inquiries: 0,
+        successful_contacts: 0,
+        total_promotions: 0,
+        total_revenue: 0,
+        api_response_time: 0,
+        error_rate: 0,
+        server_uptime: 0,
+        _source: 'fallback',
+        _timestamp: new Date().toISOString()
+      };
+    }
+  },
 
-getDailyActivity: async (days: number = 30): Promise<DailyActivity[]> => {
-  try {
-    const response = await apiClient.get<DailyActivity[]>(`/analytics/daily-activity/?days=${days}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching daily activity:', error);
-    return [];
-  }
-},
+  getDailyActivity: async (days: number = 30): Promise<DailyActivity[]> => {
+    try {
+      const response = await apiClient.get<DailyActivity[]>(`analytics/daily-activity/?days=${days}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching daily activity:', error);
+      return [];
+    }
+  },
 
-getUserGrowth: async (days: number = 30): Promise<UserGrowth[]> => {
-  try {
-    const response = await apiClient.get<UserGrowth[]>(`/analytics/user-growth/?days=${days}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching user growth:', error);
-    return [];
-  }
-},
+  getUserGrowth: async (days: number = 30): Promise<UserGrowth[]> => {
+    try {
+      const response = await apiClient.get<UserGrowth[]>(`analytics/user-growth/?days=${days}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user growth:', error);
+      return [];
+    }
+  },
 
   // Price analytics
   getPriceAnalytics: async (): Promise<any> => {
     try {
-      const response = await apiClient.get('/analytics/price-analysis/');
+      const response = await apiClient.get('analytics/price-analysis/');
       return response.data;
     } catch (error) {
       return handleApiError(error, 'price analytics', {
@@ -336,7 +336,7 @@ getUserGrowth: async (days: number = 30): Promise<UserGrowth[]> => {
   // Demand analytics
   getDemandAnalytics: async (): Promise<any> => {
     try {
-      const response = await apiClient.get('/analytics/demand-analysis/');
+      const response = await apiClient.get('analytics/demand-analysis/');
       return response.data;
     } catch (error) {
       return handleApiError(error, 'demand analytics', {
@@ -352,7 +352,7 @@ getUserGrowth: async (days: number = 30): Promise<UserGrowth[]> => {
   // Property analytics
   getPropertyAnalytics: async (propertyId: number): Promise<any> => {
     try {
-      const response = await apiClient.get(`/analytics/property/${propertyId}/`);
+      const response = await apiClient.get(`analytics/property/${propertyId}/`);
       return response.data;
     } catch (error) {
       return handleApiError(error, `property analytics for ${propertyId}`, {
@@ -366,12 +366,12 @@ getUserGrowth: async (days: number = 30): Promise<UserGrowth[]> => {
 
   // User analytics
   getUserAnalytics: async (userId?: number): Promise<any> => {
-    const url = userId 
-      ? `/analytics/users/${userId}/` 
+    const url = userId
+      ? `/analytics/users/${userId}/`
       : '/analytics/users/me/';
-    
+
     try {
-      const response = await apiClient.get(url);
+      const response = await apiClient.get(url.startsWith('/') ? url.substring(1) : url);
       return response.data;
     } catch (error) {
       return handleApiError(error, `user analytics${userId ? ` for user ${userId}` : ''}`, {
@@ -388,7 +388,7 @@ getUserGrowth: async (days: number = 30): Promise<UserGrowth[]> => {
   // Real-time analytics
   getRealtimeAnalytics: async (): Promise<any> => {
     try {
-      const response = await apiClient.get('/analytics/realtime/');
+      const response = await apiClient.get('analytics/realtime/');
       return response.data;
     } catch (error) {
       return {
@@ -406,7 +406,7 @@ getUserGrowth: async (days: number = 30): Promise<UserGrowth[]> => {
   // System metrics
   getSystemMetrics: async (): Promise<any> => {
     try {
-      const response = await apiClient.get('/analytics/platform-metrics/');
+      const response = await apiClient.get('analytics/platform-metrics/');
       return response.data;
     } catch (error) {
       return {
@@ -433,13 +433,13 @@ getUserGrowth: async (days: number = 30): Promise<UserGrowth[]> => {
   // Export analytics data
   exportAnalytics: async (type: string, format: 'csv' | 'json' = 'csv'): Promise<Blob> => {
     try {
-      const response = await apiClient.get(`/analytics/export/?type=${type}&format=${format}`, {
+      const response = await apiClient.get(`analytics/export/?type=${type}&format=${format}`, {
         responseType: 'blob'
       });
       return response.data;
     } catch (error: any) {
       console.error(`Error exporting ${type} analytics:`, error);
-      
+
       // Provide more specific error
       if (error?.response?.status === 404) {
         throw new Error(`Export endpoint not found for type: ${type}`);
@@ -447,7 +447,7 @@ getUserGrowth: async (days: number = 30): Promise<UserGrowth[]> => {
       if (error?.response?.status === 403) {
         throw new Error('Permission denied. Admin access required for export.');
       }
-      
+
       throw new Error(`Failed to export ${type}: ${error.message || 'Unknown error'}`);
     }
   },
@@ -456,7 +456,7 @@ getUserGrowth: async (days: number = 30): Promise<UserGrowth[]> => {
   generateReport: async (reportType: string, startDate: string, endDate: string): Promise<Blob> => {
     try {
       const response = await apiClient.get(
-        `/analytics/reports/${reportType}/?start_date=${startDate}&end_date=${endDate}`,
+        `analytics/reports/${reportType}/?start_date=${startDate}&end_date=${endDate}`,
         { responseType: 'blob' }
       );
       return response.data;
@@ -468,12 +468,12 @@ getUserGrowth: async (days: number = 30): Promise<UserGrowth[]> => {
 
   // City analytics
   getCityAnalytics: async (cityId?: number): Promise<any> => {
-    const url = cityId 
-      ? `/analytics/cities/${cityId}/` 
+    const url = cityId
+      ? `/analytics/cities/${cityId}/`
       : '/analytics/cities/';
-    
+
     try {
-      const response = await apiClient.get(url);
+      const response = await apiClient.get(url.startsWith('/') ? url.substring(1) : url);
       return response.data;
     } catch (error) {
       return handleApiError(error, `city analytics${cityId ? ` for city ${cityId}` : ''}`, {
@@ -486,7 +486,7 @@ getUserGrowth: async (days: number = 30): Promise<UserGrowth[]> => {
   // User type distribution
   getUserTypeDistribution: async (): Promise<any> => {
     try {
-      const response = await apiClient.get('/analytics/user-distribution/');
+      const response = await apiClient.get('analytics/user-distribution/');
       return response.data;
     } catch (error) {
       // Return fallback distribution
@@ -506,7 +506,7 @@ getUserGrowth: async (days: number = 30): Promise<UserGrowth[]> => {
   // Performance metrics
   getPerformanceMetrics: async (): Promise<any> => {
     try {
-      const response = await apiClient.get('/analytics/performance/');
+      const response = await apiClient.get('analytics/performance/');
       return response.data;
     } catch (error) {
       return {
@@ -524,7 +524,7 @@ getUserGrowth: async (days: number = 30): Promise<UserGrowth[]> => {
   // Revenue analytics
   getRevenueAnalytics: async (period: string = 'monthly'): Promise<any> => {
     try {
-      const response = await apiClient.get(`/analytics/revenue/?period=${period}`);
+      const response = await apiClient.get(`analytics/revenue/?period=${period}`);
       return response.data;
     } catch (error) {
       return {
@@ -541,11 +541,11 @@ getUserGrowth: async (days: number = 30): Promise<UserGrowth[]> => {
   // Batch analytics - multiple metrics in one call
   getBatchAnalytics: async (metrics: string[]): Promise<any> => {
     try {
-      const response = await apiClient.post('/analytics/batch/', { metrics });
+      const response = await apiClient.post('analytics/batch/', { metrics });
       return response.data;
     } catch (error) {
       console.error('Error fetching batch analytics:', error);
-      
+
       // Return individual metrics as fallback
       const results: any = {};
       for (const metric of metrics) {
@@ -558,7 +558,7 @@ getUserGrowth: async (days: number = 30): Promise<UserGrowth[]> => {
   // Health check
   healthCheck: async (): Promise<boolean> => {
     try {
-      await apiClient.get('/analytics/health/');
+      await apiClient.get('analytics/health/');
       return true;
     } catch (error) {
       console.error('Analytics health check failed:', error);
@@ -569,7 +569,7 @@ getUserGrowth: async (days: number = 30): Promise<UserGrowth[]> => {
   // Clear analytics cache
   clearCache: async (): Promise<void> => {
     try {
-      await apiClient.post('/analytics/clear-cache/');
+      await apiClient.post('analytics/clear-cache/');
     } catch (error) {
       console.error('Error clearing analytics cache:', error);
       throw error;

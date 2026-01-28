@@ -128,8 +128,8 @@ export const useSearchStore = create<SearchState>()(
           }
 
           set((state) => ({
-            searchHistory: [historyItem, ...state.searchHistory.slice(0, 49)], // Keep last 50
-            recentSearches: [historyItem, ...state.recentSearches.slice(0, 9)] // Keep last 10
+            searchHistory: [historyItem, ...(Array.isArray(state.searchHistory) ? state.searchHistory.slice(0, 49) : [])],
+            recentSearches: [historyItem, ...(Array.isArray(state.recentSearches) ? state.recentSearches.slice(0, 9) : [])]
           }))
         } catch (error) {
           console.error('Failed to add to search history:', error)
@@ -144,8 +144,8 @@ export const useSearchStore = create<SearchState>()(
           }
 
           set((state) => ({
-            searchHistory: [historyItem, ...state.searchHistory.slice(0, 49)],
-            recentSearches: [historyItem, ...state.recentSearches.slice(0, 9)]
+            searchHistory: [historyItem, ...(Array.isArray(state.searchHistory) ? state.searchHistory.slice(0, 49) : [])],
+            recentSearches: [historyItem, ...(Array.isArray(state.recentSearches) ? state.recentSearches.slice(0, 9) : [])]
           }))
         }
       },
@@ -195,15 +195,14 @@ export const useSearchStore = create<SearchState>()(
           await listingsApi.deleteSearchHistory(id)
 
           set((state) => ({
-            searchHistory: state.searchHistory.filter(item => item.id !== id),
-            recentSearches: state.recentSearches.filter(item => item.id !== id)
+            searchHistory: Array.isArray(state.searchHistory) ? state.searchHistory.filter(item => item.id !== id) : [],
+            recentSearches: Array.isArray(state.recentSearches) ? state.recentSearches.filter(item => item.id !== id) : []
           }))
         } catch (error) {
           console.error('Failed to delete search history item:', error)
-          // Fallback to local removal
           set((state) => ({
-            searchHistory: state.searchHistory.filter(item => item.id !== id),
-            recentSearches: state.recentSearches.filter(item => item.id !== id)
+            searchHistory: Array.isArray(state.searchHistory) ? state.searchHistory.filter(item => item.id !== id) : [],
+            recentSearches: Array.isArray(state.recentSearches) ? state.recentSearches.filter(item => item.id !== id) : []
           }))
         }
       },
@@ -227,7 +226,7 @@ export const useSearchStore = create<SearchState>()(
           })
 
           set((state) => ({
-            savedSearches: [...(state.savedSearches || []), response],
+            savedSearches: Array.isArray(state.savedSearches) ? [...state.savedSearches, response] : [response],
           }))
         } catch (error) {
           console.error('Failed to save search:', error)
@@ -241,7 +240,9 @@ export const useSearchStore = create<SearchState>()(
           await listingsApi.deleteSavedSearch(id)
 
           set((state) => ({
-            savedSearches: state.savedSearches.filter((search) => search.id !== id),
+            savedSearches: Array.isArray(state.savedSearches)
+              ? state.savedSearches.filter((search) => search.id !== id)
+              : [],
           }))
         } catch (error) {
           console.error('Failed to remove saved search:', error)
@@ -253,9 +254,10 @@ export const useSearchStore = create<SearchState>()(
         try {
           const { listingsApi } = await import('@/lib/api/listings')
           const savedSearches = await listingsApi.getSavedSearches()
-          set({ savedSearches })
+          set({ savedSearches: Array.isArray(savedSearches) ? savedSearches : [] })
         } catch (error) {
           console.error('Failed to load saved searches:', error)
+          set({ savedSearches: [] })
         }
       },
 
@@ -263,9 +265,10 @@ export const useSearchStore = create<SearchState>()(
         try {
           const { listingsApi } = await import('@/lib/api/listings')
           const popularSearches = await listingsApi.getPopularSearches(10)
-          set({ popularSearches })
+          set({ popularSearches: Array.isArray(popularSearches) ? popularSearches : [] })
         } catch (error) {
           console.error('Failed to load popular searches:', error)
+          set({ popularSearches: [] })
         }
       },
 
@@ -275,7 +278,7 @@ export const useSearchStore = create<SearchState>()(
         try {
           const { listingsApi } = await import('@/lib/api/listings')
           const suggestions = await listingsApi.getSearchSuggestions(query)
-          return suggestions
+          return Array.isArray(suggestions) ? suggestions : []
         } catch (error) {
           console.error('Failed to get search suggestions:', error)
 

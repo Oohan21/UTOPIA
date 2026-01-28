@@ -6,7 +6,7 @@ async function fetchWithForwardedCookie(endpoint: string, opts: any = {}) {
   if (typeof window === 'undefined') {
     try {
       const { headers } = await import('next/headers');
-      const cookie = headers().get('cookie') || '';
+      const cookie = (await headers()).get('cookie') || '';
       const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const url = `${base}/api${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
       const res = await fetch(url, {
@@ -45,6 +45,62 @@ import {
   AdminUserAnalyticsResponse,
 } from '@/lib/types/analytics';
 
+// Standalone helper function to avoid scoping issues
+const generateTrendsFromProperties = (properties: any[], days: number): MarketTrend[] => {
+  const trends: MarketTrend[] = [];
+  const today = new Date();
+
+  // Group properties by date
+  const propertiesByDate: { [key: string]: any[] } = {};
+
+  properties.forEach(property => {
+    if (property.created_at) {
+      const date = new Date(property.created_at).toISOString().split('T')[0];
+      if (!propertiesByDate[date]) {
+        propertiesByDate[date] = [];
+      }
+      propertiesByDate[date].push(property);
+    }
+  });
+
+  // Generate trends for each day
+  for (let i = 0; i < days; i++) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().split('T')[0];
+
+    const dayProperties = propertiesByDate[dateStr] || [];
+
+    // Calculate metrics
+    const activeProperties = dayProperties.filter(p => p.is_active);
+    const avgPrice = dayProperties.length > 0
+      ? dayProperties.reduce((sum, p) => sum + (p.price_etb || 0), 0) / dayProperties.length
+      : 0;
+
+    const totalViews = dayProperties.reduce((sum, p) => sum + (p.views_count || 0), 0);
+    const totalInquiries = dayProperties.reduce((sum, p) => sum + (p.inquiry_count || 0), 0);
+
+    trends.push({
+      date: dateStr,
+      total_listings: dayProperties.length,
+      active_listings: activeProperties.length,
+      average_price: avgPrice,
+      total_views: totalViews,
+      total_inquiries: totalInquiries,
+      // Optional properties that might not exist in MarketTrend type
+      new_listings: dayProperties.length,
+      sold_listings: 0,
+      rented_listings: 0,
+      price_change_daily: 0,
+      price_change_weekly: 0,
+      price_change_monthly: 0,
+      // Remove inventory_months if it doesn't exist in MarketTrend type
+    } as MarketTrend);
+  }
+
+  return trends.reverse();
+};
+
 export const analyticsApi = {
   // Market trends
   getMarketTrends: async (days: number = 30): Promise<MarketTrend[]> => {
@@ -52,9 +108,9 @@ export const analyticsApi = {
       const response = await fetchWithForwardedCookie(`/analytics/market-trends/?days=${days}`);
 
       // If backend returns empty results, try market-overview
-      if (!response.data ||
-        (response.data.results && response.data.results.length === 0) ||
-        (Array.isArray(response.data) && response.data.length === 0)) {
+      if (!response ||
+        (response.results && response.results.length === 0) ||
+        (Array.isArray(response) && response.length === 0)) {
 
         console.log('No market trends data, trying market-overview for trend data');
 
@@ -62,14 +118,14 @@ export const analyticsApi = {
           // Try to get from market overview which has trend generation
           const marketResponse = await fetchWithForwardedCookie(`/analytics/market-overview/?period=${days}d`);
 
-          if (marketResponse.data?.market_trends && marketResponse.data.market_trends.length > 0) {
+          if (marketResponse?.market_trends && marketResponse.market_trends.length > 0) {
             console.log('Using market trends from market-overview');
-            return marketResponse.data.market_trends;
+            return marketResponse.market_trends;
           }
 
           // Try to get properties and generate trends manually
           const propertiesResponse = await fetchWithForwardedCookie(`/properties/?limit=1000&ordering=-created_at`);
-          const properties = propertiesResponse.data.results || [];
+          const properties = propertiesResponse.results || [];
 
           if (properties.length > 0) {
             console.log('Generating market trends from properties data');
@@ -85,76 +141,27 @@ export const analyticsApi = {
       }
 
       // Return the data (handling both array and paginated responses)
-      if (response.data.results) {
-        return response.data.results;
+      if (response.results) {
+        return response.results;
       }
 
-      return response.data;
+      return response;
     } catch (error: any) {
       console.error('Failed to fetch market trends:', error);
       return [];
     }
   },
 
+
+
   generateTrendsFromProperties: (properties: any[], days: number): MarketTrend[] => {
-    const trends: MarketTrend[] = [];
-    const today = new Date();
-
-    // Group properties by date
-    const propertiesByDate: { [key: string]: any[] } = {};
-
-    properties.forEach(property => {
-      if (property.created_at) {
-        const date = new Date(property.created_at).toISOString().split('T')[0];
-        if (!propertiesByDate[date]) {
-          propertiesByDate[date] = [];
-        }
-        propertiesByDate[date].push(property);
-      }
-    });
-
-    // Generate trends for each day
-    for (let i = 0; i < days; i++) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
-
-      const dayProperties = propertiesByDate[dateStr] || [];
-
-      // Calculate metrics
-      const activeProperties = dayProperties.filter(p => p.is_active);
-      const avgPrice = dayProperties.length > 0
-        ? dayProperties.reduce((sum, p) => sum + (p.price_etb || 0), 0) / dayProperties.length
-        : 0;
-
-      const totalViews = dayProperties.reduce((sum, p) => sum + (p.views_count || 0), 0);
-      const totalInquiries = dayProperties.reduce((sum, p) => sum + (p.inquiry_count || 0), 0);
-
-      trends.push({
-        date: dateStr,
-        total_listings: dayProperties.length,
-        active_listings: activeProperties.length,
-        average_price: avgPrice,
-        total_views: totalViews,
-        total_inquiries: totalInquiries,
-        // Optional properties that might not exist in MarketTrend type
-        new_listings: dayProperties.length,
-        sold_listings: 0,
-        rented_listings: 0,
-        price_change_daily: 0,
-        price_change_weekly: 0,
-        price_change_monthly: 0,
-        // Remove inventory_months if it doesn't exist in MarketTrend type
-      } as MarketTrend);
-    }
-
-    return trends.reverse();
+    return generateTrendsFromProperties(properties, days);
   },
 
   // Platform metrics - Use the correct endpoint from your Django URLs
   getPlatformMetrics: async (): Promise<PlatformMetrics> => {
     const endpoints = [
-      '/analytics/platform/', 
+      '/analytics/platform/',
     ];
 
     for (const endpoint of endpoints) {
@@ -223,7 +230,7 @@ export const analyticsApi = {
   // Platform analytics - Use platform-analytics endpoint
   getPlatformAnalytics: async (period: string = '30d'): Promise<PlatformAnalyticsData> => {
     const endpoints = [
-      `/analytics/platform-analytics/?period=${period}`, 
+      `/analytics/platform-analytics/?period=${period}`,
     ];
 
     for (const endpoint of endpoints) {
@@ -271,7 +278,7 @@ export const analyticsApi = {
       ? `/analytics/users/${userId}/`
       : '/analytics/users/me/';
     try {
-      const response = await apiClient.get(url);
+      const response = await apiClient.get(url.startsWith('/') ? url.substring(1) : url);
       return response.data;
     } catch (error) {
       console.error('Failed to fetch user analytics:', error);
@@ -314,7 +321,7 @@ export const analyticsApi = {
 
   getAdminAllUsers: async (days: number = 30): Promise<AdminUserAnalyticsResponse> => {
     try {
-      const response = await apiClient.get(`/analytics/admin/all-users/?days=${days}`);
+      const response = await apiClient.get(`analytics/admin/all-users/?days=${days}`);
       return response.data;
     } catch (error) {
       console.error('Failed to fetch admin all users analytics:', error);
@@ -341,7 +348,7 @@ export const analyticsApi = {
   // User growth
   async getUserGrowth(days: number = 30): Promise<UserGrowthData[]> {
     try {
-      const response = await apiClient.get<UserGrowthResponse>(`/analytics/user-growth/?days=${days}`);
+      const response = await apiClient.get<UserGrowthResponse>(`analytics/user-growth/?days=${days}`);
       return response.data.data || []; // Extract the data array
     } catch (error) {
       console.error('Error fetching user growth:', error);
@@ -352,7 +359,7 @@ export const analyticsApi = {
   // Daily activity
   async getDailyActivity(days: number = 30): Promise<DailyActivityData[]> {
     try {
-      const response = await apiClient.get<DailyActivityResponse>(`/analytics/daily-activity/?days=${days}`);
+      const response = await apiClient.get<DailyActivityResponse>(`analytics/daily-activity/?days=${days}`);
       return response.data.data || []; // Extract the data array
     } catch (error) {
       console.error('Error fetching daily activity:', error);
@@ -370,7 +377,7 @@ export const analyticsApi = {
     for (const endpoint of endpoints) {
       try {
         console.log(`Trying market analytics endpoint: ${endpoint}`);
-        const response = await apiClient.get(endpoint);
+        const response = await apiClient.get(endpoint.startsWith('/') ? endpoint.substring(1) : endpoint);
         console.log(`Market analytics loaded from: ${endpoint}`);
         return response.data;
       } catch (error: any) {
@@ -399,7 +406,7 @@ export const analyticsApi = {
   // Price analytics
   getPriceAnalytics: async (): Promise<PriceAnalyticsData> => {
     try {
-      const response = await apiClient.get('/analytics/price-analysis/');
+      const response = await apiClient.get('analytics/price-analysis/');
       return response.data;
     } catch (error) {
       console.error('Failed to fetch price analytics:', error);
@@ -427,7 +434,7 @@ export const analyticsApi = {
   // Demand analytics
   getDemandAnalytics: async (): Promise<DemandAnalyticsData> => {
     try {
-      const response = await apiClient.get('/analytics/demand-analysis/');
+      const response = await apiClient.get('analytics/demand-analysis/');
       return response.data;
     } catch (error) {
       console.error('Failed to fetch demand analytics:', error);
@@ -466,7 +473,7 @@ export const analyticsApi = {
     for (const endpoint of endpoints) {
       try {
         console.log(`Trying dashboard analytics endpoint: ${endpoint}`);
-        const response = await apiClient.get(endpoint);
+        const response = await apiClient.get(endpoint.startsWith('/') ? endpoint.substring(1) : endpoint);
         console.log(`Dashboard analytics loaded from: ${endpoint}`);
         return response.data;
       } catch (error: any) {
@@ -519,7 +526,7 @@ export const analyticsApi = {
   // Export analytics
   exportAnalytics: async (exportType: string, format: 'csv' | 'json' = 'csv'): Promise<Blob> => {
     try {
-      const response = await apiClient.get(`/analytics/export/?type=${exportType}&format=${format}`, {
+      const response = await apiClient.get(`analytics/export/?type=${exportType}&format=${format}`, {
         responseType: 'blob'
       });
       return response.data;
@@ -532,7 +539,7 @@ export const analyticsApi = {
   // Generate today's market trend (admin only)
   generateDailyTrend: async (): Promise<MarketTrend> => {
     try {
-      const response = await apiClient.post('/analytics/market-trends/generate_today/');
+      const response = await apiClient.post('analytics/market-trends/generate_today/');
       return response.data;
     } catch (error) {
       console.error('Failed to generate daily trend:', error);

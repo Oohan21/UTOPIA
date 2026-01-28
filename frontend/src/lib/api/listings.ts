@@ -39,7 +39,7 @@ export const listingsApi = {
       params.append('ordering', '-promotion_priority,-created_at')
     }
 
-    const response = await apiClient.get<PaginatedResponse<Property>>(`/properties/?${params.toString()}`)
+    const response = await apiClient.get<PaginatedResponse<Property>>(`properties/?${params.toString()}`)
 
     // Process images to ensure full URLs
     if (response.data.results) {
@@ -61,12 +61,12 @@ export const listingsApi = {
   },
 
   getFeaturedProperties: async () => {
-    const response = await apiClient.get<Property[]>('/properties/featured/')
+    const response = await apiClient.get<Property[]>('properties/featured/')
     return response.data
   },
 
   getPropertyById: async (id: number) => {
-    const response = await apiClient.get<Property>(`/properties/${id}/`)
+    const response = await apiClient.get<Property>(`properties/${id}/`)
     const data = response.data
 
     // Add base URL to images if they're relative
@@ -83,12 +83,12 @@ export const listingsApi = {
   },
 
   getSimilarProperties: async (propertyId: number) => {
-    const response = await apiClient.get<Property[]>(`/properties/similar/?property_id=${propertyId}`)
+    const response = await apiClient.get<Property[]>(`properties/similar/?property_id=${propertyId}`)
     return response.data
   },
 
   getRecommendations: async () => {
-    const response = await apiClient.get<Property[]>('/properties/recommendations/')
+    const response = await apiClient.get<Property[]>('properties/recommendations/')
     return response.data
   },
 
@@ -99,7 +99,7 @@ export const listingsApi = {
       data.append('promotion_tier', promotionTier);
     }
 
-    const response = await apiClient.post<Property>('/properties/', data, {
+    const response = await apiClient.post<Property>('properties/', data, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -135,7 +135,7 @@ export const listingsApi = {
         console.log('Regular data:', data);
       }
 
-      const response = await apiClient.patch<Property>(`/properties/${id}/`, data, config);
+      const response = await apiClient.patch<Property>(`properties/${id}/`, data, config);
       console.log('Update successful:', response.data);
       return response.data;
 
@@ -154,14 +154,14 @@ export const listingsApi = {
   },
 
   deleteProperty: async (id: number) => {
-    const response = await apiClient.delete(`/properties/${id}/`)
+    const response = await apiClient.delete(`properties/${id}/`)
     return response.data
   },
 
   saveProperty: async (id: number) => {
     try {
       console.log('Saving property:', id);
-      const response = await apiClient.post(`/listings/${id}/save/`);
+      const response = await apiClient.post(`listings/${id}/save/`);
       console.log('Save response:', response.data);
       return response.data;
     } catch (error: any) {
@@ -172,7 +172,7 @@ export const listingsApi = {
 
   unsaveProperty: async (id: number) => {
     try {
-      const response = await apiClient.delete(`/listings/${id}/unsave/`);
+      const response = await apiClient.delete(`listings/${id}/unsave/`);
       return response.data;
     } catch (error: any) {
       console.error('Error unsaving property:', error);
@@ -182,7 +182,7 @@ export const listingsApi = {
 
   getSavedProperties: async () => {
     try {
-      const response = await apiClient.get('/listings/saved/');
+      const response = await apiClient.get('listings/saved/');
 
       // Process images to ensure full URLs
       if (response.data.results) {
@@ -216,7 +216,7 @@ export const listingsApi = {
   // City and location endpoints - UPDATED
   getCities: async (): Promise<City[]> => {
     try {
-      const response = await apiClient.get<PaginatedResponse<City>>('/cities/')
+      const response = await apiClient.get<PaginatedResponse<City>>('cities/')
       console.log('Cities API response:', response.data)
       return response.data.results || []
     } catch (error) {
@@ -232,7 +232,7 @@ export const listingsApi = {
         params.append('city', cityId.toString())
       }
 
-      const url = `/sub-cities/${params.toString() ? `?${params}` : ''}`
+      const url = `sub-cities/${params.toString() ? `?${params}` : ''}`
       const response = await apiClient.get<PaginatedResponse<SubCity>>(url)
       console.log(`SubCities API response for city ${cityId}:`, response.data)
       return response.data.results || []
@@ -243,7 +243,7 @@ export const listingsApi = {
   },
 
   getAmenities: async () => {
-    const response = await apiClient.get<any[]>('/amenities/')
+    const response = await apiClient.get<any[]>('amenities/')
     return response.data
   },
 
@@ -253,7 +253,7 @@ export const listingsApi = {
       console.log('=== FETCHING USER PROPERTIES ===');
       console.log('Endpoint:', '/listings/my-listings/');
 
-      const response = await apiClient.get('/listings/my-listings/');
+      const response = await apiClient.get('listings/my-listings/');
 
       console.log('Response status:', response.status);
       console.log('Response headers:', response.headers);
@@ -327,7 +327,7 @@ export const listingsApi = {
     formData.append('image', image)
     formData.append('property', propertyId.toString())
 
-    const response = await apiClient.post<any>('/property-images/', formData, {
+    const response = await apiClient.post<any>('property-images/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -336,47 +336,32 @@ export const listingsApi = {
   },
 
   deletePropertyImage: async (imageId: number) => {
-    const response = await apiClient.delete(`/property-images/${imageId}/`)
+    const response = await apiClient.delete(`property-images/${imageId}/`)
     return response.data
   },
 
   // Property Status Management
   updatePropertyStatus: async (id: number, status: string) => {
-    const response = await apiClient.patch<Property>(`/properties/${id}/`, {
+    const response = await apiClient.patch<Property>(`properties/${id}/`, {
       property_status: status
     })
     return response.data
   },
 
   toggleFeatured: async (id: number) => {
-    const response = await apiClient.post<Property>(`/properties/${id}/toggle_featured/`)
+    const response = await apiClient.post<Property>(`properties/${id}/toggle_featured/`)
     return response.data
   },
 
   toggleVerified: async (id: number) => {
-    const response = await apiClient.post<Property>(`/properties/${id}/toggle_verification/`)
+    const response = await apiClient.post<Property>(`properties/${id}/toggle_verification/`)
     return response.data
   },
 
-  // Saved Searches - UPDATED endpoints
-  getSavedSearches: async () => {
-    const response = await apiClient.get<any[]>('/saved-searches/')
-    return response.data
-  },
-
-  createSavedSearch: async (data: { name: string; filters: PropertyFilters }) => {
-    const response = await apiClient.post('/saved-searches/', data)
-    return response.data
-  },
-
-  deleteSavedSearch: async (id: number) => {
-    const response = await apiClient.delete(`/saved-searches/${id}/`)
-    return response.data
-  },
 
   // Tracked Properties - UPDATED endpoints
   getTrackedProperties: async () => {
-    const response = await apiClient.get<any[]>('/tracked-properties/')
+    const response = await apiClient.get<any[]>('tracked-properties/')
     return response.data
   },
 
@@ -431,7 +416,7 @@ export const listingsApi = {
         }
       }
 
-      const response = await apiClient.post('/messages/', formData, {
+      const response = await apiClient.post('messages/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -487,18 +472,18 @@ export const listingsApi = {
       });
     }
 
-    const url = `/messages/${params.toString() ? `?${params}` : ''}`;
+    const url = `messages/${params.toString() ? `?${params}` : ''}`;
     const response = await apiClient.get<PaginatedResponse<any>>(url);
     return response.data;
   },
 
   getMessageThreads: async () => {
-    const response = await apiClient.get<PaginatedResponse<any>>('/message-threads/');
+    const response = await apiClient.get<PaginatedResponse<any>>('message-threads/');
     return response.data;
   },
 
   getThreadMessages: async (threadId: number) => {
-    const response = await apiClient.get<PaginatedResponse<any>>(`/message-threads/${threadId}/messages/`);
+    const response = await apiClient.get<PaginatedResponse<any>>(`message-threads/${threadId}/messages/`);
     return response.data;
   },
 
@@ -513,7 +498,7 @@ export const listingsApi = {
     }
 
     const response = await apiClient.post(
-      `/message-threads/${threadId}/send_message/`,
+      `message-threads/${threadId}/send_message/`,
       formData,
       {
         headers: {
@@ -525,13 +510,13 @@ export const listingsApi = {
   },
 
   markMessageAsRead: async (messageId: number) => {
-    const response = await apiClient.post(`/messages/${messageId}/mark_as_read/`);
+    const response = await apiClient.post(`messages/${messageId}/mark_as_read/`);
     return response.data;
   },
 
   // Get unread message count - UPDATED endpoint
   getUnreadMessageCount: async () => {
-    const response = await apiClient.get('/messages/unread_count/');
+    const response = await apiClient.get('messages/unread_count/');
     return response.data;
   },
 
@@ -547,7 +532,7 @@ export const listingsApi = {
     }
 
     const response = await apiClient.post(
-      `/inquiries/${inquiryId}/send_message/`,
+      `inquiries/${inquiryId}/send_message/`,
       formData,
       {
         headers: {
@@ -559,13 +544,13 @@ export const listingsApi = {
   },
 
   getInquiryMessages: async (inquiryId: number) => {
-    const response = await apiClient.get(`/inquiries/${inquiryId}/messages/`);
+    const response = await apiClient.get(`inquiries/${inquiryId}/messages/`);
     return response.data;
   },
 
   // Inquiries - UPDATED endpoints
   createInquiry: async (propertyId: number, data: any) => {
-    const response = await apiClient.post('/inquiries/', {
+    const response = await apiClient.post('inquiries/', {
       property: propertyId,
       ...data,
     })
@@ -573,17 +558,17 @@ export const listingsApi = {
   },
 
   getInquiries: async () => {
-    const response = await apiClient.get<PaginatedResponse<any>>('/inquiries/')
+    const response = await apiClient.get<PaginatedResponse<any>>('inquiries/')
     return response.data
   },
 
   updateInquiry: async (id: number, data: any) => {
-    const response = await apiClient.put(`/inquiries/${id}/`, data)
+    const response = await apiClient.put(`inquiries/${id}/`, data)
     return response.data
   },
 
   deleteInquiry: async (id: number) => {
-    const response = await apiClient.delete(`/inquiries/${id}/`)
+    const response = await apiClient.delete(`inquiries/${id}/`)
     return response.data
   },
 
@@ -595,40 +580,40 @@ export const listingsApi = {
         if (value) queryParams.append(key, String(value))
       })
     }
-    const url = `/market-stats/${queryParams.toString() ? `?${queryParams}` : ''}`
+    const url = `market-stats/${queryParams.toString() ? `?${queryParams}` : ''}`
     const response = await apiClient.get(url)
     return response.data
   },
 
   // Property Valuation - UPDATED endpoint
   getPropertyValuation: async (data: any) => {
-    const response = await apiClient.post('/property-valuation/', data)
+    const response = await apiClient.post('property-valuation/', data)
     return response.data
   },
 
   getUserValuations: async () => {
-    const response = await apiClient.get('/property-valuation/my-valuations/')
+    const response = await apiClient.get('property-valuation/my-valuations/')
     return response.data
   },
 
   // Comparison functions - UPDATED endpoints
   addToComparison: async (id: number) => {
-    const response = await apiClient.post(`/properties/${id}/add_to_comparison/`)
+    const response = await apiClient.post(`properties/${id}/add_to_comparison/`)
     return response.data
   },
 
   getComparisonProperties: async () => {
-    const response = await apiClient.get('/properties/get_comparison_session/')
+    const response = await apiClient.get('properties/get_comparison_session/')
     return response.data
   },
 
   compareProperties: async (propertyIds: number[]) => {
-    const response = await apiClient.post('/compare/', { property_ids: propertyIds })
+    const response = await apiClient.post('compare/', { property_ids: propertyIds })
     return response.data
   },
 
   getComparisonSession: async () => {
-    const response = await apiClient.get('/properties/get_comparison_session/')
+    const response = await apiClient.get('properties/get_comparison_session/')
     return response.data
   },
 
@@ -644,7 +629,7 @@ export const listingsApi = {
       }
 
       // Use the correct endpoint
-      const url = `/properties/${cleanId}/track_view/`;
+      const url = `properties/${cleanId}/track_view/`;
       console.log('Tracking view for property:', cleanId, 'URL:', url);
 
       const response = await apiClient.post(url);
@@ -664,49 +649,49 @@ export const listingsApi = {
 
   // Analytics - NEW endpoints
   getPropertyAnalytics: async (propertyId: number) => {
-    const response = await apiClient.get(`/analytics/property/${propertyId}/`)
+    const response = await apiClient.get(`analytics/property/${propertyId}/`)
     return response.data
   },
 
   getUserAnalytics: async () => {
-    const response = await apiClient.get('/analytics/dashboard/')
+    const response = await apiClient.get('analytics/dashboard/')
     return response.data
   },
 
   getMarketAnalytics: async (period: string = '30d') => {
-    const response = await apiClient.get(`/analytics/market-overview/?period=${period}`)
+    const response = await apiClient.get(`analytics/market-overview/?period=${period}`)
     return response.data
   },
 
   getPriceAnalytics: async () => {
-    const response = await apiClient.get('/analytics/price-analysis/')
+    const response = await apiClient.get('analytics/price-analysis/')
     return response.data
   },
 
   getDemandAnalytics: async () => {
-    const response = await apiClient.get('/analytics/demand-analysis/')
+    const response = await apiClient.get('analytics/demand-analysis/')
     return response.data
   },
 
   // Notifications - UPDATED endpoints
   getNotifications: async () => {
-    const response = await apiClient.get<PaginatedResponse<any>>('/notifications/')
+    const response = await apiClient.get<PaginatedResponse<any>>('notifications/')
     return response.data
   },
 
   markNotificationAsRead: async (id: number) => {
-    const response = await apiClient.patch(`/notifications/${id}/`)
+    const response = await apiClient.patch(`notifications/${id}/`)
     return response.data
   },
 
   markAllNotificationsAsRead: async () => {
-    const response = await apiClient.post('/notifications/mark_all_read/')
+    const response = await apiClient.post('notifications/mark_all_read/')
     return response.data
   },
 
   // Promotion endpoints - NEW
   getPromotionTiers: async () => {
-    const response = await apiClient.get<PropertyPromotion[]>('/subscriptions/promotion-tiers/')
+    const response = await apiClient.get<PropertyPromotion[]>('subscriptions/promotion-tiers/')
     return response.data
   },
 
@@ -715,7 +700,7 @@ export const listingsApi = {
     duration_days: number;
     promo_code?: string;
   }) => {
-    const response = await apiClient.post('/subscriptions/promotions/calculate_price/', data)
+    const response = await apiClient.post('subscriptions/promotions/calculate_price/', data)
     return response.data
   },
 
@@ -725,7 +710,7 @@ export const listingsApi = {
     duration_days: number;
     promo_code?: string;
   }) => {
-    const response = await apiClient.post('/subscriptions/promotions/initiate-payment/', data)
+    const response = await apiClient.post('subscriptions/promotions/initiate-payment/', data)
     return response.data
   },
 
@@ -745,12 +730,12 @@ export const listingsApi = {
   },
 
   getPropertyPromotion: async (propertyId: number) => {
-    const response = await apiClient.get(`/subscriptions/promotions/property/${propertyId}/`)
+    const response = await apiClient.get(`subscriptions/promotions/property/${propertyId}/`)
     return response.data
   },
 
   getUserPromotions: async () => {
-    const response = await apiClient.get('/subscriptions/promotions/my-promotions/')
+    const response = await apiClient.get('subscriptions/promotions/my-promotions/')
     return response.data
   },
 
@@ -761,7 +746,7 @@ export const listingsApi = {
     promo_code?: string
   }) => {
     // First create the property
-    const propertyResponse = await apiClient.post<Property>('/properties/', formData, {
+    const propertyResponse = await apiClient.post<Property>('properties/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -799,7 +784,7 @@ export const listingsApi = {
     duration_days: number
     promo_code?: string
   }) => {
-    const response = await apiClient.post(`/subscriptions/promotions/initiate-payment/`, {
+    const response = await apiClient.post(`subscriptions/promotions/initiate-payment/`, {
       property_id: propertyId,
       ...data
     })
@@ -818,7 +803,7 @@ export const listingsApi = {
       })
     }
 
-    const response = await apiClient.get<PaginatedResponse<Property>>(`/properties/?${params.toString()}`)
+    const response = await apiClient.get<PaginatedResponse<Property>>(`properties/?${params.toString()}`)
 
     // Convert to ApiResponse type
     return {
@@ -829,7 +814,7 @@ export const listingsApi = {
 
   // Cancel promotion
   cancelPromotion: async (propertyId: number) => {
-    const response = await apiClient.post(`/subscriptions/promotions/cancel/`, {
+    const response = await apiClient.post(`subscriptions/promotions/cancel/`, {
       property_id: propertyId
     })
     return response.data
@@ -837,13 +822,13 @@ export const listingsApi = {
 
   // Get user dashboard
   getUserDashboard: async () => {
-    const response = await apiClient.get('/users/dashboard/')
+    const response = await apiClient.get('users/dashboard/')
     return response.data
   },
 
   // Admin endpoints
   getAdminDashboard: async () => {
-    const response = await apiClient.get('/admin/dashboard/')
+    const response = await apiClient.get('admin/dashboard/')
     return response.data
   },
 
@@ -861,7 +846,7 @@ export const listingsApi = {
       })
     }
 
-    const url = `/admin/users/${params.toString() ? `?${params}` : ''}`
+    const url = `admin/users/${params.toString() ? `?${params}` : ''}`
     const response = await apiClient.get<PaginatedResponse<any>>(url)
     return response.data
   },
@@ -882,7 +867,7 @@ export const listingsApi = {
       })
     }
 
-    const url = `/admin/properties/${params.toString() ? `?${params}` : ''}`
+    const url = `admin/properties/${params.toString() ? `?${params}` : ''}`
     const response = await apiClient.get<PaginatedResponse<any>>(url)
     return response.data
   },
@@ -902,14 +887,14 @@ export const listingsApi = {
       })
     }
 
-    const url = `/admin/inquiries/${params.toString() ? `?${params}` : ''}`
+    const url = `admin/inquiries/${params.toString() ? `?${params}` : ''}`
     const response = await apiClient.get<PaginatedResponse<any>>(url)
     return response.data
   },
 
   // Export analytics data
   exportAnalyticsData: async (type: 'market' | 'users' | 'properties' | 'transactions', format: 'csv' | 'json' = 'csv') => {
-    const response = await apiClient.get(`/analytics/export/?type=${type}&format=${format}`, {
+    const response = await apiClient.get(`analytics/export/?type=${type}&format=${format}`, {
       responseType: format === 'csv' ? 'blob' : 'json'
     })
     return response.data
@@ -917,13 +902,13 @@ export const listingsApi = {
 
   // Health check
   healthCheck: async () => {
-    const response = await apiClient.get('/health/')
+    const response = await apiClient.get('health/')
     return response.data
   },
 
   getSearchHistory: async (): Promise<any[]> => {
     try {
-      const response = await apiClient.get('/search-history/')
+      const response = await apiClient.get('search-history/')
       // Handle different response formats
       if (Array.isArray(response.data)) {
         return response.data
@@ -954,7 +939,7 @@ export const listingsApi = {
         results_count: searchData.results_count || 0
       }
 
-      const response = await apiClient.post('/search-history/', dataToSend)
+      const response = await apiClient.post('search-history/', dataToSend)
       return response.data
     } catch (error: any) {
       console.error('Error saving search history:', error)
@@ -979,7 +964,7 @@ export const listingsApi = {
 
   getPopularSearches: async (limit: number = 10): Promise<any[]> => {
     try {
-      const response = await apiClient.get(`/search-history/popular/?limit=${limit}`)
+      const response = await apiClient.get(`search-history/popular/?limit=${limit}`)
 
       // Handle different response formats
       if (Array.isArray(response.data)) {
@@ -1005,7 +990,7 @@ export const listingsApi = {
 
   deleteSearchHistory: async (id: number) => {
     try {
-      const response = await apiClient.delete(`/search-history/${id}/`)
+      const response = await apiClient.delete(`search-history/${id}/`)
       return response.data
     } catch (error) {
       console.error('Error deleting search history:', error)
@@ -1015,36 +1000,62 @@ export const listingsApi = {
 
   clearSearchHistory: async () => {
     try {
-      // Use the 'clear' action endpoint instead of 'clear/'
-      const response = await apiClient.delete('/search-history/clear/')
+      const response = await apiClient.delete('search-history/clear/')
       return response.data
     } catch (error: any) {
       console.error('Error clearing search history:', error)
-
-      // If 404, try the alternative endpoint pattern
       if (error.response?.status === 404) {
         try {
-          // Try the Django REST framework pattern
-          const response = await apiClient.post('/search-history/clear/')
+          const response = await apiClient.post('search-history/clear/')
           return response.data
         } catch (retryError) {
           console.error('Retry failed:', retryError)
         }
       }
+      return { status: 'success', message: 'Search history cleared locally', deleted_count: 0 }
+    }
+  },
 
-      // Return a success response anyway so UI doesn't break
-      return {
-        status: 'success',
-        message: 'Search history cleared locally',
-        deleted_count: 0
+  // Saved Searches API
+  getSavedSearches: async (): Promise<any[]> => {
+    try {
+      const response = await apiClient.get('saved-searches/')
+      if (Array.isArray(response.data)) {
+        return response.data
+      } else if (response.data && Array.isArray(response.data.results)) {
+        return response.data.results
       }
+      return []
+    } catch (error) {
+      console.error('Error fetching saved searches:', error)
+      return []
+    }
+  },
+
+  createSavedSearch: async (data: { name: string; filters: PropertyFilters }) => {
+    try {
+      const response = await apiClient.post('saved-searches/', data)
+      return response.data
+    } catch (error) {
+      console.error('Error creating saved search:', error)
+      throw error
+    }
+  },
+
+  deleteSavedSearch: async (id: number) => {
+    try {
+      const response = await apiClient.delete(`saved-searches/${id}/`)
+      return response.data
+    } catch (error) {
+      console.error('Error deleting saved search:', error)
+      throw error
     }
   },
 
   getSearchSuggestions: async (query: string) => {
     try {
-      const response = await apiClient.get(`/search-history/suggestions/?q=${encodeURIComponent(query)}`)
-      return response.data
+      const response = await apiClient.get(`search-history/suggestions/?q=${encodeURIComponent(query)}`)
+      return Array.isArray(response.data) ? response.data : []
     } catch (error) {
       console.error('Error fetching search suggestions:', error)
       return []

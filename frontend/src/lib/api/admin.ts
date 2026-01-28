@@ -7,7 +7,7 @@ async function fetchWithForwardedCookie(endpoint: string, opts: any = {}) {
   if (typeof window === 'undefined') {
     try {
       const { headers } = await import('next/headers');
-      const cookie = headers().get('cookie') || '';
+      const cookie = (await headers()).get('cookie') || '';
       const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const url = `${base}/api${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
       const res = await fetch(url, {
@@ -188,6 +188,13 @@ export interface PaginatedResponse<T> {
   results: T[];
   total_pages: number;
   current_page: number;
+  stats?: {
+    pending: number;
+    approved: number;
+    rejected: number;
+    changes_requested: number;
+    total: number;
+  };
 }
 
 export interface AnalyticsData {
@@ -277,10 +284,10 @@ export const adminApi = {
     const queryParams = new URLSearchParams(cleanedParams || {}).toString();
 
     // Try different user endpoints
-      const endpoints = [
-        `/admin/users/${queryParams ? `?${queryParams}` : ''}`,
-        `/users/${queryParams ? `?${queryParams}` : ''}`
-      ];
+    const endpoints = [
+      `/admin/users/${queryParams ? `?${queryParams}` : ''}`,
+      `/users/${queryParams ? `?${queryParams}` : ''}`
+    ];
 
     let lastError: any = null;
 
@@ -317,7 +324,7 @@ export const adminApi = {
   },
 
   updateUser: async (userId: number, data: Partial<AdminUser>): Promise<AdminUser> => {
-    const response = await apiClient.put<AdminUser>(`/admin/users/${userId}/`, data);
+    const response = await apiClient.patch<AdminUser>(`/admin/users/${userId}/`, data);
     return response.data;
   },
 
@@ -389,6 +396,18 @@ export const adminApi = {
 
   togglePropertyFeatured: async (propertyId: number): Promise<AdminProperty> => {
     const response = await apiClient.post(`/admin/properties/${propertyId}/toggle_featured/`);
+    return response.data;
+  },
+
+  getPendingProperties: async (params?: any): Promise<PaginatedResponse<PropertyType>> => {
+    const cleanedParams = cleanParams(params);
+    const queryParams = new URLSearchParams(cleanedParams || {}).toString();
+    const response = await apiClient.get<PaginatedResponse<PropertyType>>(`/admin/listings/pending/${queryParams ? `?${queryParams}` : ''}`);
+    return response.data;
+  },
+
+  approveProperty: async (data: { property_id: number; action: string; notes?: string }): Promise<any> => {
+    const response = await apiClient.post('/admin/listings/approve/', data);
     return response.data;
   },
 
@@ -876,6 +895,30 @@ export const adminApi = {
         responseType: 'blob'
       });
 
+      if (!response.data || response.data.size === 0) {
+        throw new Error('Empty response received from server');
+      }
+
+      // Create and trigger download
+      const blob = new Blob([response.data], {
+        type: response.headers['content-type'] || 'application/octet-stream'
+      });
+
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+
+      // Generate filename
+      const timestamp = new Date().toISOString().split('T')[0].replace(/-/g, '');
+      const filename = `${reportType}_custom_${timestamp}.csv`;
+      link.download = filename;
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+
+      console.log(`Custom report completed: ${filename}`);
       return response.data;
     } catch (error: any) {
       console.error('Custom report failed:', error);
@@ -930,19 +973,17 @@ export const adminApi = {
   },
 
   // Platform Metrics
-  getPlatformMetrics: async (): Promise<any> => {
+  getPlatformMetrics: async (period: string = '7d'): Promise<any> => {
     try {
-      const response = await apiClient.get('/admin/platform-metrics/');
+      const response = await apiClient.get(`/admin/platform-metrics/?period=${period}`);
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to get platform metrics:', error);
       return {
-        uptime: '99.9%',
-        response_time: 250,
-        error_rate: 0.1,
-        active_sessions: 0,
-        memory_usage: '0 MB',
-        cpu_usage: '0%'
+        total_revenue: 0,
+        total_users: 0,
+        total_properties: 0,
+        growth_rate: 0
       };
     }
   },
@@ -959,20 +1000,6 @@ export const adminApi = {
     return response.data;
   },
 
-  getPendingProperties: async () => {
-    const response = await apiClient.get('/admin/listings/pending/')
-    return response.data
-  },
-
-  approveProperty: async (data: {
-    property_id: number
-    action: 'approve' | 'reject' | 'request_changes'
-    notes?: string
-  }) => {
-    const response = await apiClient.post('/admin/listings/approve/', data)
-    return response.data
-  },
-
   // Database Stats
   getDatabaseStats: async (): Promise<any> => {
     try {
@@ -986,5 +1013,94 @@ export const adminApi = {
         row_counts: {}
       };
     }
-  }
+  },
+
+  // Location Management
+  // Cities
+  getCitiesAdmin: async (params?: any): Promise<PaginatedResponse<any>> => {
+    const queryParams = new URLSearchParams(params || {}).toString();
+    const response = await apiClient.get(`/admin/cities/${queryParams ? `?${queryParams}` : ''}`);
+    return response.data;
+  },
+
+  createCity: async (data: any): Promise<any> => {
+    const response = await apiClient.post('/admin/cities/', data);
+    return response.data;
+  },
+
+  updateCity: async (cityId: number, data: any): Promise<any> => {
+    const response = await apiClient.patch(`/admin/cities/${cityId}/`, data);
+    return response.data;
+  },
+
+  deleteCity: async (cityId: number): Promise<void> => {
+    await apiClient.delete(`/admin/cities/${cityId}/`);
+  },
+
+  toggleCityActive: async (cityId: number): Promise<any> => {
+    const response = await apiClient.post(`/admin/cities/${cityId}/toggle_active/`);
+    return response.data;
+  },
+
+  getCitySubCities: async (cityId: number): Promise<any> => {
+    const response = await apiClient.get(`/admin/cities/${cityId}/subcities/`);
+    return response.data;
+  },
+
+  // Sub-cities
+  getSubCitiesAdmin: async (params?: any): Promise<PaginatedResponse<any>> => {
+    const queryParams = new URLSearchParams(params || {}).toString();
+    const response = await apiClient.get(`/admin/sub-cities/${queryParams ? `?${queryParams}` : ''}`);
+    return response.data;
+  },
+
+  createSubCity: async (data: any): Promise<any> => {
+    const response = await apiClient.post('/admin/sub-cities/', data);
+    return response.data;
+  },
+
+  updateSubCity: async (subCityId: number, data: any): Promise<any> => {
+    const response = await apiClient.patch(`/admin/sub-cities/${subCityId}/`, data);
+    return response.data;
+  },
+
+  deleteSubCity: async (subCityId: number): Promise<void> => {
+    await apiClient.delete(`/admin/sub-cities/${subCityId}/`);
+  },
+
+  toggleSubCityPopular: async (subCityId: number): Promise<any> => {
+    const response = await apiClient.post(`/admin/sub-cities/${subCityId}/toggle_popular/`);
+    return response.data;
+  },
+
+  // Amenities
+  getAmenitiesAdmin: async (params?: any): Promise<PaginatedResponse<any>> => {
+    const queryParams = new URLSearchParams(params || {}).toString();
+    const response = await apiClient.get(`/admin/amenities/${queryParams ? `?${queryParams}` : ''}`);
+    return response.data;
+  },
+
+  createAmenity: async (data: any): Promise<any> => {
+    const response = await apiClient.post('/admin/amenities/', data);
+    return response.data;
+  },
+
+  updateAmenity: async (amenityId: number, data: any): Promise<any> => {
+    const response = await apiClient.patch(`/admin/amenities/${amenityId}/`, data);
+    return response.data;
+  },
+
+  deleteAmenity: async (amenityId: number): Promise<void> => {
+    await apiClient.delete(`/admin/amenities/${amenityId}/`);
+  },
+
+  toggleAmenityActive: async (amenityId: number): Promise<any> => {
+    const response = await apiClient.post(`/admin/amenities/${amenityId}/toggle_active/`);
+    return response.data;
+  },
+
+  getAmenitiesByType: async (): Promise<any> => {
+    const response = await apiClient.get('/admin/amenities/by_type/');
+    return response.data;
+  },
 };

@@ -5,10 +5,11 @@ import toast from 'react-hot-toast'
 // Use relative API base in development so Next.js rewrites can proxy requests
 // and keep requests same-origin (cookies and CSRF will work).
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api'
+const NORMALIZED_API_URL = API_BASE_URL.endsWith('/') ? API_BASE_URL : `${API_BASE_URL}/`
 
 // ============ SESSION-BASED API CLIENT ============
 export const apiClient = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: NORMALIZED_API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -21,7 +22,7 @@ apiClient.defaults.xsrfHeaderName = 'X-CSRFToken'
 
 // ============ FILE UPLOAD CLIENT ============
 export const uploadClient = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: NORMALIZED_API_URL,
   withCredentials: true,
 })
 
@@ -83,7 +84,7 @@ export const initCSRF = async (): Promise<string | null> => {
     console.log('Initializing CSRF token...')
 
     // Fetch CSRF token from server
-    const response = await axios.get(`${API_BASE_URL}/auth/csrf/`, {
+    const response = await axios.get(`${NORMALIZED_API_URL}auth/csrf/`, {
       withCredentials: true,
       headers: {
         'Accept': 'application/json',
