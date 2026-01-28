@@ -139,12 +139,6 @@ class UserViewSet(viewsets.ModelViewSet):
 
 # Property Views
 class PropertyViewSet(viewsets.ModelViewSet):
-    queryset = (
-        Property.objects.filter(is_active=True)
-        .select_related("city", "sub_city", "owner", "agent")
-        .prefetch_related("images", "amenities")
-    )
-
     serializer_class = PropertySerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
     filter_backends = [
@@ -152,6 +146,42 @@ class PropertyViewSet(viewsets.ModelViewSet):
         filters.SearchFilter,
         filters.OrderingFilter,
     ]
+
+    def get_queryset(self):
+        """
+        Custom queryset logic:
+        - Admin: Full access to all properties
+        - Listing/Retrieving: Active properties OR owned/assigned properties
+        - Management (Update/Delete): All properties (permission classes handle ownership)
+        """
+        user = self.request.user
+        
+        # Base queryset with relations
+        queryset = Property.objects.select_related(
+            "city", "sub_city", "owner", "agent"
+        ).prefetch_related("images", "amenities")
+
+        # Admin bypass
+        if user.is_authenticated and getattr(user, 'is_admin_user', False):
+            return queryset
+
+        # Define management actions
+        management_actions = ['update', 'partial_update', 'destroy']
+        
+        if self.action in management_actions:
+            # For these actions, we return the full queryset so DRF can find the object.
+            # The permission_classes (IsOwnerOrReadOnly) will then ensure only the owner can modify it.
+            return queryset
+
+        # For standard list and retrieve actions
+        if user.is_authenticated:
+            # Include active properties OR properties where user is owner/agent
+            return queryset.filter(
+                Q(is_active=True) | Q(owner=user) | Q(agent=user)
+            ).distinct()
+        
+        # Anonymous users only see active properties
+        return queryset.filter(is_active=True)
     filterset_class = PropertyFilter
     search_fields = ["title", "title_amharic", "description", "specific_location"]
     ordering_fields = [
@@ -179,6 +209,19 @@ class PropertyViewSet(viewsets.ModelViewSet):
         if self.action in ["create", "update", "partial_update", "destroy"]:
             return [IsAuthenticated(), IsOwnerOrReadOnly()]
         return super().get_permissions()
+
+    def perform_destroy(self, instance):
+        """Soft delete: mark property as inactive"""
+        instance.is_active = False
+        instance.save()
+        
+        # Log activity
+        UserActivity.objects.create(
+            user=self.request.user,
+            activity_type="property_delete",
+            ip_address=self.request.META.get("REMOTE_ADDR"),
+            user_agent=self.request.META.get("HTTP_USER_AGENT", ""),
+        )
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
@@ -768,6 +811,118 @@ class SavedSearchViewSet(viewsets.ModelViewSet):
         saved_search.is_active = not saved_search.is_active
         saved_search.save()
         return Response({"is_active": saved_search.is_active})
+
+
+# Admin Location Management ViewSets
+class AdminCityViewSet(viewsets.ModelViewSet):
+    """Admin viewset for managing cities with full CRUD operations"""
+    queryset = City.objects.all()
+    serializer_class = CitySerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'name_amharic', 'description']
+    ordering_fields = ['name', 'created_at', 'is_active', 'population']
+    ordering = ['name']
+    
+    def get_queryset(self):
+        queryset = City.objects.all()
+        is_active = self.request.query_params.get('is_active', None)
+        if is_active is not None:
+            queryset = queryset.filter(is_active=is_active.lower() == 'true')
+        return queryset
+    
+    @action(detail=True, methods=['post'])
+    def toggle_active(self, request, pk=None):
+        """Toggle city active status"""
+        city = self.get_object()
+        city.is_active = not city.is_active
+        city.save()
+        return Response({
+            'id': city.id,
+            'is_active': city.is_active,
+            'message': f'City {city.name} is now {"active" if city.is_active else "inactive"}'
+        })
+    
+    @action(detail=True, methods=['get'])
+    def subcities(self, request, pk=None):
+        """Get all sub-cities for this city"""
+        city = self.get_object()
+        subcities = city.sub_cities.all()
+        serializer = SubCitySerializer(subcities, many=True)
+        return Response({
+            'city': CitySerializer(city).data,
+            'subcities': serializer.data,
+            'count': subcities.count()
+        })
+
+
+class AdminSubCityViewSet(viewsets.ModelViewSet):
+    """Admin viewset for managing sub-cities with full CRUD operations"""
+    queryset = SubCity.objects.select_related('city').all()
+    serializer_class = SubCitySerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['city', 'is_popular']
+    search_fields = ['name', 'name_amharic', 'description']
+    ordering_fields = ['name', 'city__name', 'created_at', 'is_popular']
+    ordering = ['city__name', 'name']
+    
+    @action(detail=True, methods=['post'])
+    def toggle_popular(self, request, pk=None):
+        """Toggle sub-city popular status"""
+        subcity = self.get_object()
+        subcity.is_popular = not subcity.is_popular
+        subcity.save()
+        return Response({
+            'id': subcity.id,
+            'is_popular': subcity.is_popular,
+            'message': f'SubCity {subcity.name} is now {"popular" if subcity.is_popular else "not popular"}'
+        })
+
+
+class AdminAmenityViewSet(viewsets.ModelViewSet):
+    """Admin viewset for managing amenities with full CRUD operations"""
+    queryset = Amenity.objects.all()
+    serializer_class = AmenitySerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['amenity_type', 'is_active']
+    search_fields = ['name', 'name_amharic', 'description']
+    ordering_fields = ['name', 'amenity_type', 'created_at', 'is_active']
+    ordering = ['amenity_type', 'name']
+    
+    def get_queryset(self):
+        queryset = Amenity.objects.all()
+        is_active = self.request.query_params.get('is_active', None)
+        if is_active is not None:
+            queryset = queryset.filter(is_active=is_active.lower() == 'true')
+        return queryset
+    
+    @action(detail=True, methods=['post'])
+    def toggle_active(self, request, pk=None):
+        """Toggle amenity active status"""
+        amenity = self.get_object()
+        amenity.is_active = not amenity.is_active
+        amenity.save()
+        return Response({
+            'id': amenity.id,
+            'is_active': amenity.is_active,
+            'message': f'Amenity {amenity.name} is now {"active" if amenity.is_active else "inactive"}'
+        })
+    
+    @action(detail=False, methods=['get'])
+    def by_type(self, request):
+        """Get amenities grouped by type"""
+        amenity_types = Amenity.AMENITY_TYPES
+        result = {}
+        for type_code, type_name in amenity_types:
+            amenities = self.queryset.filter(amenity_type=type_code, is_active=True)
+            result[type_code] = {
+                'type_name': type_name,
+                'amenities': AmenitySerializer(amenities, many=True).data,
+                'count': amenities.count()
+            }
+        return Response(result)
 
 
 class TrackedPropertyViewSet(viewsets.ModelViewSet):
@@ -3017,19 +3172,48 @@ class AdminPropertyApprovalView(generics.GenericAPIView):
         )
     
     def get(self, request):
-        """Get pending properties for approval"""
+        """Get pending properties for approval with statistics"""
         queryset = self.get_queryset()
+        
+        # Calculate statistics for today
+        today = timezone.now().date()
+        today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        pending_count = Property.objects.filter(approval_status="pending").count()
+        approved_today = Property.objects.filter(
+            approval_status="approved", 
+            approved_at__gte=today_start
+        ).count()
+        rejected_today = Property.objects.filter(
+            approval_status="rejected", 
+            updated_at__gte=today_start
+        ).count()
+        changes_today = Property.objects.filter(
+            approval_status="changes_requested", 
+            updated_at__gte=today_start
+        ).count()
+        
+        stats = {
+            "pending": pending_count,
+            "approved": approved_today,
+            "rejected": rejected_today,
+            "changes_requested": changes_today,
+            "total": pending_count + approved_today + rejected_today + changes_today
+        }
         
         # Add pagination
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = PropertySerializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
+            response = self.get_paginated_response(serializer.data)
+            response.data['stats'] = stats
+            return response
         
         serializer = PropertySerializer(queryset, many=True)
         return Response({
             "count": queryset.count(), 
-            "results": serializer.data
+            "results": serializer.data,
+            "stats": stats
         })
     
     def post(self, request):
@@ -3792,6 +3976,28 @@ class AnalyticsView(generics.GenericAPIView):
 class ExportDataView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
 
+    def apply_date_filter(self, queryset, request, date_field='created_at'):
+        """Helper to apply start_date and end_date filters to a queryset"""
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        if start_date:
+            try:
+                start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+                queryset = queryset.filter(**{f"{date_field}__gte": start_dt})
+            except (ValueError, TypeError):
+                pass
+                
+        if end_date:
+            try:
+                # Add 23:59:59 to include the whole end day
+                end_dt = datetime.strptime(end_date, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+                queryset = queryset.filter(**{f"{date_field}__lte": end_dt})
+            except (ValueError, TypeError):
+                pass
+                
+        return queryset
+
     def get(self, request, data_type):
         if data_type == "users":
             return self.export_users(request)
@@ -3847,6 +4053,7 @@ class ExportDataView(generics.GenericAPIView):
         )
 
         users = User.objects.all().order_by("-created_at")
+        users = self.apply_date_filter(users, request)
         for user in users:
             writer.writerow(
                 [
@@ -3896,6 +4103,7 @@ class ExportDataView(generics.GenericAPIView):
             .select_related("city", "sub_city")
             .order_by("-created_at")
         )
+        properties = self.apply_date_filter(properties, request)
         for prop in properties:
             writer.writerow(
                 [
@@ -3945,6 +4153,7 @@ class ExportDataView(generics.GenericAPIView):
             .select_related("property", "user")
             .order_by("-created_at")
         )
+        inquiries = self.apply_date_filter(inquiries, request)
         for inquiry in inquiries:
             writer.writerow(
                 [
@@ -3992,6 +4201,7 @@ class ExportDataView(generics.GenericAPIView):
     # Get all audit logs
         from .models import AuditLog
         logs = AuditLog.objects.all().select_related('user').order_by('-created_at')
+        logs = self.apply_date_filter(logs, request)
     
         for log in logs:
             writer.writerow([
@@ -4039,6 +4249,7 @@ class ExportDataView(generics.GenericAPIView):
             payments = Payment.objects.all().select_related(
                 'user', 'promotion', 'promotion__listed_property', 'promotion__tier'
             ).order_by('-created_at')
+            payments = self.apply_date_filter(payments, request)
 
             for payment in payments:
                 writer.writerow([
@@ -4159,8 +4370,9 @@ class ExportDataView(generics.GenericAPIView):
         writer.writerow([f'Generated: {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'])
         writer.writerow([])
     
-    # Get all users
+    # Get filtered users
         users = User.objects.all().order_by('-created_at')
+        users = self.apply_date_filter(users, request)
         total_users = users.count()
         today = timezone.now().date()
     
@@ -4243,32 +4455,6 @@ class ExportDataView(generics.GenericAPIView):
             ])
         writer.writerow([])
     
-        # Language & Currency Preferences
-        writer.writerow(['PREFERENCE DISTRIBUTION'])
-    
-        # Language
-        writer.writerow(['Language', 'Count', 'Percentage'])
-        languages = users.values('language_preference').annotate(count=Count('id')).order_by('-count')
-        for lang in languages:
-            count = lang['count']
-            writer.writerow([
-                lang['language_preference'].upper(),
-                count,
-                f'{(count/total_users*100):.1f}%' if total_users > 0 else '0%'
-            ])
-        writer.writerow([])
-    
-        # Currency
-        writer.writerow(['Currency', 'Count', 'Percentage'])
-        currencies = users.values('currency_preference').annotate(count=Count('id')).order_by('-count')
-        for curr in currencies:
-            count = curr['count']
-            writer.writerow([
-                curr['currency_preference'],
-                count,
-                f'{(count/total_users*100):.1f}%' if total_users > 0 else '0%'
-            ])
-    
         return response
     
     def export_property_report(self, request):
@@ -4292,6 +4478,7 @@ class ExportDataView(generics.GenericAPIView):
     
     # Write data
         properties = Property.objects.all().select_related('city', 'sub_city', 'owner').order_by('-created_at')
+        properties = self.apply_date_filter(properties, request)
         for prop in properties:
             writer.writerow([
                 prop.id,
@@ -4343,6 +4530,7 @@ class ExportDataView(generics.GenericAPIView):
     
     # Write data
         inquiries = Inquiry.objects.all().select_related('property', 'user', 'assigned_to').order_by('-created_at')
+        inquiries = self.apply_date_filter(inquiries, request)
         for inquiry in inquiries:
             writer.writerow([
                 inquiry.id,
@@ -4394,6 +4582,7 @@ class ExportDataView(generics.GenericAPIView):
             payments = Payment.objects.all().select_related(
                 'user', 'promotion', 'promotion__listed_property'
             ).order_by('-created_at')
+            payments = self.apply_date_filter(payments, request)
         
             for payment in payments:
                 writer.writerow([
@@ -4441,7 +4630,9 @@ class ExportDataView(generics.GenericAPIView):
         ])
     
     # Write data
-        activities = UserActivity.objects.all().select_related('user').order_by('-created_at')[:1000]  # Limit to 1000
+        activities = UserActivity.objects.all().select_related('user').order_by('-created_at')
+        activities = self.apply_date_filter(activities, request)
+        activities = activities[:1000]  # Limit after filtering
     
         for activity in activities:
             writer.writerow([
@@ -4480,21 +4671,26 @@ class ExportDataView(generics.GenericAPIView):
     
         today = timezone.now().date()
     
-        writer.writerow(['Total Users', User.objects.count(), today])
-        writer.writerow(['Active Users', User.objects.filter(is_active=True).count(), today])
-        writer.writerow(['Verified Users', User.objects.filter(is_verified=True).count(), today])
-        writer.writerow(['Admin Users', User.objects.filter(user_type='admin').count(), today])
+        # Apply date filters to counts
+        users = self.apply_date_filter(User.objects.all(), request)
+        props = self.apply_date_filter(Property.objects.all(), request)
+        inquiries = self.apply_date_filter(Inquiry.objects.all(), request)
+
+        writer.writerow(['Total Users', users.count(), today])
+        writer.writerow(['Active Users', users.filter(is_active=True).count(), today])
+        writer.writerow(['Verified Users', users.filter(is_verified=True).count(), today])
+        writer.writerow(['Admin Users', users.filter(user_type='admin').count(), today])
         writer.writerow([])
     
-        writer.writerow(['Total Properties', Property.objects.count(), today])
-        writer.writerow(['Active Properties', Property.objects.filter(is_active=True).count(), today])
-        writer.writerow(['Verified Properties', Property.objects.filter(is_verified=True).count(), today])
-        writer.writerow(['Featured Properties', Property.objects.filter(is_featured=True).count(), today])
+        writer.writerow(['Total Properties', props.count(), today])
+        writer.writerow(['Active Properties', props.filter(is_active=True).count(), today])
+        writer.writerow(['Verified Properties', props.filter(is_verified=True).count(), today])
+        writer.writerow(['Featured Properties', props.filter(is_featured=True).count(), today])
         writer.writerow([])
     
-        writer.writerow(['Total Inquiries', Inquiry.objects.count(), today])
-        writer.writerow(['Pending Inquiries', Inquiry.objects.filter(status='pending').count(), today])
-        writer.writerow(['Closed Inquiries', Inquiry.objects.filter(status='closed').count(), today])
+        writer.writerow(['Total Inquiries', inquiries.count(), today])
+        writer.writerow(['Pending Inquiries', inquiries.filter(status='pending').count(), today])
+        writer.writerow(['Closed Inquiries', inquiries.filter(status='closed').count(), today])
         writer.writerow([])
     
     # User Activity Summary
@@ -4564,6 +4760,7 @@ class ExportDataView(generics.GenericAPIView):
         writer.writerow(['Metric', 'Value (ETB)'])
     
         active_properties = Property.objects.filter(is_active=True)
+        active_properties = self.apply_date_filter(active_properties, request)
     
     # For Sale Properties
         sale_properties = active_properties.filter(listing_type='sale', price_etb__gt=0)
@@ -4688,26 +4885,29 @@ class ExportDataView(generics.GenericAPIView):
         writer.writerow(['Metric', 'Today', 'Last 7 Days', 'Last 30 Days', 'Total'])
     
     # User Growth
-        users_today = User.objects.filter(created_at__date=today).count()
-        users_week = User.objects.filter(created_at__date__gte=week_ago).count()
-        users_month = User.objects.filter(created_at__date__gte=month_ago).count()
-        users_total = User.objects.count()
+        target_users = self.apply_date_filter(User.objects.all(), request)
+        users_today = target_users.filter(created_at__date=today).count()
+        users_week = target_users.filter(created_at__date__gte=week_ago).count()
+        users_month = target_users.filter(created_at__date__gte=month_ago).count()
+        users_total = target_users.count()
     
         writer.writerow(['New Users', users_today, users_week, users_month, users_total])
     
     # Property Growth
-        props_today = Property.objects.filter(created_at__date=today).count()
-        props_week = Property.objects.filter(created_at__date__gte=week_ago).count()
-        props_month = Property.objects.filter(created_at__date__gte=month_ago).count()
-        props_total = Property.objects.count()
+        target_props = self.apply_date_filter(Property.objects.all(), request)
+        props_today = target_props.filter(created_at__date=today).count()
+        props_week = target_props.filter(created_at__date__gte=week_ago).count()
+        props_month = target_props.filter(created_at__date__gte=month_ago).count()
+        props_total = target_props.count()
     
         writer.writerow(['New Properties', props_today, props_week, props_month, props_total])
     
     # Inquiry Growth
-        inq_today = Inquiry.objects.filter(created_at__date=today).count()
-        inq_week = Inquiry.objects.filter(created_at__date__gte=week_ago).count()
-        inq_month = Inquiry.objects.filter(created_at__date__gte=month_ago).count()
-        inq_total = Inquiry.objects.count()
+        target_inquiries = self.apply_date_filter(Inquiry.objects.all(), request)
+        inq_today = target_inquiries.filter(created_at__date=today).count()
+        inq_week = target_inquiries.filter(created_at__date__gte=week_ago).count()
+        inq_month = target_inquiries.filter(created_at__date__gte=month_ago).count()
+        inq_total = target_inquiries.count()
     
         writer.writerow(['New Inquiries', inq_today, inq_week, inq_month, inq_total])
         writer.writerow([])

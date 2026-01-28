@@ -7,7 +7,7 @@ router = DefaultRouter()
 router.register(r"users", views.UserViewSet, basename="user")
 router.register(r"cities", views.CityViewSet)
 router.register(r"sub-cities", views.SubCityViewSet)
-router.register(r"properties", views.PropertyViewSet)
+router.register(r"properties", views.PropertyViewSet, basename="property")
 router.register(r"saved-searches", views.SavedSearchViewSet, basename="savedsearch")
 router.register(
     r"tracked-properties", views.TrackedPropertyViewSet, basename="trackedproperty"
@@ -21,6 +21,12 @@ router.register(
     r"admin/properties", views.AdminPropertyViewSet, basename="admin-property"
 )
 router.register(r"admin/inquiries", views.AdminInquiryViewSet, basename="admin-inquiry")
+
+# Add admin location management endpoints
+router.register(r"admin/cities", views.AdminCityViewSet, basename="admin-city")
+router.register(r"admin/sub-cities", views.AdminSubCityViewSet, basename="admin-subcity")
+router.register(r"admin/amenities", views.AdminAmenityViewSet, basename="admin-amenity")
+
 router.register(r"messages", views.SimpleMessageViewSet, basename="message")
 router.register(r"threads", views.SimpleThreadViewSet, basename="thread")
 router.register(r"notifications", views.NotificationViewSet, basename="notification")

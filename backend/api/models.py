@@ -635,7 +635,7 @@ def log_payment_activity(sender, instance, created, **kwargs):
             action_type=action,
             model_name='Payment',
             object_id=str(instance.id),
-            object_repr=f"Payment {instance.id[:8]} - {instance.amount_etb} ETB",
+            object_repr=f"Payment {str(instance.id)[:8]} - {instance.amount_etb} ETB",
             changes=changes,
             request=None
         )
