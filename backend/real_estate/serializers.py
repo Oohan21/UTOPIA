@@ -134,7 +134,7 @@ class PropertySerializer(serializers.ModelSerializer):
             'has_air_conditioning', 'has_heating', 'has_internet', 'has_generator',
             'has_elevator', 'has_swimming_pool', 'has_gym', 'has_conference_room',
             'is_pet_friendly', 'is_wheelchair_accessible', 'has_backup_water',
-            'is_featured', 'is_verified', 'is_active', 'is_premium',
+            'is_featured', 'is_verified', 'is_active', 'is_premium', 'is_promoted', 'promotion_tier', 'promotion_end',
             'views_count', 'inquiry_count', 'save_count', 'virtual_tour_url',
             'video_url', 'has_title_deed', 'has_construction_permit',
             'has_occupancy_certificate', 'created_at', 'updated_at', 'is_saved', 'owner_id',

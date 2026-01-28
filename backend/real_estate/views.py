@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.decorators import action, api_view, permission_classes
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import F, Q, Count, Avg, Max, Min
+from django.db.models import F, Q, Count, Avg, Max, Min, Case, When, Value, IntegerField
 import json
 from django.utils import timezone
 from datetime import datetime, timedelta
@@ -29,6 +29,7 @@ from .serializers import (
     SavedSearchSerializer,
 )
 from subscriptions.models import PropertyPromotion
+from users.utils.activity import log_user_activity
 
 
 class FeaturedPropertiesView(generics.ListAPIView):
@@ -59,40 +60,59 @@ class PropertyListView(generics.ListAPIView):
     ]
     filterset_fields = {
         "property_type": ["exact"],
+        "listing_type": ["exact"],
+        "property_status": ["exact"],
         "city": ["exact"],
         "sub_city": ["exact"],
         "bedrooms": ["gte", "lte"],
         "bathrooms": ["gte", "lte"],
         "price_etb": ["gte", "lte"],
         "total_area": ["gte", "lte"],
+        "furnishing_type": ["exact"],
         "is_featured": ["exact"],
         "is_verified": ["exact"],
+        "is_promoted": ["exact"],
         "has_parking": ["exact"],
         "has_security": ["exact"],
         "has_garden": ["exact"],
         "has_furniture": ["exact"],
+        "has_generator": ["exact"],
+        "has_backup_water": ["exact"],
+        "has_elevator": ["exact"],
     }
     search_fields = [
+        "property_id",
         "title",
+        "title_amharic",
         "description",
+        "description_amharic",
         "specific_location",
         "city__name",
         "sub_city__name",
     ]
     ordering_fields = [
+        "promotion_priority",
         "price_etb",
         "total_area",
         "bedrooms",
         "created_at",
         "views_count",
     ]
-    ordering = ["-created_at"]
+    ordering = ["-promotion_priority", "-created_at"]
 
     def get_queryset(self):
-        # Base queryset for approved, active properties
-        queryset = Property.objects.filter(
-            approval_status="approved", is_active=True, property_status="available"
-        )
+        # Default filters
+        filters = {"is_active": True}
+
+        # Handle status filtering
+        # If user explicitly asks for a status, use it
+        # Otherwise default to 'available'
+        status_param = self.request.query_params.get("property_status")
+        if not status_param:
+            filters["property_status"] = "available"
+
+        # Base queryset for approved properties (and user's own pending ones)
+        queryset = Property.objects.filter(approval_status="approved", **filters)
 
         # If user is authenticated, also include their own pending properties
         if self.request.user.is_authenticated:
@@ -102,7 +122,16 @@ class PropertyListView(generics.ListAPIView):
             )
 
         return (
-            queryset.select_related("city", "sub_city", "owner", "agent", "developer")
+            queryset.annotate(
+                promotion_priority=Case(
+                    When(promotion_tier="premium", then=Value(3)),
+                    When(promotion_tier="standard", then=Value(2)),
+                    When(promotion_tier="basic", then=Value(1)),
+                    default=Value(0),
+                    output_field=IntegerField(),
+                )
+            )
+            .select_related("city", "sub_city", "owner", "agent", "developer")
             .prefetch_related("amenities", "images")
             .distinct()
         )
