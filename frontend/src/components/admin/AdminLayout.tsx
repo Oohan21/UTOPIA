@@ -31,7 +31,8 @@ import {
   Package,
   Heart,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  MapPin,
 } from 'lucide-react';
 import Link from 'next/link'
 import { useTheme } from 'next-themes'
@@ -119,6 +120,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       href: `/${locale}/admin/analytics`,
     },
     {
+      icon: <MapPin size={20} />,
+      label: 'Locations',
+      href: `/${locale}/admin/locations`,
+    },
+    {
       icon: <Shield size={20} />,
       label: tAdmin('audit.title'),
       href: `/${locale}/admin/audit`,
@@ -127,7 +133,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
 
   useEffect(() => {
     setMounted(true);
-    
+
     // Auto-expand properties section if on a property-related page
     if (pathname.includes('/admin/properties')) {
       setExpandedItems(prev => ({ ...prev, properties: true }));
@@ -188,7 +194,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     if (hasChildren && !isMobile) {
       // Check if any child is active
       const hasActiveChild = item.children!.some(child => isNavItemActive(child.href));
-      
+
       return (
         <div key={item.label} className="mb-1">
           <Button
@@ -219,7 +225,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               <ChevronDown className="ml-2 h-4 w-4" />
             )}
           </Button>
-          
+
           {/* Child items */}
           {isExpanded && (
             <div className="ml-8 mt-1 space-y-1">
@@ -585,9 +591,9 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         {/* Main Content */}
         <main className="flex-1 min-w-0">
           <div className="h-full flex flex-col">
-            <div className="flex-1 overflow-auto"> 
-              <div className="p-4 md:p-6 lg:p-8 max-w-full"> 
-                <div className="w-full overflow-hidden"> 
+            <div className="flex-1 overflow-auto">
+              <div className="p-4 md:p-6 lg:p-8 max-w-full">
+                <div className="w-full overflow-hidden">
                   {children}
                 </div>
               </div>

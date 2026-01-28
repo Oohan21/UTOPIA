@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Badge } from '@/components/ui/Badge';
-import { 
+import {
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
@@ -77,8 +77,8 @@ export function MarketAnalytics() {
     <div className="space-y-4 md:space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 bg-gray-100 dark:bg-gray-800 p-1">
-          <TabsTrigger 
-            value="overview" 
+          <TabsTrigger
+            value="overview"
             className={cn(
               "data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900",
               "data-[state=active]:text-gray-900 dark:data-[state=active]:text-white"
@@ -86,8 +86,8 @@ export function MarketAnalytics() {
           >
             {t('tabs.overview')}
           </TabsTrigger>
-          <TabsTrigger 
-            value="prices" 
+          <TabsTrigger
+            value="prices"
             className={cn(
               "data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900",
               "data-[state=active]:text-gray-900 dark:data-[state=active]:text-white"
@@ -101,7 +101,7 @@ export function MarketAnalytics() {
           {marketData && (
             <>
               {/* Key Metrics */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
                 <Card className="border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                   <CardContent className="p-3 md:p-4">
                     <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
@@ -130,24 +130,6 @@ export function MarketAnalytics() {
                     <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mt-1">
                       {marketData.total_views_today || 0}
                     </p>
-                  </CardContent>
-                </Card>
-                <Card className="border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                  <CardContent className="p-3 md:p-4">
-                    <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-1">
-                      {t('metrics.marketHealth')}
-                    </p>
-                    <Badge 
-                      className={cn(
-                        marketData.market_health === 'Excellent' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' :
-                        marketData.market_health === 'Good' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300' :
-                        marketData.market_health === 'Moderate' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300' :
-                        'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300',
-                        "text-xs font-medium"
-                      )}
-                    >
-                      {marketData.market_health || t('metrics.unknown')}
-                    </Badge>
                   </CardContent>
                 </Card>
               </div>
@@ -195,17 +177,17 @@ export function MarketAnalytics() {
                               outerRadius={80}
                               fill="#8884d8"
                               dataKey="count"
+                              nameKey="property_type"
                             >
                               {(marketData.property_type_distribution || []).map((entry: any, index: number) => (
                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                               ))}
                             </Pie>
-                            <Tooltip 
-                              formatter={(value: any, name: any, props: any) => {
-                                const payload = props.payload;
-                                return [value, payload?.property_type || t('charts.unknown')];
+                            <Tooltip
+                              formatter={(value: any, name: any) => {
+                                return [value, name];
                               }}
-                              contentStyle={{ 
+                              contentStyle={{
                                 backgroundColor: 'white',
                                 border: '1px solid #e5e7eb',
                                 color: '#111827',
@@ -213,19 +195,11 @@ export function MarketAnalytics() {
                                 fontSize: '14px',
                               }}
                             />
-                            <Legend 
-                              formatter={(value: any, entry: any) => {
-                                const index = entry.payload?.index;
-                                const data = marketData.property_type_distribution || [];
-                                const item = data[index];
-                                
-                                if (item) {
-                                  return `${item.property_type}`;
-                                }
-                                
+                            <Legend
+                              formatter={(value: any) => {
                                 return value;
                               }}
-                              wrapperStyle={{ 
+                              wrapperStyle={{
                                 color: '#6b7280',
                                 fontSize: '12px',
                               }}
@@ -254,27 +228,27 @@ export function MarketAnalytics() {
                     <div className="h-64 md:h-80">
                       <ResponsiveContainer width="100%" height="100%">
                         {(marketData.price_distribution || []).length > 0 ? (
-                          <BarChart 
+                          <BarChart
                             data={marketData.price_distribution || []}
                             margin={{ top: 10, right: 10, left: 0, bottom: 30 }}
                           >
                             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" strokeOpacity={0.3} />
-                            <XAxis 
-                              dataKey="range" 
+                            <XAxis
+                              dataKey="range"
                               stroke="#666"
                               tick={{ fill: '#666', fontSize: 12 }}
                               angle={-45}
                               textAnchor="end"
                               height={40}
                             />
-                            <YAxis 
+                            <YAxis
                               stroke="#666"
                               tick={{ fill: '#666', fontSize: 12 }}
                             />
-                            <Tooltip 
+                            <Tooltip
                               formatter={(value) => [value, t('charts.properties')]}
                               labelFormatter={(label) => `${t('charts.priceRange')}: ${label}`}
-                              contentStyle={{ 
+                              contentStyle={{
                                 backgroundColor: 'white',
                                 border: '1px solid #e5e7eb',
                                 color: '#111827',
@@ -283,9 +257,9 @@ export function MarketAnalytics() {
                               }}
                             />
                             <Legend wrapperStyle={{ color: '#6b7280', fontSize: '12px' }} />
-                            <Bar 
-                              dataKey="count" 
-                              fill="#3b82f6" 
+                            <Bar
+                              dataKey="count"
+                              fill="#3b82f6"
                               name={t('charts.numberOfProperties')}
                               radius={[4, 4, 0, 0]}
                             />
@@ -331,8 +305,8 @@ export function MarketAnalytics() {
                       </thead>
                       <tbody>
                         {(marketData.top_performing_cities || []).map((city, index) => (
-                          <tr 
-                            key={index} 
+                          <tr
+                            key={index}
                             className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                           >
                             <td className="py-3 px-4 text-sm text-gray-900 dark:text-gray-100 font-medium">
@@ -424,12 +398,12 @@ export function MarketAnalytics() {
                   <div className="h-64 md:h-80">
                     <ResponsiveContainer width="100%" height="100%">
                       {(priceData.average_prices_by_city || []).length > 0 ? (
-                        <BarChart 
+                        <BarChart
                           data={priceData.average_prices_by_city || []}
                           margin={{ top: 10, right: 10, left: 0, bottom: 30 }}
                         >
                           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" strokeOpacity={0.3} />
-                          <XAxis 
+                          <XAxis
                             dataKey="city"
                             angle={-45}
                             textAnchor="end"
@@ -437,12 +411,12 @@ export function MarketAnalytics() {
                             stroke="#666"
                             tick={{ fill: '#666', fontSize: 12 }}
                           />
-                          <YAxis 
+                          <YAxis
                             tickFormatter={(value) => formatCurrency(value, 'ETB')}
                             stroke="#666"
                             tick={{ fill: '#666', fontSize: 12 }}
                           />
-                          <Tooltip 
+                          <Tooltip
                             formatter={(value, name) => {
                               if (name === 'avg_price') {
                                 return [formatCurrency(Number(value), 'ETB'), t('priceAnalysis.averagePrice')];
@@ -450,7 +424,7 @@ export function MarketAnalytics() {
                               return [value, t('priceAnalysis.propertyCount')];
                             }}
                             labelFormatter={(label) => `${t('priceAnalysis.city')}: ${label}`}
-                            contentStyle={{ 
+                            contentStyle={{
                               backgroundColor: 'white',
                               border: '1px solid #e5e7eb',
                               color: '#111827',
@@ -459,15 +433,15 @@ export function MarketAnalytics() {
                             }}
                           />
                           <Legend wrapperStyle={{ color: '#6b7280', fontSize: '12px' }} />
-                          <Bar 
-                            dataKey="avg_price" 
-                            fill="#3b82f6" 
+                          <Bar
+                            dataKey="avg_price"
+                            fill="#3b82f6"
                             name={t('priceAnalysis.averagePrice')}
                             radius={[4, 4, 0, 0]}
                           />
-                          <Bar 
-                            dataKey="property_count" 
-                            fill="#10b981" 
+                          <Bar
+                            dataKey="property_count"
+                            fill="#10b981"
                             name={t('priceAnalysis.propertyCount')}
                             radius={[4, 4, 0, 0]}
                           />
@@ -514,13 +488,13 @@ export function MarketAnalytics() {
                         {(priceData.average_prices_by_property_type || []).map((type, index) => {
                           const totalCount = (priceData.average_prices_by_property_type || [])
                             .reduce((sum, item) => sum + (item.count || 0), 0);
-                          const percentage = totalCount > 0 
+                          const percentage = totalCount > 0
                             ? ((type.count || 0) / totalCount * 100).toFixed(1)
                             : '0.0';
-                          
+
                           return (
-                            <tr 
-                              key={index} 
+                            <tr
+                              key={index}
                               className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                             >
                               <td className="py-3 px-4 text-sm text-gray-900 dark:text-gray-100 font-medium">
@@ -553,7 +527,7 @@ export function MarketAnalytics() {
             </>
           )}
         </TabsContent>
-      </Tabs>
-    </div>
+      </Tabs >
+    </div >
   );
 }

@@ -4,6 +4,7 @@
 import React, { useState } from 'react'
 import { useSearchStore } from '@/lib/store/searchStore'
 import { listingsApi } from '@/lib/api/listings'
+import SearchHistory from '@/components/listings/SearchHistory'
 import { useQuery } from '@tanstack/react-query'
 import {
     PROPERTY_TYPES,
@@ -32,15 +33,15 @@ export default function HomeSearchFilters() {
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault()
-        
+
         const filters: any = {}
         if (searchQuery) filters.search = searchQuery
         if (propertyType) filters.property_type = propertyType
         if (listingType) filters.listing_type = listingType
         if (city) filters.city = city
-        
+
         setFilters(filters)
-        
+
         // Navigate to listings page with filters
         window.location.href = `/listings?${new URLSearchParams(filters).toString()}`
     }
@@ -54,14 +55,21 @@ export default function HomeSearchFilters() {
         <div className="rounded-lg border bg-card p-4">
             <form onSubmit={handleSearch} className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    {/* Search Input */}
                     <div className="lg:col-span-2">
-                        <Input
-                            placeholder="Search properties, locations, keywords..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="h-11"
-                            startIcon={<Search className="h-4 w-4" />}
+                        <SearchHistory
+                            searchQuery={searchQuery}
+                            onSearchChange={setSearchQuery}
+                            onSelectSearch={(filters) => {
+                                if (filters.search !== undefined) {
+                                    setSearchQuery(filters.search)
+                                    // Navigate to listings with the search query
+                                    const searchParams = new URLSearchParams()
+                                    if (filters.search) searchParams.set('search', filters.search)
+                                    if (propertyType) searchParams.set('property_type', propertyType)
+                                    if (listingType) searchParams.set('listing_type', listingType)
+                                    window.location.href = `/listings?${searchParams.toString()}`
+                                }
+                            }}
                         />
                     </div>
 

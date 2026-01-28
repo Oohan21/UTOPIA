@@ -167,7 +167,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
     // Check promotion status
     const promotionTier = property.promotion_tier
     const promotionEnd = property.promotion_end
-    const promotionActive = property.is_promoted && (property.promotion_status === 'active' || property.promotion_status === 'pending')
+    const promotionActive = property.is_promoted
 
     const calculateDaysRemaining = () => {
         if (!promotionEnd) return null
@@ -392,10 +392,18 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                                         promotionBadgeConfig[promotionTier as keyof typeof promotionBadgeConfig]?.className,
                                         promotionBadgeConfig[promotionTier as keyof typeof promotionBadgeConfig]?.glow
                                     )}>
-                                        {promotionTier === 'standard' && <Star className="h-3 w-3" />}
-                                        {promotionTier === 'premium' && <Crown className="h-3 w-3" />}
-                                        {promotionTier === 'basic' && <TrendingUp className="h-3 w-3" />}
-                                        {tListings(`promotion.badges.${promotionTier}`)}
+                                        {promotionTier === 'premium' ? (
+                                            <>
+                                                <Crown className="h-3 w-3" />
+                                                Top Result
+                                            </>
+                                        ) : (
+                                            <>
+                                                {promotionTier === 'standard' && <Star className="h-3 w-3" />}
+                                                {promotionTier === 'basic' && <TrendingUp className="h-3 w-3" />}
+                                                {tListings(`promotion.badges.${promotionTier}`)}
+                                            </>
+                                        )}
                                     </Badge>
                                 )}
 
@@ -645,10 +653,18 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                                 promotionBadgeConfig[promotionTier as keyof typeof promotionBadgeConfig]?.className,
                                 promotionBadgeConfig[promotionTier as keyof typeof promotionBadgeConfig]?.glow
                             )}>
-                                {promotionTier === 'standard' && <Star className="h-3 w-3" />}
-                                {promotionTier === 'premium' && <Crown className="h-3 w-3" />}
-                                {promotionTier === 'basic' && <TrendingUp className="h-3 w-3" />}
-                                {tListings(`promotion.badges.${promotionTier}`)}
+                                {promotionTier === 'premium' ? (
+                                    <>
+                                        <Crown className="h-3 w-3" />
+                                        Top Result
+                                    </>
+                                ) : (
+                                    <>
+                                        {promotionTier === 'standard' && <Star className="h-3 w-3" />}
+                                        {promotionTier === 'basic' && <TrendingUp className="h-3 w-3" />}
+                                        {tListings(`promotion.badges.${promotionTier}`)}
+                                    </>
+                                )}
                             </Badge>
                         )}
 

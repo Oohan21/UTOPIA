@@ -7,27 +7,19 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Input } from '@/components/ui/Input';
-import { 
+import {
   BarChart, Bar, LineChart, Line, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell
 } from 'recharts';
-import { 
-  Users, UserPlus, TrendingUp, Activity, Clock, Target,
+import {
+  Users, TrendingUp, Activity, Clock,
   MessageSquare, Eye, Home, CheckCircle,
-  Search, Download, Filter, UserCheck, UserX,
-  Shield, AlertCircle, MoreVertical
+  Search, UserCheck, UserX,
+  Shield, AlertCircle
 } from 'lucide-react';
 import { analyticsApi } from '@/lib/api/analytics';
 import { UserGrowthData, DailyActivityData, AdminUserAnalyticsResponse } from '@/lib/types/analytics';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/DropdownMenu';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils/formatCurrency';
@@ -60,7 +52,7 @@ export function UserAnalytics() {
     try {
       setLoading(true);
       const days = timeRange === '7d' ? 7 : timeRange === '90d' ? 90 : 30;
-      
+
       const [adminAllUsers, growth, activity] = await Promise.allSettled([
         analyticsApi.getAdminAllUsers(days),
         analyticsApi.getUserGrowth(days),
@@ -91,10 +83,10 @@ export function UserAnalytics() {
 
   const calculateUserStats = () => {
     if (!adminUserData) return { total: 0, activeToday: 0, newToday: 0 };
-    
+
     const activeToday = adminUserData.users.filter(user => user.is_active_today).length;
     const newToday = adminUserData.platform_totals.new_users_today;
-    
+
     return {
       total: adminUserData.users.length,
       activeToday,
@@ -105,31 +97,31 @@ export function UserAnalytics() {
 
   const getFilteredUsers = () => {
     if (!adminUserData) return [];
-    
+
     return adminUserData.users.filter(user => {
-      if (filter.search && !user.email.toLowerCase().includes(filter.search.toLowerCase()) && 
-          !user.full_name?.toLowerCase().includes(filter.search.toLowerCase())) {
+      if (filter.search && !user.email.toLowerCase().includes(filter.search.toLowerCase()) &&
+        !user.full_name?.toLowerCase().includes(filter.search.toLowerCase())) {
         return false;
       }
-      
+
       if (filter.userType !== 'all' && user.user_type !== filter.userType) {
         return false;
       }
-      
+
       if (filter.status === 'active' && !user.is_active_today) {
         return false;
       }
       if (filter.status === 'inactive' && user.is_active_today) {
         return false;
       }
-      
+
       return true;
     });
   };
 
   const getTopUsersByMetric = (metric: 'inquiries' | 'properties' | 'views', limit: number = 5) => {
     if (!adminUserData) return [];
-    
+
     return [...adminUserData.users]
       .sort((a, b) => {
         if (metric === 'inquiries') return b.total_inquiries - a.total_inquiries;
@@ -137,22 +129,6 @@ export function UserAnalytics() {
         return b.total_views - a.total_views;
       })
       .slice(0, limit);
-  };
-
-  const exportData = async (format: 'csv' | 'json' = 'csv') => {
-    try {
-      const blob = await analyticsApi.exportAnalytics('users', format);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `users_analytics_${new Date().toISOString().split('T')[0]}.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
-      console.error('Export failed:', error);
-    }
   };
 
   if (loading) {
@@ -190,17 +166,8 @@ export function UserAnalytics() {
             {t('subtitle')}
           </p>
         </div>
-        
+
         <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => exportData('csv')}
-            className="border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-          >
-            <Download className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
-            {t('actions.exportCSV')}
-          </Button>
           <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
             <Button
               variant={timeRange === '7d' ? 'default' : 'ghost'}
@@ -291,7 +258,7 @@ export function UserAnalytics() {
             </div>
             <div className="mt-2 md:mt-4 text-xs md:text-sm text-gray-600 dark:text-gray-400">
               {t('cards.avgPerUser', {
-                avg: adminUserData?.platform_totals.total_users ? 
+                avg: adminUserData?.platform_totals.total_users ?
                   Math.round(adminUserData.platform_totals.total_properties / adminUserData.platform_totals.total_users) : 0
               })}
             </div>
@@ -315,7 +282,7 @@ export function UserAnalytics() {
             </div>
             <div className="mt-2 md:mt-4 text-xs md:text-sm text-gray-600 dark:text-gray-400">
               {t('cards.conversionRate', {
-                rate: adminUserData?.platform_totals.total_views ? 
+                rate: adminUserData?.platform_totals.total_views ?
                   ((adminUserData.platform_totals.total_inquiries / adminUserData.platform_totals.total_views) * 100).toFixed(1) : 0
               })}
             </div>
@@ -336,19 +303,19 @@ export function UserAnalytics() {
                 <Input
                   placeholder={t('filters.searchPlaceholder')}
                   value={filter.search}
-                  onChange={(e) => setFilter({...filter, search: e.target.value})}
+                  onChange={(e) => setFilter({ ...filter, search: e.target.value })}
                   className="pl-8 md:pl-10 text-xs md:text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                 />
               </div>
             </div>
-            
+
             <div>
               <label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
                 {t('filters.userType')}
               </label>
               <select
                 value={filter.userType}
-                onChange={(e) => setFilter({...filter, userType: e.target.value})}
+                onChange={(e) => setFilter({ ...filter, userType: e.target.value })}
                 className="w-full px-3 py-2 text-xs md:text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="all">{t('filters.allTypes')}</option>
@@ -356,14 +323,14 @@ export function UserAnalytics() {
                 <option value="admin">{t('filters.admin')}</option>
               </select>
             </div>
-            
+
             <div>
               <label className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
                 {t('filters.activityStatus')}
               </label>
               <select
                 value={filter.status}
-                onChange={(e) => setFilter({...filter, status: e.target.value})}
+                onChange={(e) => setFilter({ ...filter, status: e.target.value })}
                 className="w-full px-3 py-2 text-xs md:text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="all">{t('filters.allUsers')}</option>
@@ -372,12 +339,12 @@ export function UserAnalytics() {
               </select>
             </div>
           </div>
-          
+
           <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
-              {t('filters.showing', { 
-                showing: filteredUsers.length, 
-                total: adminUserData?.users.length || 0 
+              {t('filters.showing', {
+                showing: filteredUsers.length,
+                total: adminUserData?.users.length || 0
               })}
               {filter.search && ` "${filter.search}"`}
             </div>
@@ -411,17 +378,17 @@ export function UserAnalytics() {
                 {growthData.length > 0 ? (
                   <AreaChart data={growthData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" strokeOpacity={0.3} />
-                    <XAxis 
-                      dataKey="date" 
+                    <XAxis
+                      dataKey="date"
                       stroke="#666"
                       tick={{ fill: '#666', fontSize: 11 }}
                     />
-                    <YAxis 
+                    <YAxis
                       stroke="#666"
                       tick={{ fill: '#666', fontSize: 11 }}
                     />
-                    <Tooltip 
-                      contentStyle={{ 
+                    <Tooltip
+                      contentStyle={{
                         backgroundColor: 'white',
                         border: '1px solid #e5e7eb',
                         color: '#111827',
@@ -430,19 +397,20 @@ export function UserAnalytics() {
                       }}
                     />
                     <Legend wrapperStyle={{ color: '#666', fontSize: '12px' }} />
-                    <Area 
-                      type="monotone" 
-                      dataKey="cumulative_users" 
-                      stroke="#3b82f6" 
-                      fill="#3b82f6" 
+                    <Area
+                      type="monotone"
+                      dataKey="cumulative_users"
+                      stroke="#3b82f6"
+                      fill="#3b82f6"
                       fillOpacity={0.3}
                       name={t('charts.totalUsers')}
                     />
-                    <Bar 
-                      dataKey="new_users" 
-                      fill="#10b981" 
+                    <Line
+                      type="monotone"
+                      dataKey="new_users"
+                      stroke="#10b981"
+                      strokeWidth={2}
                       name={t('charts.newUsers')}
-                      radius={[2, 2, 0, 0]}
                     />
                   </AreaChart>
                 ) : (
@@ -473,7 +441,7 @@ export function UserAnalytics() {
                 <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2 text-sm md:text-base">
                   {t('topPerformers.mostInquiries')}
                 </h4>
-                {topUsersByInquiries.map((user, index) => (
+                {topUsersByInquiries.length > 0 ? topUsersByInquiries.map((user, index) => (
                   <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
                     <div className="flex items-center space-x-3 mb-1 sm:mb-0">
                       <div className={cn(
@@ -498,14 +466,16 @@ export function UserAnalytics() {
                       {formatNumber(user.total_inquiries)} {t('topPerformers.inquiries')}
                     </Badge>
                   </div>
-                ))}
+                )) : (
+                  <p className="text-xs text-gray-500 italic py-2">{t('topPerformers.noData')}</p>
+                )}
               </div>
-              
+
               <div>
                 <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2 text-sm md:text-base">
                   {t('topPerformers.mostProperties')}
                 </h4>
-                {topUsersByProperties.map((user, index) => (
+                {topUsersByProperties.length > 0 ? topUsersByProperties.map((user, index) => (
                   <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
                     <div className="flex items-center space-x-3 mb-1 sm:mb-0">
                       <div className={cn(
@@ -530,7 +500,9 @@ export function UserAnalytics() {
                       {formatNumber(user.total_properties)} {t('topPerformers.properties')}
                     </Badge>
                   </div>
-                ))}
+                )) : (
+                  <p className="text-xs text-gray-500 italic py-2">{t('topPerformers.noData')}</p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -573,15 +545,12 @@ export function UserAnalytics() {
                   <th className="text-left py-2 px-4 text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
                     {t('usersTable.columns.status')}
                   </th>
-                  <th className="text-left py-2 px-4 text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {t('usersTable.columns.actions')}
-                  </th>
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.map((user) => (
-                  <tr 
-                    key={user.id} 
+                {filteredUsers.length > 0 ? filteredUsers.map((user) => (
+                  <tr
+                    key={user.id}
                     className={cn(
                       "border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors",
                       selectedUser === user.id && "bg-blue-50 dark:bg-blue-900/20"
@@ -615,9 +584,9 @@ export function UserAnalytics() {
                       <Badge variant="outline" className={cn(
                         "text-xs",
                         user.user_type === 'admin' ? 'bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-300 border-red-200 dark:border-red-800' :
-                        user.user_type === 'agent' ? 'bg-purple-50 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300 border-purple-200 dark:border-purple-800' :
-                        user.user_type === 'seller' ? 'bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800' :
-                        'bg-gray-50 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300 border-gray-200 dark:border-gray-700'
+                          user.user_type === 'agent' ? 'bg-purple-50 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300 border-purple-200 dark:border-purple-800' :
+                            user.user_type === 'seller' ? 'bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800' :
+                              'bg-gray-50 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300 border-gray-200 dark:border-gray-700'
                       )}>
                         {user.user_type}
                       </Badge>
@@ -658,14 +627,14 @@ export function UserAnalytics() {
                       <div className="flex items-center space-x-2">
                         <TrendingUp className={cn(
                           "h-3 w-3 md:h-4 md:w-4 flex-shrink-0",
-                          user.conversion_rate > 5 ? 'text-green-500' : 
-                          user.conversion_rate > 2 ? 'text-amber-500' : 'text-gray-400'
+                          user.conversion_rate > 5 ? 'text-green-500' :
+                            user.conversion_rate > 2 ? 'text-amber-500' : 'text-gray-400'
                         )} />
                         <span className={cn(
                           "font-medium text-sm",
-                          user.conversion_rate > 5 ? 'text-green-600 dark:text-green-400' : 
-                          user.conversion_rate > 2 ? 'text-amber-600 dark:text-amber-400' : 
-                          'text-gray-600 dark:text-gray-400'
+                          user.conversion_rate > 5 ? 'text-green-600 dark:text-green-400' :
+                            user.conversion_rate > 2 ? 'text-amber-600 dark:text-amber-400' :
+                              'text-gray-600 dark:text-gray-400'
                         )}>
                           {user.conversion_rate.toFixed(1)}%
                         </span>
@@ -686,51 +655,26 @@ export function UserAnalytics() {
                         )}
                       </div>
                     </td>
-                    <td className="py-3 px-4">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuLabel>{t('usersTable.actionsLabel')}</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => window.location.href = `/admin/users/${user.id}`}>
-                            {t('usersTable.viewDetails')}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => window.location.href = `/admin/users/${user.id}/properties`}>
-                            {t('usersTable.viewProperties')}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(user.email)}>
-                            {t('usersTable.copyEmail')}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600 dark:text-red-400">
-                            {t('usersTable.suspendUser')}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center">
+                      <AlertCircle className="h-10 w-10 md:h-12 md:w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                      <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base">
+                        {t('usersTable.noUsers')}
+                      </p>
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
-          
-          {filteredUsers.length === 0 && (
-            <div className="text-center py-8">
-              <AlertCircle className="h-10 w-10 md:h-12 md:w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-              <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base">
-                {t('usersTable.noUsers')}
-              </p>
-            </div>
-          )}
-          
+
           <div className="mt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
-              {t('usersTable.showing', { 
-                showing: filteredUsers.length, 
-                total: adminUserData?.users.length || 0 
+              {t('usersTable.showing', {
+                showing: filteredUsers.length,
+                total: adminUserData?.users.length || 0
               })}
             </div>
             <div className="flex flex-wrap gap-2">
@@ -741,15 +685,6 @@ export function UserAnalytics() {
                 className="border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs md:text-sm"
               >
                 {t('usersTable.refresh')}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => exportData('json')}
-                className="border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs md:text-sm"
-              >
-                <Download className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
-                {t('usersTable.exportJSON')}
               </Button>
             </div>
           </div>

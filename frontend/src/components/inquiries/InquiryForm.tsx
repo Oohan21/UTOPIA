@@ -180,10 +180,8 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({
               <Select
                 value={watch('inquiry_type')}
                 onValueChange={(value) => setValue('inquiry_type', value as any)}
+                placeholder="Select inquiry type"
               >
-                <SelectTrigger className={errors.inquiry_type?.message ? 'border-red-500' : ''}>
-                  <SelectValue placeholder="Select inquiry type" />
-                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="general">General Inquiry</SelectItem>
                   <SelectItem value="viewing">Viewing Request</SelectItem>
@@ -203,10 +201,8 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({
               <Select
                 value={watch('contact_preference')}
                 onValueChange={(value) => setValue('contact_preference', value as any)}
+                placeholder="Select contact method"
               >
-                <SelectTrigger className={errors.contact_preference?.message ? 'border-red-500' : ''}>
-                  <SelectValue placeholder="Select contact method" />
-                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="any">Any Method</SelectItem>
                   <SelectItem value="call">Phone Call</SelectItem>
@@ -254,10 +250,8 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({
               <Select
                 value={watch('priority')}
                 onValueChange={(value) => setValue('priority', value as any)}
+                placeholder="Select priority"
               >
-                <SelectTrigger className={errors.priority?.message ? 'border-red-500' : ''}>
-                  <SelectValue placeholder="Select priority" />
-                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="low">Low Priority</SelectItem>
                   <SelectItem value="medium">Medium Priority</SelectItem>
@@ -277,10 +271,8 @@ export const InquiryForm: React.FC<InquiryFormProps> = ({
               <Select
                 value={watch('category')}
                 onValueChange={(value) => setValue('category', value as any)}
+                placeholder="Select category"
               >
-                <SelectTrigger className={errors.category?.message ? 'border-red-500' : ''}>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="buyer">Buyer Inquiry</SelectItem>
                   <SelectItem value="seller">Seller Inquiry</SelectItem>
