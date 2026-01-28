@@ -95,8 +95,8 @@ interface ApprovalHistoryItem {
     timestamp: string;
 }
 
-// Fix: Add API base URL for images
-const API_BASE_URL = 'http://localhost:8000';
+// Use environment variable or default to relative path
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 const PropertyApprovalPage = () => {
     const t = useTranslations('admin.approval');
@@ -149,6 +149,11 @@ const PropertyApprovalPage = () => {
             return imagePath;
         }
 
+        // If no API base URL is set (relative path), just return the path
+        if (!API_BASE_URL) {
+            return imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+        }
+
         // If it starts with /media/, prepend the API base URL
         if (imagePath.startsWith('/media/') || imagePath.startsWith('media/')) {
             const cleanPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
@@ -165,18 +170,8 @@ const PropertyApprovalPage = () => {
             const data = await adminApi.getPendingProperties();
             console.log('Fetched properties:', data);
 
-            // Fix: Handle paginated response properly
-            let propertiesList: Property[] = [];
-
-            if (Array.isArray(data)) {
-                propertiesList = data;
-            } else if (data.results && Array.isArray(data.results)) {
-                propertiesList = data.results;
-            } else if (data.properties && Array.isArray(data.properties)) {
-                propertiesList = data.properties;
-            } else if (data.data && Array.isArray(data.data)) {
-                propertiesList = data.data;
-            }
+            // The adminApi.getPendingProperties() returns a PaginatedResponse<Property>
+            let propertiesList: Property[] = data.results || [];
 
             // Fix: Ensure image URLs are properly formatted
             propertiesList = propertiesList.map(property => ({
@@ -189,15 +184,19 @@ const PropertyApprovalPage = () => {
 
             setProperties(propertiesList);
 
-            // Calculate stats
-            const pending = propertiesList.length;
-            setStats({
-                pending,
-                approved: 0,
-                rejected: 0,
-                changes_requested: 0,
-                total: pending,
-            });
+            // Update stats from backend if provided, otherwise fallback to local calculation
+            if (data.stats) {
+                setStats(data.stats);
+            } else {
+                const pending = propertiesList.length;
+                setStats({
+                    pending,
+                    approved: 0,
+                    rejected: 0,
+                    changes_requested: 0,
+                    total: pending,
+                });
+            }
 
         } catch (err: any) {
             console.error('Error loading properties:', err);

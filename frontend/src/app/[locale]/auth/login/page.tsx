@@ -80,6 +80,9 @@ export default function LoginPage() {
     const status = error.response?.status
     const data = error.response?.data
     const errorDetail = data?.detail || data?.error || data?.message
+    const errorDetailStr = typeof errorDetail === 'string'
+      ? errorDetail
+      : (errorDetail ? JSON.stringify(errorDetail) : '')
 
     switch (status) {
       case 401:
@@ -122,7 +125,7 @@ export default function LoginPage() {
         break
 
       case 403:
-        if (errorDetail?.includes('verify') || data?.requires_verification) {
+        if (errorDetailStr.includes('verify') || data?.requires_verification) {
           setAuthError('Please verify your email before logging in.');
 
           // Store user data for verification page
@@ -136,16 +139,16 @@ export default function LoginPage() {
           setUnverifiedEmail(data?.email || '');
 
           toast.error('Email verification required');
-        } else if (errorDetail?.includes('locked') || errorDetail?.includes('temporarily')) {
+        } else if (errorDetailStr.includes('locked') || errorDetailStr.includes('temporarily')) {
           setIsLocked(true)
           // Extract lockout time if provided
-          const lockoutMatch = errorDetail?.match(/(\d+)/)
+          const lockoutMatch = errorDetailStr.match(/(\d+)/)
           if (lockoutMatch) {
             setLockoutTime(parseInt(lockoutMatch[1]))
           }
           setAuthError('Account temporarily locked due to too many failed attempts')
           toast.error('Account temporarily locked. Please try again later.')
-        } else if (errorDetail?.includes('disabled')) {
+        } else if (errorDetailStr.includes('disabled')) {
           setAuthError('Your account has been disabled. Please contact support.')
           toast.error('Account disabled. Please contact support.')
         } else {

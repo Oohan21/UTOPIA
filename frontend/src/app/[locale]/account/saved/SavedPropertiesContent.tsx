@@ -194,9 +194,9 @@ function SavedPropertiesContent({ locale }: { locale: string }) {
       console.log('Waiting for auth hydration...');
       return;
     }
-    
+
     console.log('Auth state:', { isAuthenticated, hasHydrated, authLoading });
-    
+
     if (!isAuthenticated) {
       console.log('User not authenticated, redirecting to login');
       router.push(`/${locale}/auth/login?redirect=/account/saved`);
@@ -294,12 +294,60 @@ function SavedPropertiesContent({ locale }: { locale: string }) {
                 variant="outline"
                 size="sm"
                 className="gap-1 md:gap-2"
-                onClick={() => {
-                  // Export functionality
-                  toast({
-                    title: t('toasts.exportStarted') || 'Export started',
-                    description: t('toasts.exportDescription') || 'Your saved properties list is being exported',
-                  });
+                onClick={async () => {
+                  try {
+                    toast({
+                      title: t('toasts.exportStarted') || 'Export started',
+                      description: t('toasts.exportDescription') || 'Your saved properties list is being exported',
+                    });
+
+                    // Define CSV headers
+                    const headers = ['ID', 'Title', 'Price (ETB)', 'Type', 'City', 'Sub City', 'Bedrooms', 'Bathrooms', 'Area (sqm)', 'Status', 'Date Saved'];
+
+                    // Convert properties to CSV rows
+                    const rows = savedProperties.map(p => [
+                      p.id,
+                      `"${p.title.replace(/"/g, '""')}"`, // Escape quotes
+                      p.price_etb,
+                      p.property_type,
+                      p.city?.name || '',
+                      p.sub_city?.name || '',
+                      p.bedrooms,
+                      p.bathrooms,
+                      p.total_area,
+                      p.property_status,
+                      new Date(p.created_at).toLocaleDateString()
+                    ]);
+
+                    // Combine headers and rows
+                    const csvContent = [
+                      headers.join(','),
+                      ...rows.map(row => row.join(','))
+                    ].join('\n');
+
+                    // Create blob and download link
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', `saved_properties_${new Date().toISOString().split('T')[0]}.csv`);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    toast({
+                      title: 'Export successful',
+                      description: 'Your saved properties have been exported to CSV',
+                    });
+                  } catch (error) {
+                    console.error('Export error:', error);
+                    toast({
+                      title: 'Export failed',
+                      description: 'Failed to export saved properties',
+                      variant: 'destructive',
+                    });
+                  }
                 }}
               >
                 <Download className="h-3 w-3 md:h-4 md:w-4" />
@@ -400,7 +448,7 @@ function SavedPropertiesContent({ locale }: { locale: string }) {
                 className="pl-10"
               />
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -412,7 +460,7 @@ function SavedPropertiesContent({ locale }: { locale: string }) {
                 Filter
                 {showMobileFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
-              
+
               <Button
                 variant="outline"
                 size="sm"
@@ -424,7 +472,7 @@ function SavedPropertiesContent({ locale }: { locale: string }) {
                 {showMobileSort ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
             </div>
-            
+
             {/* Mobile filters dropdown */}
             {showMobileFilters && (
               <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-2">
@@ -451,7 +499,7 @@ function SavedPropertiesContent({ locale }: { locale: string }) {
                 </div>
               </div>
             )}
-            
+
             {/* Mobile sort dropdown */}
             {showMobileSort && (
               <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-2">
@@ -654,8 +702,8 @@ function SavedPropertiesContent({ locale }: { locale: string }) {
                     togglePropertySelection(property.id);
                   }}
                   className={`w-5 h-5 md:w-6 md:h-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedProperties.includes(property.id)
-                      ? 'bg-blue-500 border-blue-500'
-                      : 'bg-white/80 border-gray-300 hover:border-blue-500 dark:bg-gray-800/80 dark:border-gray-600'
+                    ? 'bg-blue-500 border-blue-500'
+                    : 'bg-white/80 border-gray-300 hover:border-blue-500 dark:bg-gray-800/80 dark:border-gray-600'
                     }`}
                 >
                   {selectedProperties.includes(property.id) && (

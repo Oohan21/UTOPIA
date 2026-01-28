@@ -17,7 +17,7 @@ import {
   FileText, ExternalLink, Globe, Waves, Thermometer, Coffee, Home,
   Percent, TrendingUp, Eye, Mail, Edit, Copy,
   Facebook, Twitter, Printer, Download as DownloadIcon, Play, Video,
-  ArrowLeft, Crown, Zap as ZapIcon, BarChart3, Target, Mail as MailIcon,
+  ArrowLeft, Crown, Zap as ZapIcon, BarChart3, Info, Mail as MailIcon,
   AlertCircle, Maximize2, Map, Building2, Check, X, Filter,
   CalendarDays, DollarSign as Dollar, ArrowUpRight, User, MailCheck,
   PhoneCall, MessageCircle, Bookmark, Share, Send, Paperclip, XCircle,
@@ -25,14 +25,7 @@ import {
   Bell, ShieldAlert, Trash2, Wrench, Satellite, ShieldCheck,
   Refrigerator, Microwave, Flame, Snowflake, Lightbulb, Gamepad,
   GlassWater, Droplet, Sun, Building as BuildingIcon, Briefcase,
-  Library, Book, Tv, Music, Headphones, Gamepad as GamepadIcon,
-  MonitorPlay, Projector, Film, BookOpen, GraduationCap, Banknote,
-  Wallet, PiggyBank, Receipt, ShoppingCart, Store, Factory,
-  Ship, Plane, Train, Bus, Bike, CarTaxiFront, ParkingSquare,
-  TrafficCone, Flashlight, SunDim, Cloud, CloudRain, CloudSnow,
-  CloudLightning, CloudFog, Sunrise, Sunset, AlarmClock, Megaphone,
-  RadioTower, TowerControl, Route, Signpost, Flag, Trophy, Medal,
-  Gem, Diamond, ThumbsUp, HelpCircle, Mic, Truck, Trees, Package,
+  Library, Book, Tv, HelpCircle, Mic, Truck, Trees, Package,
   Droplets, Camera, ChevronDown, ArrowUpDown, Cpu, Calculator,
   XSquare as XSquare2, Square, Linkedin
 } from 'lucide-react'
@@ -54,6 +47,8 @@ import {
 } from "@/components/ui/Alert"
 import { Property, PropertyImage, PropertyFormData } from '@/lib/types/property'
 import { cn } from '@/lib/utils'
+import { subscriptionApi } from '@/lib/api/subscriptions'
+import { PropertyPromotionTier } from '@/lib/types/subscription';
 import { SimpleMessageDialog } from '@/components/properties/SimpleMessageDialog'
 import { InquiryDialog } from '@/components/inquiries/InquiryDialog'
 import { useTranslations, useLocale } from 'next-intl'
@@ -74,7 +69,6 @@ import {
 } from "@/components/ui/DropdownMenu"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/Collapsible'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
-
 
 // WhatsApp Icon Component
 const WhatsappIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -467,6 +461,7 @@ function PropertyGallery({
 }
 
 // Property Sidebar Component
+// Property Sidebar Component - Updated with better promotion detection
 function PropertySidebar({
   property,
   user,
@@ -482,7 +477,8 @@ function PropertySidebar({
   onSendMessage,
   isOwner,
   t,
-  locale
+  locale,
+  onPromote
 }: {
   property: Property
   user: any
@@ -499,6 +495,7 @@ function PropertySidebar({
   isOwner: boolean
   t: any
   locale: string
+  onPromote: () => void
 }) {
   const priceDisplay = property.listing_type === 'for_rent'
     ? `${formatCurrency(property.monthly_rent || 0)}${t('perMonth')}`
@@ -527,6 +524,22 @@ function PropertySidebar({
       color: 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg',
     },
   ]
+
+  // Check if property is already promoted - using multiple possible indicators
+  const isPropertyPromoted = () => {
+    // Check for explicit promotion fields
+    if ((property as any).is_promoted === true) return true;
+    if ((property as any).promotion_tier && (property as any).promotion_tier !== 'basic') return true;
+    if ((property as any).promotion_status === 'active') return true;
+
+    // Check for featured badge (which might indicate promotion)
+    if (property.is_featured === true) return true;
+
+    // Check for premium badges or indicators
+    const hasPremiumBadge = property.is_premium === true;
+
+    return hasPremiumBadge;
+  }
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -881,6 +894,7 @@ function PropertySidebar({
           </div>
         </Alert>
       )}
+
     </div>
   )
 }
@@ -907,6 +921,10 @@ export default function PropertyDetailPage() {
   const [isSendingInquiry, setIsSendingInquiry] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['essentials', 'comfort'])
 
+  const [isPromotionDialogOpen, setIsPromotionDialogOpen] = useState(false);
+  const [isLoadingPromotionTiers, setIsLoadingPromotionTiers] = useState(false);
+  const [promotionTiers, setPromotionTiers] = useState<PropertyPromotionTier[]>([]);
+
   // Track view on mount
   useEffect(() => {
     if (propertyId) {
@@ -927,6 +945,28 @@ export default function PropertyDetailPage() {
     retry: 2,
     staleTime: 5 * 60 * 1000,
   })
+
+  const isOwner = user?.id === property?.owner?.id
+  const canEdit = isOwner
+
+  const fetchPromotionTiers = useCallback(async () => {
+    setIsLoadingPromotionTiers(true);
+    try {
+      const tiers = await subscriptionApi.getPromotionTiers();
+      setPromotionTiers(Array.isArray(tiers) ? tiers : []);
+    } catch (error) {
+      console.error('Error fetching promotion tiers:', error);
+      toast.error(tProperty('toasts.promotionTiersFailed'));
+    } finally {
+      setIsLoadingPromotionTiers(false);
+    }
+  }, [tProperty]);
+
+  useEffect(() => {
+    if (property && isOwner && property.is_promoted === false) {
+      fetchPromotionTiers();
+    }
+  }, [property, isOwner, fetchPromotionTiers]);
 
   // Fetch similar properties
   const { data: similarProperties, isLoading: isLoadingSimilar } = useQuery<Property[]>({
@@ -962,7 +1002,7 @@ export default function PropertyDetailPage() {
     };
 
     const propertyWithFormData = property as PropertyWithFormData;
-    
+
     const allAmenities = Object.values(AMENITIES_CATEGORIES).flat()
     const amenities = allAmenities
       .filter(amenity => propertyWithFormData[amenity.key] === true)
@@ -972,7 +1012,7 @@ export default function PropertyDetailPage() {
         label: amenity.name,
         value: true,
         description: amenity.description,
-        category: Object.entries(AMENITIES_CATEGORIES).find(([cat, items]) => 
+        category: Object.entries(AMENITIES_CATEGORIES).find(([cat, items]) =>
           items.some(item => item.key === amenity.key)
         )?.[0]
       }))
@@ -1087,12 +1127,6 @@ export default function PropertyDetailPage() {
   }, [property, tProperty])
 
   const handleSubmitInquiry = useCallback(async (data: any) => {
-    if (!isAuthenticated) {
-      toast.error(tProperty('toasts.loginRequired'))
-      router.push(`/auth/login?redirect=/listings/${propertyId}`)
-      return Promise.reject(new Error('Authentication required'))
-    }
-
     setIsSendingInquiry(true)
     try {
       console.log('📤 Preparing inquiry data...')
@@ -1132,7 +1166,9 @@ export default function PropertyDetailPage() {
       let errorMessage = tProperty('toasts.inquiryFailed')
 
       // Check for specific validation errors
-      if (error.response?.data) {
+      if (error.response?.status === 500) {
+        errorMessage = 'Server error. Please try again later.'
+      } else if (error.response?.data) {
         const errorData = error.response.data
 
         // Handle field errors
@@ -1164,6 +1200,18 @@ export default function PropertyDetailPage() {
     }
   }, [isAuthenticated, propertyId, router, refetchProperty, tProperty])
 
+  const handleDeleteProperty = useCallback(async () => {
+    if (!window.confirm(tProperty('deleteConfirmation'))) return;
+
+    try {
+      await listingsApi.deleteProperty(propertyId);
+      toast.success(tProperty('deleteSuccess'));
+      router.push('/account/listings');
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || tProperty('toasts.deleteFailed') || 'Failed to delete listing');
+    }
+  }, [propertyId, router, tProperty])
+
   const handleAddToComparison = useCallback(async () => {
     if (!isAuthenticated) {
       toast.error(tProperty('toasts.loginRequired'))
@@ -1194,8 +1242,8 @@ export default function PropertyDetailPage() {
 
   // Function to toggle category expansion
   const toggleCategory = useCallback((category: string) => {
-    setExpandedCategories(prev => 
-      prev.includes(category) 
+    setExpandedCategories(prev =>
+      prev.includes(category)
         ? prev.filter(c => c !== category)
         : [...prev, category]
     )
@@ -1206,11 +1254,112 @@ export default function PropertyDetailPage() {
       return property.title_amharic;
     }
     return property?.title || '';
-  }, [locale, property?.title, property?.title_amharic]);
+  }, [locale, property?.title, property?.title_amharic])
 
-  // Derived values
-  const isOwner = user?.id === property?.owner?.id
-  const canEdit = isOwner
+  const handlePromoteProperty = useCallback(async (tierType: 'standard' | 'premium', duration: number = 30) => {
+    if (!isAuthenticated) {
+      toast.error(tProperty('toasts.loginRequired'));
+      router.push(`/auth/login?redirect=/listings/${propertyId}`);
+      return;
+    }
+
+    if (!property) return;
+
+    try {
+      const tier = promotionTiers.find(t => t.tier_type === tierType);
+      if (!tier) {
+        toast.error(tProperty('toasts.promotionTierNotFound'));
+        return;
+      }
+
+      const price = calculatePromotionPrice(tier, duration);
+
+      setIsPromotionDialogOpen(false);
+
+      // Show confirmation toast with payment button
+      toast.custom((t) => (
+        <div className="max-w-md w-full bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 border border-primary/20">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-full bg-gradient-to-r from-orange-500 to-yellow-500">
+              <TrendingUp className="h-5 w-5 text-white" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-lg text-foreground">{tProperty('promotion.confirm.title')}</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                {tProperty('promotion.confirm.description', {
+                  tier: tier.name,
+                  days: duration
+                })}
+              </p>
+              <div className="mt-3 flex items-center justify-between">
+                <span className="text-2xl font-bold text-primary">
+                  {price.toLocaleString()} ETB
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => toast.dismiss(t.id)}
+                    className="border-muted-foreground/20"
+                  >
+                    {tCommon('cancel')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => initiatePromotionPayment(tierType, duration, price)}
+                    className="bg-gradient-to-r from-orange-500 to-yellow-500"
+                  >
+                    {tProperty('promotion.confirm.payNow')}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ), { duration: 10000 });
+    } catch (error) {
+      console.error('Error preparing promotion:', error);
+      toast.error(tProperty('toasts.promotionFailed'));
+    }
+  }, [isAuthenticated, propertyId, property, promotionTiers, router, tProperty, tCommon])
+
+  const calculatePromotionPrice = useCallback((tier: PropertyPromotionTier, duration: number): number => {
+    switch (duration) {
+      case 7: return tier.price_7 || 0;
+      case 30: return tier.price_30 || 0;
+      case 60: return tier.price_60 || tier.price_30 * 2 || 0;
+      case 90: return tier.price_90 || tier.price_30 * 3 || 0;
+      default: return tier.price_30 || 0;
+    }
+  }, [])
+
+  const initiatePromotionPayment = useCallback(async (tierType: string, duration: number, amount: number) => {
+    if (!propertyId) return;
+
+    try {
+      const response = await subscriptionApi.initiatePromotionPayment({
+        property_id: propertyId,
+        tier_type: tierType,
+        duration_days: duration,
+      });
+
+      if (response.checkout_url) {
+        // Store payment data
+        localStorage.setItem('last_payment_attempt', JSON.stringify({
+          propertyId,
+          tierType,
+          duration,
+          timestamp: new Date().toISOString()
+        }));
+
+        // Redirect to payment page
+        window.location.href = response.checkout_url;
+      }
+    } catch (error: any) {
+      console.error('Payment initiation error:', error);
+      toast.error(error.response?.data?.error || tProperty('toasts.paymentFailed'));
+    }
+  }, [propertyId, tProperty])
 
   // Loading State
   if (isLoadingProperty) {
@@ -1358,7 +1507,7 @@ export default function PropertyDetailPage() {
 
             {/* EDIT BUTTON - Only show if user can edit */}
             {canEdit && (
-              <div className="flex flex-col gap-2 md:gap-3 mt-2 md:mt-3">
+              <div className="flex flex-col sm:flex-row flex-wrap gap-2 md:gap-3 mt-2 md:mt-3">
                 <Button
                   onClick={() => router.push(`/listings/${propertyId}/edit`)}
                   className="gap-2 md:gap-3 px-4 md:px-6 py-3 md:py-6 h-auto bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-xl text-sm md:text-base"
@@ -1402,6 +1551,28 @@ export default function PropertyDetailPage() {
                     )}
                   </Button>
                 )}
+
+                {/* Promote Property button - only show if not already promoted */}
+                {property.approval_status === 'approved' && !property.is_promoted && (
+                  <Button
+                    onClick={() => router.push(`/listings/${propertyId}/promote`)}
+                    className="gap-2 md:gap-3 px-4 md:px-6 py-3 md:py-6 h-auto text-sm md:text-base bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg"
+                  >
+                    <Rocket className="h-4 w-4 md:h-5 md:w-5" />
+                    <span className="hidden sm:inline">{tProperty('buttons.promoteProperty') || 'Promote Property'}</span>
+                    <span className="sm:hidden">Promote</span>
+                  </Button>
+                )}
+
+                <Button
+                  onClick={handleDeleteProperty}
+                  variant="outline"
+                  className="gap-2 md:gap-3 px-4 md:px-6 py-3 md:py-6 h-auto text-sm md:text-base border-red-200 dark:border-red-900/30 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                >
+                  <Trash2 className="h-4 w-4 md:h-5 md:w-5" />
+                  <span className="hidden sm:inline">{tProperty('deleteProperty')}</span>
+                  <span className="sm:hidden">Delete</span>
+                </Button>
               </div>
             )}
           </div>
@@ -1623,7 +1794,7 @@ export default function PropertyDetailPage() {
                   {propertyStats && propertyStats.amenities.length > 0 ? (
                     <div className="space-y-6">
                       {/* Essentials Category */}
-                      <Collapsible 
+                      <Collapsible
                         open={expandedCategories.includes('essentials')}
                         onOpenChange={() => toggleCategory('essentials')}
                         className="space-y-4"
@@ -1668,7 +1839,7 @@ export default function PropertyDetailPage() {
                       </Collapsible>
 
                       {/* Comfort Category */}
-                      <Collapsible 
+                      <Collapsible
                         open={expandedCategories.includes('comfort')}
                         onOpenChange={() => toggleCategory('comfort')}
                         className="space-y-4"
@@ -1897,6 +2068,7 @@ export default function PropertyDetailPage() {
               isOwner={isOwner}
               t={tProperty}
               locale={locale}
+              onPromote={() => setIsPromotionDialogOpen(true)}
             />
           </div>
         </div>
@@ -2000,6 +2172,147 @@ export default function PropertyDetailPage() {
           }}
         />
       )}
+
+      {/* Promotion Dialog */}
+      <Dialog open={isPromotionDialogOpen} onOpenChange={setIsPromotionDialogOpen}>
+        <DialogContent className="max-w-md md:max-w-2xl bg-background dark:bg-gray-900 border-0 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3 text-2xl">
+              <div className="p-2 rounded-full bg-gradient-to-r from-orange-500 to-yellow-500">
+                <TrendingUp className="h-6 w-6 text-white" />
+              </div>
+              {tProperty('promotion.title')}
+            </DialogTitle>
+            <DialogDescription className="text-lg dark:text-gray-400">
+              {tProperty('promotion.description')}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-6">
+            {isLoadingPromotionTiers ? (
+              <div className="flex items-center justify-center py-12">
+                <LoadingSpinner className="h-8 w-8" />
+                <span className="ml-3 dark:text-white">{tProperty('promotion.loading')}</span>
+              </div>
+            ) : promotionTiers.filter(t => t.tier_type !== 'basic').length > 0 ? (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {promotionTiers
+                    .filter(tier => tier.tier_type !== 'basic')
+                    .map((tier) => (
+                      <Card key={tier.id} className="border-2 hover:border-primary/50 transition-all hover:shadow-lg">
+                        <CardHeader>
+                          <div className="flex items-center gap-3 mb-2">
+                            {tier.tier_type === 'standard' ? (
+                              <TrendingUp className="h-5 w-5 text-blue-500" />
+                            ) : (
+                              <Crown className="h-5 w-5 text-purple-500" />
+                            )}
+                            <CardTitle className="text-xl">{tier.name}</CardTitle>
+                          </div>
+                          <CardDescription>{tier.description}</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3 mb-4">
+                            {tier.features && tier.features.slice(0, 3).map((feature, idx) => (
+                              <div key={idx} className="flex items-start gap-2">
+                                <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />
+                                <span className="text-sm">{feature}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePromoteProperty(tier.tier_type as 'standard' | 'premium', 7)}
+                              className="text-xs"
+                            >
+                              7 days
+                              <br />
+                              {tier.price_7?.toLocaleString()} ETB
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePromoteProperty(tier.tier_type as 'standard' | 'premium', 30)}
+                              className="text-xs"
+                            >
+                              30 days
+                              <br />
+                              {tier.price_30?.toLocaleString()} ETB
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePromoteProperty(tier.tier_type as 'standard' | 'premium', 60)}
+                              className="text-xs"
+                            >
+                              60 days
+                              <br />
+                              {tier.price_60?.toLocaleString() || (tier.price_30 ? (tier.price_30 * 2).toLocaleString() : '0')} ETB
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePromoteProperty(tier.tier_type as 'standard' | 'premium', 90)}
+                              className="text-xs"
+                            >
+                              90 days
+                              <br />
+                              {tier.price_90?.toLocaleString() || (tier.price_30 ? (tier.price_30 * 3).toLocaleString() : '0')} ETB
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                </div>
+
+                <Alert className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500/20">
+                  <Rocket className="h-5 w-5 text-blue-500" />
+                  <AlertTitle className="text-blue-800 dark:text-blue-300">
+                    {tProperty('promotion.benefits.title')}
+                  </AlertTitle>
+                  <AlertDescription className="text-blue-700 dark:text-blue-400 space-y-2">
+                    <p>🚀 <strong>3-5x more views</strong> than regular listings</p>
+                    <p>🎯 <strong>Priority placement</strong> in search results</p>
+                    <p>👑 <strong>Featured badge</strong> attracts more clicks</p>
+                    <p>⚡ <strong>Faster response</strong> from potential buyers</p>
+                  </AlertDescription>
+                </Alert>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <TrendingUp className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-bold dark:text-white mb-2">
+                  {tProperty('promotion.noTiers.title')}
+                </h3>
+                <p className="text-muted-foreground">
+                  {tProperty('promotion.noTiers.description')}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsPromotionDialogOpen(false)}
+              className="w-full sm:w-auto"
+            >
+              {tCommon('cancel')}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => window.open('/help/promotion', '_blank')}
+              className="w-full sm:w-auto"
+            >
+              <Info className="mr-2 h-4 w-4" />
+              {tProperty('promotion.learnMore')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

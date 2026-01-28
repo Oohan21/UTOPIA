@@ -377,12 +377,12 @@ const UsersManagement = () => {
                         </div>
                       </td>
                       <td className="py-3 px-2 md:px-4">
-                        <Badge variant={user.user_type === 'admin' ? 'success' : 'outline'} 
-                               className={cn(
-                                 user.user_type === 'admin' 
-                                   ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-                                   : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'
-                               )}>
+                        <Badge variant={user.user_type === 'admin' ? 'success' : 'outline'}
+                          className={cn(
+                            user.user_type === 'admin'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+                              : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'
+                          )}>
                           {t(`userTypes.${user.user_type}`)}
                         </Badge>
                       </td>
@@ -402,17 +402,11 @@ const UsersManagement = () => {
                               <MoreVertical className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent 
-                            align="end" 
+                          <DropdownMenuContent
+                            align="end"
                             className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700"
                           >
-                            <DropdownMenuItem 
-                              onClick={() => router.push(`/admin/users/${user.id}`)}
-                              className="dark:text-gray-300 dark:hover:bg-gray-700"
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              {t('actions.viewDetails')}
-                            </DropdownMenuItem>
+
 
                             {/* Verify/Unverify Action */}
                             <DropdownMenuItem
@@ -437,7 +431,7 @@ const UsersManagement = () => {
                             </DropdownMenuItem>
 
                             {user.user_type !== 'admin' && (
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 onClick={() => handleMakeAdmin(user.id)}
                                 className="dark:text-gray-300 dark:hover:bg-gray-700"
                               >
@@ -445,7 +439,7 @@ const UsersManagement = () => {
                                 {t('actions.makeAdmin')}
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={() => handleToggleStatus(user.id, user.is_active)}
                               className="dark:text-gray-300 dark:hover:bg-gray-700"
                             >
@@ -472,7 +466,7 @@ const UsersManagement = () => {
           {!loading && users.results.length === 0 && (
             <div className="text-center py-12">
               <div className="text-gray-400 dark:text-gray-500 mb-4">{t('emptyState.noUsers')}</div>
-              <Button 
+              <Button
                 onClick={() => router.push('/admin/users/create')}
                 className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
               >
@@ -507,8 +501,8 @@ const UsersManagement = () => {
           </DialogHeader>
           <DialogFooter>
             <DialogClose asChild>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 {t('dialogs.delete.cancel')}
@@ -542,8 +536,8 @@ const UsersManagement = () => {
           </DialogHeader>
           <DialogFooter>
             <DialogClose asChild>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 {t('dialogs.verify.cancel')}

@@ -118,6 +118,13 @@ interface ChartDataPoint {
   views?: number;
 }
 
+interface UserGrowthData {
+  date: string;
+  new_users: number;
+  active_users: number;
+  cumulative_users: number;
+}
+
 interface MarketTrend {
   date: string;
   total_listings?: number;
@@ -211,12 +218,14 @@ const AdminDashboard = () => {
     setMounted(true);
   }, []);
 
+  const [userGrowth, setUserGrowth] = useState<UserGrowthData[]>([]); // Add state
+
   const fetchAllData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const [dashboard, trends, metrics, propertiesRes] = await Promise.allSettled([
+      const [dashboard, trends, metrics, propertiesRes, growth] = await Promise.allSettled([
         analyticsApi.getDashboardAnalytics('admin'),
         analyticsApi.getMarketTrends(30),
         analyticsApi.getPlatformMetrics(),
@@ -225,11 +234,13 @@ const AdminDashboard = () => {
           ordering: '-created_at',
           is_active: true
         }),
+        analyticsApi.getUserGrowth(30), // Fetch user growth
       ]);
 
       if (dashboard.status === 'fulfilled') {
         setDashboardData(dashboard.value as DashboardData);
       } else {
+        // ... (fallback data can remain, omitted for brevity if no changes)
         setDashboardData({
           platform_metrics: {
             total_users: 0,
@@ -318,6 +329,10 @@ const AdminDashboard = () => {
         setLatestProperties([]);
       }
 
+      if (growth.status === 'fulfilled' && growth.value) {
+        setUserGrowth(growth.value);
+      }
+
     } catch (err: any) {
       console.error('Failed to load dashboard data:', err);
       setError(t('errors.loadFailed') || 'Failed to load dashboard data. Please try again.');
@@ -335,46 +350,91 @@ const AdminDashboard = () => {
   };
 
   const prepareChartData = (): ChartDataPoint[] => {
-    if (Array.isArray(marketTrends) && marketTrends.length > 0) {
-      return marketTrends.map((trend: MarketTrend) => ({
-        date: trend.date ? new Date(trend.date).toLocaleDateString(locale, { month: 'short', day: 'numeric' }) : t('charts.unknown'),
-        users: trend.total_listings || 0,
-        properties: trend.active_listings || 0,
-        revenue: trend.average_price || 0,
-        inquiries: trend.total_inquiries || 0,
-        views: trend.total_views || 0,
-      })).slice(-30);
-    }
-
-    const data: ChartDataPoint[] = [];
+    // Create a map of dates to data
+    const dataMap = new Map<string, ChartDataPoint>();
     const today = new Date();
 
-    const totalProperties = dashboardData?.platform_metrics?.total_properties || 0;
-    const totalUsers = dashboardData?.platform_metrics?.total_users || 0;
-    const totalInquiries = dashboardData?.engagement_metrics?.total_inquiries_today || 0;
-    const totalViews = dashboardData?.engagement_metrics?.total_views_today || 0;
-
+    // Initialize with last 30 days
     for (let i = 29; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const displayDate = d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 
-      const dateStr = date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
-      const baseProperties = Math.max(1, Math.floor(totalProperties / 30));
-      const baseUsers = Math.max(1, Math.floor(totalUsers / 30));
-      const baseInquiries = Math.max(0, Math.floor(totalInquiries / 30));
-      const baseViews = Math.max(1, Math.floor(totalViews / 30));
-
-      const variation = 0.2;
-
-      data.push({
-        date: dateStr,
-        users: Math.floor(baseUsers * (1 + (Math.random() - 0.5) * variation)),
-        properties: Math.floor(baseProperties * (1 + (Math.random() - 0.5) * variation)),
-        revenue: dashboardData?.revenue_metrics?.revenue_today ?
-          Math.floor(dashboardData.revenue_metrics.revenue_today / 30) : 0,
-        inquiries: Math.floor(baseInquiries * (1 + (Math.random() - 0.5) * variation)),
-        views: Math.floor(baseViews * (1 + (Math.random() - 0.5) * variation)),
+      dataMap.set(dateStr, {
+        date: displayDate,
+        users: 0,
+        properties: 0,
+        revenue: 0,
+        inquiries: 0,
+        views: 0
       });
+    }
+
+    // Merge Market Trends (Properties, Inquiries, Views)
+    if (Array.isArray(marketTrends)) {
+      marketTrends.forEach(trend => {
+        if (!trend.date) return;
+        const dateStr = trend.date.split('T')[0];
+        const point = dataMap.get(dateStr);
+        if (point) {
+          point.properties = trend.active_listings || trend.total_listings || 0;
+          point.inquiries = trend.total_inquiries || 0;
+          point.views = trend.total_views || 0;
+          point.revenue = trend.average_price || 0;
+        }
+      });
+    }
+
+    // Merge User Growth
+    if (Array.isArray(userGrowth)) {
+      userGrowth.forEach(growth => {
+        if (!growth.date) return;
+        const dateStr = growth.date.split('T')[0];
+        const point = dataMap.get(dateStr);
+        if (point) {
+          point.users = growth.cumulative_users || growth.active_users || 0;
+        }
+      });
+    }
+
+    // Convert map values to array
+    const data = Array.from(dataMap.values());
+
+    // Fallback if no real data
+    if (data.every(d => d.users === 0 && d.properties === 0)) {
+      // ... (Simulated data fallback logic can be improved or kept)
+      // For now, let's return the empty-ish data but ideally we should keep the simulation fallback if data is truly empty
+
+      // If we have absolutely no data, use simulation
+      if (marketTrends.length === 0 && userGrowth.length === 0) {
+        const simData: ChartDataPoint[] = [];
+        const totalProperties = dashboardData?.platform_metrics?.total_properties || 0;
+        const totalUsers = dashboardData?.platform_metrics?.total_users || 0;
+        const totalInquiries = dashboardData?.engagement_metrics?.total_inquiries_today || 0;
+        const totalViews = dashboardData?.engagement_metrics?.total_views_today || 0;
+
+        for (let i = 29; i >= 0; i--) {
+          const date = new Date(today);
+          date.setDate(date.getDate() - i);
+          const dateStr = date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+
+          const baseProperties = Math.max(1, Math.floor(totalProperties / 1)); // Assuming linear for simulation
+          const baseUsers = Math.max(1, Math.floor(totalUsers / 1));
+
+          const variation = 0.1;
+
+          simData.push({
+            date: dateStr,
+            users: Math.floor(baseUsers * (0.9 + Math.random() * variation)), // Just a flat line with noise
+            properties: Math.floor(baseProperties * (0.9 + Math.random() * variation)),
+            revenue: 0,
+            inquiries: Math.floor(totalInquiries * Math.random()),
+            views: Math.floor(totalViews * Math.random())
+          });
+        }
+        return simData;
+      }
     }
 
     return data;
@@ -495,10 +555,12 @@ const AdminDashboard = () => {
 
     const totalLatest = latestProperties.length;
 
-    let estimatedSaleCount = 0;
-    let estimatedRentCount = 0;
+    // Use direct metrics from dashboardData if available, otherwise fallback to estimation
+    let estimatedSaleCount = dashboardData.platform_metrics.sale_properties ?? 0;
+    let estimatedRentCount = dashboardData.platform_metrics.rent_properties ?? 0;
 
-    if (totalLatest > 0) {
+    // Fallback if backend returns 0 (and we have properties) or undefined
+    if (estimatedSaleCount === 0 && estimatedRentCount === 0 && totalLatest > 0) {
       const saleRatio = salePropertiesFromLatest / totalLatest;
       const rentRatio = rentPropertiesFromLatest / totalLatest;
 

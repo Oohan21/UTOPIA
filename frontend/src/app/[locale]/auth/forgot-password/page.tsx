@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation'
 import { authApi } from '@/lib/api/auth'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import Image from 'next/image'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Loader2, Mail } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -54,13 +55,19 @@ export default function ForgotPasswordPage() {
         <CardHeader className="text-center">
           <div className="mb-4 flex justify-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
-              <span className="text-2xl font-bold text-white">U</span>
+              <Image
+                src="/favicon.ico"
+                alt="UTOPIA Logo"
+                width={44}
+                height={44}
+                className="object-contain"
+              />
             </div>
           </div>
           <CardTitle className="text-2xl">Forgot Password</CardTitle>
           <CardDescription>
-            {emailSent 
-              ? "Check your email for reset instructions" 
+            {emailSent
+              ? "Check your email for reset instructions"
               : "Enter your email to reset your password"
             }
           </CardDescription>
@@ -74,7 +81,7 @@ export default function ForgotPasswordPage() {
                   We've sent password reset instructions to your email address.
                 </p>
               </div>
-              
+
               <div className="space-y-2 text-sm">
                 <p className="font-semibold">Didn't receive the email?</p>
                 <ul className="list-inside list-disc space-y-1 pl-4 text-left">
@@ -83,7 +90,7 @@ export default function ForgotPasswordPage() {
                   <li>Wait a few minutes and try again</li>
                 </ul>
               </div>
-              
+
               <div className="space-y-2">
                 <Button
                   onClick={() => setEmailSent(false)}

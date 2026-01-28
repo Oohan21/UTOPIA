@@ -925,7 +925,68 @@ const PropertiesManagement = () => {
                                                                         </Button>
                                                                     </DropdownMenuTrigger>
                                                                     <DropdownMenuContent align="end" className="w-48">
-                                                                        {/* Keep the same dropdown items */}
+                                                                        <DropdownMenuItem
+                                                                            onClick={() => router.push(`/listings/${property.id}`)}
+                                                                            className="dark:text-gray-300 dark:hover:bg-gray-700"
+                                                                        >
+                                                                            <Eye className="h-4 w-4 mr-2" />
+                                                                            {t('actions.view')}
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuItem
+                                                                            onClick={() => confirmToggleActive(property.id, property.is_active, property.title)}
+                                                                            className="dark:text-gray-300 dark:hover:bg-gray-700"
+                                                                        >
+                                                                            {property.is_active ? (
+                                                                                <>
+                                                                                    <PowerOff className="h-4 w-4 mr-2" />
+                                                                                    {t('actions.deactivate')}
+                                                                                </>
+                                                                            ) : (
+                                                                                <>
+                                                                                    <Power className="h-4 w-4 mr-2" />
+                                                                                    {t('actions.activate')}
+                                                                                </>
+                                                                            )}
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuItem
+                                                                            onClick={() => handleToggleVerification(property.id, property.is_verified)}
+                                                                            className="dark:text-gray-300 dark:hover:bg-gray-700"
+                                                                        >
+                                                                            {property.is_verified ? (
+                                                                                <>
+                                                                                    <XCircle className="h-4 w-4 mr-2" />
+                                                                                    {t('actions.unverify')}
+                                                                                </>
+                                                                            ) : (
+                                                                                <>
+                                                                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                                                                    {t('actions.verify')}
+                                                                                </>
+                                                                            )}
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuItem
+                                                                            onClick={() => handleToggleFeatured(property.id, property.is_featured)}
+                                                                            className="dark:text-gray-300 dark:hover:bg-gray-700"
+                                                                        >
+                                                                            {property.is_featured ? (
+                                                                                <>
+                                                                                    <Star className="h-4 w-4 mr-2" />
+                                                                                    {t('actions.removeFeatured')}
+                                                                                </>
+                                                                            ) : (
+                                                                                <>
+                                                                                    <Star className="h-4 w-4 mr-2" />
+                                                                                    {t('actions.makeFeatured')}
+                                                                                </>
+                                                                            )}
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuItem
+                                                                            className="text-red-600 dark:text-red-400 dark:hover:bg-gray-700"
+                                                                            onClick={() => setDeleteDialog({ open: true, propertyId: property.id })}
+                                                                        >
+                                                                            <Trash2 className="h-4 w-4 mr-2" />
+                                                                            {t('actions.delete')}
+                                                                        </DropdownMenuItem>
                                                                     </DropdownMenuContent>
                                                                 </DropdownMenu>
                                                             </div>

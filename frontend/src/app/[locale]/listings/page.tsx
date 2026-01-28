@@ -13,6 +13,7 @@ import { formatCurrency } from '@/lib/utils/formatCurrency'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import PropertyCard from '@/components/listings/PropertyCard'
+import SearchHistory from '@/components/listings/SearchHistory'
 import { ComparisonFloatingButton } from '@/components/properties/ComparisonFloatingButton'
 import { ComparisonModal } from '@/components/properties/ComparisonModal'
 import {
@@ -643,7 +644,8 @@ const SimplifiedFiltersPanel: React.FC<{
   subCities: SubCity[];
   amenities: Amenity[];
   isOpen: boolean;
-}> = ({ filters, onFilterChange, onResetFilters, cities, subCities, amenities, isOpen }) => {
+  onClose: () => void;
+}> = ({ filters, onFilterChange, onResetFilters, cities, subCities, amenities, isOpen, onClose }) => {
   const t = useTranslations('listings');
   const tProperty = useTranslations('property');
   const [activeTab, setActiveTab] = useState('basic')
@@ -822,7 +824,7 @@ const SimplifiedFiltersPanel: React.FC<{
                         onValueChange={(value) => onFilterChange({
                           min_bedrooms: value === t('bedrooms.any') ? undefined : parseInt(value)
                         })}
-                        placeholder={t('bedrooms.any')} 
+                        placeholder={t('bedrooms.any')}
                       >
                         <SelectContent>
                           <SelectItem value={t('bedrooms.any')}>{t('bedrooms.any')}</SelectItem>
@@ -1126,7 +1128,7 @@ const SimplifiedFiltersPanel: React.FC<{
             </Button>
           </div>
           <div className="flex gap-1.5 md:gap-2">
-            <Button variant="outline" onClick={() => setActiveTab('basic')} className="text-xs md:text-sm">
+            <Button variant="outline" onClick={onClose} className="text-xs md:text-sm">
               {t('actions.applyClose')}
             </Button>
             <Button onClick={() => setActiveTab('basic')} className="bg-gradient-to-r from-primary to-secondary text-xs md:text-sm">
@@ -1396,7 +1398,7 @@ const PaginationComponent: React.FC<{
       </div>
 
       <div className="flex items-center gap-2">
-        
+
       </div>
     </div>
   );
@@ -1677,15 +1679,15 @@ export default function ListingsPage() {
     console.log('🔧 Filter change:', updates);
     setFilters(prev => {
       const newFilters = { ...prev, ...updates };
-      
+
       // Remove undefined values
       Object.keys(newFilters).forEach(key => {
-        if (newFilters[key as keyof PropertyFiltersType] === undefined || 
-            newFilters[key as keyof PropertyFiltersType] === '') {
+        if (newFilters[key as keyof PropertyFiltersType] === undefined ||
+          newFilters[key as keyof PropertyFiltersType] === '') {
           delete newFilters[key as keyof PropertyFiltersType];
         }
       });
-      
+
       return newFilters;
     });
   }, []);
@@ -1694,7 +1696,7 @@ export default function ListingsPage() {
   const handlePageChange = useCallback((page: number) => {
     if (page < 1 || page > totalPages) return;
     handleFilterChange({ page });
-    
+
     // Scroll to top when changing pages
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [totalPages, handleFilterChange]);
@@ -1967,24 +1969,16 @@ export default function ListingsPage() {
           <CardContent className="p-4 md:p-6">
             <div className="flex flex-col md:flex-row gap-3 md:gap-4">
               <div className="flex-1 relative">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 md:h-5 md:w-5 text-muted-foreground dark:text-gray-500" />
-                  <Input
-                    placeholder={t('searchPlaceholder')}
-                    value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
-                    className="h-11 md:h-14 pl-10 md:pl-12 pr-10 md:pr-12 text-sm md:text-lg border md:border-2 focus:border-primary dark:border-gray-700 dark:focus:border-primary"
-                  />
-                  {searchInput && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchInput('')}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1.5 hover:bg-muted rounded-full transition-colors"
-                    >
-                      <X className="h-4 w-4 md:h-5 md:w-5" />
-                    </button>
-                  )}
-                </div>
+                <SearchHistory
+                  searchQuery={searchInput}
+                  onSearchChange={setSearchInput}
+                  onSelectSearch={(filters) => {
+                    handleFilterChange(filters);
+                    if (filters.search !== undefined) {
+                      setSearchInput(filters.search);
+                    }
+                  }}
+                />
               </div>
               <div className="flex gap-2 md:gap-3">
                 <Button
@@ -2075,6 +2069,7 @@ export default function ListingsPage() {
           subCities={subCities}
           amenities={amenities}
           isOpen={showFilters}
+          onClose={() => setShowFilters(false)}
         />
 
         {/* Main Content Area */}
@@ -2085,7 +2080,9 @@ export default function ListingsPage() {
               <h2 className="text-lg md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/80 dark:from-white dark:to-white/80 bg-clip-text text-transparent">
                 {isLoadingProperties && filters.page === 1
                   ? t('results.loading')
-                  : t('results.propertiesFound', { count: totalCount })}
+                  : totalCount > 0
+                    ? `Top 20 Search Results (${totalCount} total found)`
+                    : t('results.propertiesFound', { count: totalCount })}
               </h2>
               {!isLoadingProperties && properties.length > 0 && (
                 <p className="text-muted-foreground dark:text-gray-400 mt-0.5 md:mt-1 text-sm md:text-base">
