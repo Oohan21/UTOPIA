@@ -123,30 +123,29 @@ class MarketAnalyticsView(generics.GenericAPIView):
         # Get properties data
         properties = Property.objects.filter(created_at__gte=date_from, is_active=True)
 
-        # Calculate market overview - FIXED TODAY'S METRICS
+        # Calculate market overview - FIXED METRICS
         overview = {
-            "total_listings": properties.count(),
-            "active_listings": properties.filter(property_status="available").count(),
-            "new_listings_today": properties.filter(
+            "total_listings": Property.objects.count(),  # FIXED: All listings
+            "active_listings": Property.objects.filter(is_active=True, property_status="available").count(),
+            "new_listings_today": Property.objects.filter(
                 created_at__gte=today_start, created_at__lte=today_end
             ).count(),
-            "average_price": properties.filter(price_etb__gt=0).aggregate(
+            "average_price": Property.objects.filter(is_active=True, price_etb__gt=0).aggregate(
                 avg=Avg("price_etb")
             )["avg"]
             or 0,
             "price_change_weekly": self.calculate_price_change(7),
-            "total_views_today": PropertyView.objects.filter(  # FIXED
+            "total_views_today": PropertyView.objects.filter(
                 viewed_at__gte=today_start, viewed_at__lte=today_end
             ).count(),
-            "total_inquiries_today": Inquiry.objects.filter(  # FIXED
+            "total_inquiries_today": Inquiry.objects.filter(
                 created_at__gte=today_start, created_at__lte=today_end
             ).count(),
-            "total_inquiries": Inquiry.objects.count(),  # ADDED: Total inquiries
-            "market_health": self.calculate_market_health(),
+            "total_inquiries": Inquiry.objects.count(),
             "top_performing_cities": self.get_top_performing_cities(days),
-            "property_type_distribution": self.get_property_type_distribution(days),
+            "property_type_distribution": self.get_property_type_distribution(),
             "price_distribution": self.get_price_distribution(),
-            "market_trends": self.get_market_trends_data(days),  # ADDED: Market trends
+            "market_trends": self.get_market_trends_data(days),
         }
 
         serializer = MarketOverviewSerializer(overview)
@@ -242,12 +241,16 @@ class MarketAnalyticsView(generics.GenericAPIView):
             for city in cities
         ]
 
-    def get_property_type_distribution(self, days):
-        """Get property type distribution"""
-        date_from = timezone.now() - timedelta(days=days)
+    def get_property_type_distribution(self):
+        """Get global property type distribution for active listings"""
+        # Calculate total active properties once for performance
+        total_active_count = Property.objects.filter(is_active=True).count()
+        
+        if total_active_count == 0:
+            return []
 
         distribution = (
-            Property.objects.filter(created_at__gte=date_from, is_active=True)
+            Property.objects.filter(is_active=True)
             .values("property_type")
             .annotate(
                 count=Count("id"),
@@ -269,20 +272,7 @@ class MarketAnalyticsView(generics.GenericAPIView):
                     "avg_views": item["avg_views"] or 0,
                     "avg_inquiries": item["avg_inquiries"] or 0,
                     "sold_count": item["sold_count"],
-                    "percentage": (
-                        (
-                            item["count"]
-                            / Property.objects.filter(
-                                created_at__gte=date_from, is_active=True
-                            ).count()
-                            * 100
-                        )
-                        if Property.objects.filter(
-                            created_at__gte=date_from, is_active=True
-                        ).count()
-                        > 0
-                        else 0
-                    ),
+                    "percentage": (item["count"] / total_active_count * 100),
                 }
             )
 
@@ -815,11 +805,11 @@ class AnalyticsDashboardView(generics.GenericAPIView):
         active_properties = Property.objects.filter(is_active=True).count()
 
         sale_properties = Property.objects.filter(
-            is_active=True, listing_type="sale"
+            is_active=True, listing_type="for_sale"
         ).count()
 
         rent_properties = Property.objects.filter(
-            is_active=True, listing_type="rent"
+            is_active=True, listing_type="for_rent"
         ).count()
 
         # Revenue metrics
@@ -1053,7 +1043,7 @@ class AnalyticsDashboardView(generics.GenericAPIView):
 
     def calculate_user_response_rate(self, user):
         """Calculate user's response rate to inquiries"""
-        inquiries = user.inquiries_received.all()  # Assuming this relation exists
+        inquiries = Inquiry.objects.filter(property__owner=user)
 
         if not inquiries.exists():
             return 0
@@ -1094,14 +1084,23 @@ class AnalyticsDashboardView(generics.GenericAPIView):
             )
 
         # Check property photos
-        properties_without_primary = user.owned_properties.filter(
-            images__is_primary=False
-        )
+        properties_without_photos = user.owned_properties.filter(images__isnull=True)
+        if properties_without_photos.exists():
+            recommendations.append(
+                {
+                    "type": "property",
+                    "message": f"Add photos to {properties_without_photos.count()} properties without images",
+                    "priority": "medium",
+                }
+            )
+
+        # Check for properties without a primary photo
+        properties_without_primary = user.owned_properties.filter(images__isnull=False).exclude(images__is_primary=True)
         if properties_without_primary.exists():
             recommendations.append(
                 {
                     "type": "property",
-                    "message": "Add primary photos to your properties",
+                    "message": f"Set a primary photo for {properties_without_primary.count()} properties",
                     "priority": "medium",
                 }
             )
@@ -1903,6 +1902,18 @@ class UserAnalyticsView(generics.GenericAPIView):
                 {
                     "type": "property_photos",
                     "message": f"Add photos to {properties_without_photos.count()} properties without images",
+                    "priority": "medium",
+                    "action_url": "/my-properties",
+                }
+            )
+
+        # Check for properties without a primary photo
+        properties_without_primary = user.owned_properties.filter(images__isnull=False).exclude(images__is_primary=True)
+        if properties_without_primary.exists():
+            recommendations.append(
+                {
+                    "type": "property_photos",
+                    "message": f"Set a primary photo for {properties_without_primary.count()} properties",
                     "priority": "medium",
                     "action_url": "/my-properties",
                 }
